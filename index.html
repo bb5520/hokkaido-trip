@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>北海道冰雪之旅 - Trip App</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Noto Sans TC & Zen Maru Gothic (日系圓潤感) -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet" />
+
+  <!-- 讓瀏覽器知道這是一個可以安裝的 Web App -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- 設定手機狀態列（瀏海區）的底色，與你的背景色一致 -->
+  <meta name="theme-color" content="#eef4f8" />
+
+  <!-- ====== iOS Safari 專屬設定 ====== -->
+  <!-- 允許加入主畫面並全螢幕執行 (隱藏網址列) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <!-- 設定狀態列樣式 (預設、黑色、透明) -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <!-- 設定 iOS 桌面的 App 名稱 -->
+  <meta name="apple-mobile-web-app-title" content="北海道之旅" />
+  <!-- 設定 iOS 桌面的 App 圖示 (請在 GitHub 根目錄放一張 512x512 的 icon.png) -->
+  <link rel="apple-touch-icon" href="icon.png" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ice: {
+              50: '#f0f8ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              500: '#38bdf8',
+              600: '#0284c7',
+              700: '#0369a1',
+              900: '#0c4a6e',
+            },
+            snow: '#f8fafc',
+            japanBg: '#eef4f8'
+          },
+          fontFamily: {
+            sans: ['Zen Maru Gothic', 'Noto Sans TC', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* 隱藏滾動條但保持滾動 */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    body { background-color: #eef4f8; }
+    /* Vue 尚未接管畫面前，先隱藏整個 App，避免出現未渲染的 {{ }} 模板閃爍畫面 */
+    [v-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="text-slate-700 antialiased selection:bg-ice-200">
+
+  <div id="app" v-cloak class="max-w-md mx-auto min-h-screen bg-[#eef4f8] shadow-2xl relative flex flex-col pb-24">
+
+    <!-- 頁首 Banner 區塊 (固定高度，用 object-cover 縮放填滿) -->
+    <div class="relative w-full h-56 overflow-hidden bg-slate-300">
+      <!-- 頁首背景圖片 -->
+      <img :src="bannerImage" alt="北海道之旅" class="w-full h-full object-cover block" />
+      
+      <!-- 漸層遮罩讓文字與Tab更清晰 -->
+      <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10"></div>
+    </div>
+
+    <!-- 主內容區域 -->
+    <main class="relative z-10 bg-[#eef4f8] pt-5 px-4 flex-1">
+
+      <!-- ================= 1. 每日行程表 Tab ================= -->
+      <section v-if="currentTab === 'itinerary'" class="space-y-4">
+        
+        <!-- (1) 日期橫向滑動選單 -->
+        <div class="flex space-x-3 overflow-x-auto no-scrollbar py-1">
+          <button 
+            v-for="(day, index) in dateList" 
+            :key="index"
+            @click="selectedDateIndex = index"
+            :class="['flex-shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-2xl transition-all',
+                     selectedDateIndex === index ? 'bg-ice-600 text-white shadow-lg shadow-ice-500/30 font-bold scale-105' : 'bg-white text-slate-600 border border-slate-100 shadow-sm']"
+          >
+            <span class="text-base leading-none">{{ day.week }}</span>
+            <span class="text-xs mt-1 opacity-90 leading-none">{{ day.date }}</span>
+          </button>
+        </div>
+
+        <!-- (10) 當日天氣資訊 -->
+        <div class="bg-gradient-to-r from-ice-500 to-ice-600 text-white p-3.5 rounded-2xl shadow-md flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <i :class="[weather.icon, 'text-3xl text-amber-200']"></i>
+            <div>
+              <div class="text-xs opacity-90">札幌 · 今日天氣狀況</div>
+              <div class="text-sm font-semibold">{{ weather.condition }}</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-xl font-bold">{{ weather.temp }}</div>
+            <div class="text-[11px] opacity-80">體感 {{ weather.feelsLike }}</div>
+          </div>
+        </div>
+
+        <!-- (2) 分類篩選下拉選單 -->
+        <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl shadow-sm border border-slate-100">
+          <span class="text-xs font-bold text-slate-500"><i class="fa-solid fa-filter mr-1"></i>行程類別</span>
+          <select v-model="selectedCategory" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none text-slate-700 font-medium">
+            <option value="全部">全部類別</option>
+            <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <!-- (3) 行程卡片列表 -->
+        <div class="space-y-3">
+          <div v-for="(item, idx) in filteredItinerary" :key="item.id" class="relative group">
+            
+            <!-- (6) 交通時間 (顯示於卡片之間) -->
+            <div v-if="idx > 0" class="flex items-center justify-center my-2 text-xs text-slate-400 font-medium">
+              <div class="h-4 w-[2px] bg-ice-200 mr-2"></div>
+              <span class="bg-white border border-ice-100 px-2 py-0.5 rounded-full text-[11px] shadow-sm flex items-center gap-1 text-ice-700">
+                <i :class="item.transitIcon || 'fa-solid fa-bus'"></i>
+                {{ item.transitTime || '約 25 分鐘' }}
+              </span>
+              <div class="h-4 w-[2px] bg-ice-200 ml-2"></div>
+            </div>
+
+            <!-- 航班專屬顯示卡片 -->
+            <div v-if="item.category === '航班'" 
+                 class="bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-2xl p-4 shadow-md relative overflow-hidden border border-slate-700">
+              <div class="absolute -right-4 -bottom-4 opacity-10 text-7xl"><i class="fa-solid fa-plane-departure"></i></div>
+              <div class="flex justify-between items-center text-xs text-slate-300 mb-2">
+                <span class="bg-ice-600/40 text-ice-200 px-2 py-0.5 rounded-full font-bold">航班 · {{ item.flightNo || '未填寫' }}</span>
+                <!-- 獨立的導航按鈕 -->
+                <button @click.stop="openMap(item.location)" class="hover:text-white transition cursor-pointer flex items-center z-10 relative">
+                  <i class="fa-solid fa-diamond-turn-right text-ice-400 mr-1"></i>點擊導航
+                </button>
+              </div>
+              <div class="flex justify-between items-center my-2">
+                <div class="w-1/3">
+                  <div class="text-xl font-bold truncate">{{ item.depAirport || '出發地' }}</div>
+                  <div class="text-xs text-slate-400">{{ item.depTime || '--:--' }} 起飛</div>
+                </div>
+                <div class="text-center w-1/3">
+                  <i class="fa-solid fa-plane text-ice-400 text-lg"></i>
+                  <div class="text-[10px] text-slate-400 mt-1">{{ item.flightDuration || '飛行時間' }}</div>
+                </div>
+                <div class="text-right w-1/3">
+                  <div class="text-xl font-bold truncate">{{ item.arrAirport || '目的地' }}</div>
+                  <div class="text-xs text-slate-400">{{ item.arrTime || '--:--' }} 抵達</div>
+                </div>
+              </div>
+              <div class="text-xs text-slate-300 mt-2 pt-2 border-t border-slate-700/60 flex justify-between items-end relative z-10">
+                <span class="pr-2">備註: {{ item.note }}</span>
+                <button @click.stop="editItinerary(item)" class="text-slate-400 hover:text-white cursor-pointer p-1">
+                  <i class="fa-solid fa-pen-to-square text-lg"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- 一般行程卡片 -->
+            <div v-else 
+                 class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative hover:shadow-md transition">
+              
+              <!-- 頂部類別標籤與操作 -->
+              <div class="flex justify-between items-start mb-2">
+                <div class="flex items-center gap-2">
+                  <span :class="getCategoryBadgeClass(item.category)" class="px-2 py-0.5 rounded-md text-[11px] font-bold">
+                    {{ item.category }}
+                  </span>
+                  <h3 class="font-bold text-slate-800 text-base">{{ item.name }}</h3>
+                </div>
+                <div class="flex items-center space-x-1">
+                  <!-- 上下移動拖曳按鈕 (模擬拖曳) -->
+                  <button @click.stop="moveItem(idx, -1)" class="p-1 text-slate-300 hover:text-ice-600"><i class="fa-solid fa-chevron-up text-xs"></i></button>
+                  <button @click.stop="moveItem(idx, 1)" class="p-1 text-slate-300 hover:text-ice-600"><i class="fa-solid fa-chevron-down text-xs"></i></button>
+                  <button @click.stop="editItinerary(item)" class="p-1 text-slate-400 hover:text-ice-600 ml-1"><i class="fa-solid fa-pen"></i></button>
+                </div>
+              </div>
+
+              <!-- 資訊欄位 -->
+              <div class="text-xs space-y-1.5 text-slate-600">
+                <div v-if="item.openHours" class="flex items-center"><i class="fa-regular fa-clock w-4 text-ice-600"></i>營業時間: {{ item.openHours }}</div>
+                <div v-if="item.ticket && item.category === '景點'" class="flex items-center"><i class="fa-solid fa-ticket w-4 text-amber-500"></i>門票: {{ item.ticket }}</div>
+                <div v-if="item.note" class="flex items-start"><i class="fa-regular fa-sticky-note w-4 text-slate-400 mt-0.5"></i>特色/備註: {{ item.note }}</div>
+              </div>
+
+              <!-- 獨立的導航按鈕 -->
+              <button @click.stop="openMap(item.location)" class="w-full mt-3 pt-2 border-t border-slate-100 flex justify-end items-center text-[11px] text-ice-600 font-medium hover:text-ice-700 cursor-pointer">
+                <span>Google Maps 導航</span>
+                <i class="fa-solid fa-location-arrow ml-1"></i>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- (5) 新增行程右下角浮動按鈕 -->
+        <button @click="openAddModal" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+
+      </section>
+
+      <!-- ================= 2. 資訊 Tab ================= -->
+      <section v-if="currentTab === 'info'" class="space-y-4">
+        
+        <!-- 匯率換算器 (台幣 TWD ➔ 日幣 JPY) -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-calculator text-ice-600"></i> 匯率換算 (台幣 TWD ➔ 日幣 JPY)
+          </h2>
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+              <span class="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">NT$</span>
+              <input v-model.number="twdInput" type="number" placeholder="輸入台幣金額" class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-ice-500">
+            </div>
+            <i class="fa-solid fa-arrow-right-long text-slate-400"></i>
+            <div class="flex-1 bg-ice-50 border border-ice-100 rounded-xl py-2 px-3 text-right">
+              <span class="text-xs text-slate-500 font-normal">約 ¥</span>
+              <span class="text-base font-bold text-ice-700 ml-1">{{ (twdInput / jpyRate).toFixed(0) }}</span>
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-400 mt-2 text-right">當前參考匯率約 1 TWD ≈ {{ (1 / jpyRate).toFixed(2) }} JPY</div>
+        </div>
+
+        <!-- 航班資訊 (同步自「行程」分頁，內容唯讀，僅可加附件) -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-plane text-ice-600"></i> 航班資訊
+            </h2>
+            <span class="text-[10px] text-slate-400">同步自「行程」</span>
+          </div>
+          <div class="space-y-3 text-xs">
+            <div v-for="f in flightsInfo" :key="f.id" class="bg-slate-50 p-3 rounded-xl border border-slate-100 relative">
+              <div class="text-[10px] text-ice-600 font-bold mb-1">Day {{ f.dayIndex + 1 }}</div>
+              <div class="font-bold text-slate-700 mb-1 flex justify-between pr-8">
+                <span>{{ f.label }}</span>
+                <span class="text-ice-600">{{ f.duration }}</span>
+              </div>
+              <div class="text-slate-600">{{ f.route }}</div>
+              <div v-if="f.price || f.payMethod" class="flex items-center gap-1.5 mt-1.5 pr-8">
+                <i v-if="f.payMethod" :class="payMethodIcon(f.payMethod)" :title="f.payMethod"></i>
+                <span v-if="f.price" class="text-ice-700 font-bold">{{ priceDisplay(f.price, f.currency) }}</span>
+              </div>
+              <div class="absolute top-3 right-3 flex flex-col items-center gap-1.5">
+                <button @click="editFlightInfo(f)" class="text-slate-400 hover:text-ice-600 p-1" title="編輯附加文件">
+                  <i class="fa-solid fa-pen text-xs"></i>
+                </button>
+                <button v-if="f.documents && f.documents.length" @click="openDocList(f.label, f.documents)" class="p-1 relative" title="查看附件">
+                  <i class="fa-solid fa-paperclip text-xs text-ice-600"></i>
+                  <span class="absolute -top-1.5 -right-1.5 bg-ice-600 text-white text-[8px] leading-none rounded-full w-3.5 h-3.5 flex items-center justify-center">{{ f.documents.length }}</span>
+                </button>
+              </div>
+            </div>
+            <div v-if="flightsInfo.length === 0" class="text-slate-400 text-center py-2">尚未在「行程」分頁新增航班</div>
+          </div>
+        </div>
+
+        <!-- 住宿資訊 (飯店名稱同步自「行程」分頁，其餘可編輯) -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-hotel text-ice-600"></i> 住宿資訊
+            </h2>
+            <span class="text-[10px] text-slate-400">名稱同步自「行程」</span>
+          </div>
+          <div class="space-y-3 text-xs">
+            <div v-for="h in hotelsInfo" :key="h.id" class="border-b border-slate-100 pb-2 last:border-b-0 last:pb-0 relative">
+              <div class="text-[10px] text-ice-600 font-bold mb-1">Day {{ h.dayIndex + 1 }}</div>
+              <div class="font-bold text-slate-800 text-sm pr-8">{{ h.name }}</div>
+              <div v-if="h.phone" class="text-slate-500 mt-1"><i class="fa-solid fa-phone mr-1"></i>{{ h.phone }}</div>
+              <div v-if="h.address" class="text-slate-500"><i class="fa-solid fa-location-dot mr-1"></i>{{ h.address }}</div>
+              <div v-if="h.price || h.payMethod" class="flex items-center gap-1.5 mt-1">
+                <i v-if="h.payMethod" :class="payMethodIcon(h.payMethod)" :title="h.payMethod"></i>
+                <span v-if="h.price" class="text-ice-700 font-bold">{{ priceDisplay(h.price, h.currency) }}</span>
+              </div>
+              <div class="flex items-center gap-2 mt-2 flex-wrap">
+                <button @click="openMap(h.location || h.name)" class="text-ice-600 font-bold flex items-center gap-1">
+                  <i class="fa-solid fa-location-arrow"></i> 開啟地圖導航
+                </button>
+              </div>
+              <div class="absolute top-0 right-0 flex flex-col items-center gap-1.5">
+                <button @click="editHotelInfo(h)" class="text-slate-400 hover:text-ice-600 p-1">
+                  <i class="fa-solid fa-pen text-xs"></i>
+                </button>
+                <button v-if="h.documents && h.documents.length" @click="openDocList(h.name, h.documents)" class="p-1 relative" title="查看附件">
+                  <i class="fa-solid fa-paperclip text-xs text-ice-600"></i>
+                  <span class="absolute -top-1.5 -right-1.5 bg-ice-600 text-white text-[8px] leading-none rounded-full w-3.5 h-3.5 flex items-center justify-center">{{ h.documents.length }}</span>
+                </button>
+              </div>
+            </div>
+            <div v-if="hotelsInfo.length === 0" class="text-slate-400 text-center py-2">尚未在「行程」分頁新增住宿</div>
+          </div>
+        </div>
+
+        <!-- 一日遊 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-person-hiking text-ice-600"></i> 一日遊
+            </h2>
+            <button @click="openAddDayTourModal" class="w-6 h-6 rounded-full bg-ice-50 text-ice-600 flex items-center justify-center hover:bg-ice-100">
+              <i class="fa-solid fa-plus text-xs"></i>
+            </button>
+          </div>
+          <div class="space-y-3 text-xs">
+            <div v-for="t in dayTours" :key="t.id" class="bg-slate-50 p-3 rounded-xl border border-slate-100 relative pr-8">
+              <div class="font-bold text-slate-800">{{ t.name }}</div>
+              <div v-if="t.bookingNo" class="text-slate-600 mt-1">預約號碼: {{ t.bookingNo }}</div>
+              <div v-if="t.time" class="text-slate-600">集合/出發時間: {{ t.time }}</div>
+              <div v-if="t.note" class="text-slate-500 mt-1"><i class="fa-regular fa-sticky-note mr-1"></i>{{ t.note }}</div>
+              <div v-if="t.price || t.payMethod" class="flex items-center gap-1.5 mt-1">
+                <i v-if="t.payMethod" :class="payMethodIcon(t.payMethod)" :title="t.payMethod"></i>
+                <span v-if="t.price" class="text-ice-700 font-bold">{{ priceDisplay(t.price, t.currency) }}</span>
+              </div>
+              <div class="flex items-center gap-2 mt-2 flex-wrap">
+                <button @click="openMap(t.location || t.name)" class="text-ice-600 font-bold flex items-center gap-1">
+                  <i class="fa-solid fa-location-arrow"></i> 導航至集合地點
+                </button>
+              </div>
+              <div class="absolute top-3 right-3 flex flex-col items-center gap-1.5">
+                <button @click="editDayTour(t)" class="text-slate-400 hover:text-ice-600 p-1">
+                  <i class="fa-solid fa-pen text-xs"></i>
+                </button>
+                <button v-if="t.documents && t.documents.length" @click="openDocList(t.name, t.documents)" class="p-1 relative" title="查看附件">
+                  <i class="fa-solid fa-paperclip text-xs text-ice-600"></i>
+                  <span class="absolute -top-1.5 -right-1.5 bg-ice-600 text-white text-[8px] leading-none rounded-full w-3.5 h-3.5 flex items-center justify-center">{{ t.documents.length }}</span>
+                </button>
+              </div>
+            </div>
+            <div v-if="dayTours.length === 0" class="text-slate-400 text-center py-2">尚未新增一日遊</div>
+          </div>
+        </div>
+
+        <!-- 其他預約 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-ticket text-ice-600"></i> 其他預約
+            </h2>
+            <button @click="openAddOtherBookingModal" class="w-6 h-6 rounded-full bg-ice-50 text-ice-600 flex items-center justify-center hover:bg-ice-100">
+              <i class="fa-solid fa-plus text-xs"></i>
+            </button>
+          </div>
+          <div class="space-y-3 text-xs">
+            <div v-for="b in otherBookings" :key="b.id" class="bg-slate-50 p-3 rounded-xl border border-slate-100 relative pr-8">
+              <div class="font-bold text-slate-800">{{ b.name }}</div>
+              <div v-if="b.bookingNo" class="text-slate-600 mt-1">預約號碼: {{ b.bookingNo }}</div>
+              <div v-if="b.time" class="text-slate-600">時間: {{ b.time }}</div>
+              <div v-if="b.note" class="text-slate-500 mt-1"><i class="fa-regular fa-sticky-note mr-1"></i>{{ b.note }}</div>
+              <div v-if="b.price || b.payMethod" class="flex items-center gap-1.5 mt-1">
+                <i v-if="b.payMethod" :class="payMethodIcon(b.payMethod)" :title="b.payMethod"></i>
+                <span v-if="b.price" class="text-ice-700 font-bold">{{ priceDisplay(b.price, b.currency) }}</span>
+              </div>
+              <div class="flex items-center gap-2 mt-2 flex-wrap">
+                <button @click="openMap(b.location || b.name)" class="text-ice-600 font-bold flex items-center gap-1">
+                  <i class="fa-solid fa-location-arrow"></i> 導航
+                </button>
+              </div>
+              <div class="absolute top-3 right-3 flex flex-col items-center gap-1.5">
+                <button @click="editOtherBooking(b)" class="text-slate-400 hover:text-ice-600 p-1">
+                  <i class="fa-solid fa-pen text-xs"></i>
+                </button>
+                <button v-if="b.documents && b.documents.length" @click="openDocList(b.name, b.documents)" class="p-1 relative" title="查看附件">
+                  <i class="fa-solid fa-paperclip text-xs text-ice-600"></i>
+                  <span class="absolute -top-1.5 -right-1.5 bg-ice-600 text-white text-[8px] leading-none rounded-full w-3.5 h-3.5 flex items-center justify-center">{{ b.documents.length }}</span>
+                </button>
+              </div>
+            </div>
+            <div v-if="otherBookings.length === 0" class="text-slate-400 text-center py-2">尚未新增其他預約</div>
+          </div>
+        </div>
+
+        <!-- 租車資訊 (可能沒有租車) -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-car text-ice-600"></i> 租車資訊
+            </h2>
+            <button @click="openAddCarModal" class="w-6 h-6 rounded-full bg-ice-50 text-ice-600 flex items-center justify-center hover:bg-ice-100">
+              <i class="fa-solid fa-plus text-xs"></i>
+            </button>
+          </div>
+          <div class="space-y-3 text-xs">
+            <div v-for="c in carRentals" :key="c.id" class="text-slate-600 space-y-1 relative pr-8">
+              <div class="font-bold text-slate-800">{{ c.name }}</div>
+              <div v-if="c.bookingNo">預約號碼: {{ c.bookingNo }}</div>
+              <div v-if="c.pickupTime">取車時間: {{ c.pickupTime }}</div>
+              <div v-if="c.note" class="text-slate-500 mt-1"><i class="fa-regular fa-sticky-note mr-1"></i>{{ c.note }}</div>
+              <div v-if="c.price || c.payMethod" class="flex items-center gap-1.5">
+                <i v-if="c.payMethod" :class="payMethodIcon(c.payMethod)" :title="c.payMethod"></i>
+                <span v-if="c.price" class="text-ice-700 font-bold">{{ priceDisplay(c.price, c.currency) }}</span>
+              </div>
+              <div class="flex items-center gap-2 mt-2 flex-wrap">
+                <button @click="openMap(c.location || c.name)" class="text-ice-600 font-bold flex items-center gap-1">
+                  <i class="fa-solid fa-location-arrow"></i> 導航至租車處
+                </button>
+              </div>
+              <div class="absolute top-0 right-0 flex flex-col items-center gap-1.5">
+                <button @click="editCar(c)" class="text-slate-400 hover:text-ice-600 p-1">
+                  <i class="fa-solid fa-pen text-xs"></i>
+                </button>
+                <button v-if="c.documents && c.documents.length" @click="openDocList(c.name, c.documents)" class="p-1 relative" title="查看附件">
+                  <i class="fa-solid fa-paperclip text-xs text-ice-600"></i>
+                  <span class="absolute -top-1.5 -right-1.5 bg-ice-600 text-white text-[8px] leading-none rounded-full w-3.5 h-3.5 flex items-center justify-center">{{ c.documents.length }}</span>
+                </button>
+              </div>
+            </div>
+            <div v-if="carRentals.length === 0" class="text-slate-400 text-center py-2">這趟旅程沒有租車，尚未新增資訊</div>
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- ================= 3. 購物清單 Tab ================= -->
+      <section v-if="currentTab === 'shopping'" class="space-y-3">
+
+        <div v-for="(item, idx) in shoppingList" :key="item.id"
+             :ref="el => setShoppingCardRef(el, idx)"
+             :style="draggingShopping.active && draggingShopping.index === idx ? { transform: 'translateY(' + draggingShopping.offsetY + 'px)', zIndex: 50, position: 'relative' } : {}"
+             :class="['bg-white rounded-2xl p-3 border border-slate-100 transition-shadow', draggingShopping.active && draggingShopping.index === idx ? 'shadow-xl scale-[1.02]' : 'shadow-sm']">
+          <div class="flex items-start gap-3">
+            <!-- 照片區 (可多張，右上角顯示張數，點擊放大並可左右滑動) -->
+            <div class="relative flex-shrink-0" style="width:64px">
+              <img v-if="item.images && item.images.length" :src="item.images[0].data" @click="openGallery(item.images, 0)" class="w-16 h-16 rounded-lg object-cover cursor-pointer border border-slate-100">
+              <div v-else class="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center text-slate-300">
+                <i class="fa-solid fa-image"></i>
+              </div>
+              <span v-if="item.images && item.images.length > 1" class="absolute -top-1.5 -right-1.5 bg-ice-600 text-white text-[10px] font-bold leading-none rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">{{ item.images.length }}</span>
+            </div>
+
+            <!-- 資訊區 -->
+            <div class="flex-1 min-w-0">
+              <div class="font-bold text-slate-800 text-sm" :class="{'line-through text-slate-400': item.bought}">{{ item.name }}</div>
+              <div v-if="item.location" class="text-[11px] text-slate-500 mt-1 flex items-center"><i class="fa-solid fa-location-dot w-3.5 text-ice-600"></i>{{ item.location }}</div>
+              <div class="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-1 text-[11px] text-slate-500">
+                <span v-if="item.quantity">數量: {{ item.quantity }}</span>
+                <span v-if="item.price" class="text-ice-700 font-bold">{{ priceDisplay(item.price, item.currency) }}</span>
+              </div>
+            </div>
+
+            <!-- 拖曳排序把手 -->
+            <div class="flex items-center flex-shrink-0 px-1 h-16 cursor-grab active:cursor-grabbing touch-none select-none"
+                 @pointerdown="onGripPointerDown(idx, $event)">
+              <i class="fa-solid fa-grip-lines text-slate-300 text-sm"></i>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mt-2.5 pt-2.5 border-t border-slate-100">
+            <label class="flex items-center space-x-1.5 cursor-pointer">
+              <input type="checkbox" v-model="item.bought" class="rounded text-ice-600 focus:ring-0">
+              <span class="text-[11px] text-slate-500" :class="{'line-through': item.bought}">已購買</span>
+            </label>
+            <div class="flex items-center gap-3">
+              <button @click="editShoppingItem(item)" class="text-slate-400 hover:text-ice-600"><i class="fa-solid fa-pen text-xs"></i></button>
+              <button @click="confirmDeleteShoppingItem(item.id)" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash text-xs"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="shoppingList.length === 0" class="text-slate-400 text-center py-6 text-sm">尚未新增購物清單項目</div>
+
+        <!-- 新增購物清單浮動按鈕 -->
+        <button @click="openAddShoppingModal" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+
+      </section>
+
+      <!-- ================= 4. 花費 Tab ================= -->
+      <section v-if="currentTab === 'expenses'" class="space-y-4">
+        
+        <!-- 總花費統計卡片 (自動換算為日幣 JPY 加總，含手動紀錄 + 資訊分頁自動帶入的費用) -->
+        <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-md">
+          <div class="text-xs text-slate-400">總花費統計 (換算為日幣 JPY)</div>
+          <div class="text-3xl font-bold mt-1 text-amber-300">¥ {{ totalExpensesJPY.toLocaleString() }}</div>
+          <div class="text-xs text-slate-400 mt-1">約合 NT$ {{ Math.round(totalExpensesJPY * jpyRate).toLocaleString() }}</div>
+        </div>
+
+        <!-- 花費列表 (手動紀錄可編輯/刪除；來自「資訊」分頁的費用自動帶入，僅可在資訊分頁編輯) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
+          <div v-for="exp in allExpenses" :key="exp.key" class="p-3.5 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-ice-50 text-ice-600 flex items-center justify-center text-base font-bold">
+                <i :class="exp.icon || getExpenseIcon(exp.category)"></i>
+              </div>
+              <div>
+                <div class="font-bold text-slate-800 text-sm flex items-center gap-1.5 flex-wrap">
+                  <span>{{ exp.name }}</span>
+                </div>
+                <div class="text-[11px] text-slate-400">{{ [exp.dateLabel, exp.payMethod].filter(Boolean).join(' · ') }}</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="font-bold text-slate-800 text-sm">{{ priceDisplay(exp.amount, exp.currency) }}</div>
+              <div class="flex items-center justify-end gap-2 mt-0.5">
+                <template v-if="!exp.auto">
+                  <button @click="editExpense(exp)" class="text-slate-400 hover:text-ice-600 p-1" title="編輯花費"><i class="fa-solid fa-pen text-xs"></i></button>
+                  <button @click="confirmDeleteExpense(exp.id)" class="text-red-400 hover:text-red-600 p-1" title="刪除花費"><i class="fa-solid fa-trash text-xs"></i></button>
+                </template>
+                <span v-else class="text-[10px] text-slate-300 flex items-center gap-1" title="請至「資訊」分頁編輯"><i class="fa-solid fa-circle-info"></i>資訊分頁編輯</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="allExpenses.length === 0" class="text-slate-400 text-center py-6 text-sm">尚未新增花費紀錄</div>
+        </div>
+
+        <!-- 新增花費浮動按鈕 -->
+        <button @click="openAddExpenseModal" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+
+      </section>
+
+      <!-- ================= 5. 設定 Tab ================= -->
+      <section v-if="currentTab === 'settings'" class="space-y-4">
+
+        <!-- 首頁封面圖片設定 (無需預覽，開啟彈跳視窗編輯) -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-image text-ice-600"></i> 首頁封面照片
+            </h2>
+            <button @click="openBannerModal" class="text-slate-400 hover:text-ice-600 p-1" title="更換封面照片"><i class="fa-solid fa-pen text-xs"></i></button>
+          </div>
+        </div>
+
+        <!-- 匯率手動調整 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-money-bill-transfer text-ice-600"></i> 匯率手動調整
+          </h2>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-500 font-bold whitespace-nowrap">1 台幣 (TWD) =</span>
+            <input v-model.number="twdToJpyInput" type="number" step="0.001" placeholder="4.65" class="flex-1 bg-slate-50 border p-2.5 rounded-xl outline-none text-sm font-bold">
+            <span class="text-xs text-slate-500 font-bold whitespace-nowrap">日圓 (JPY)</span>
+          </div>
+          <div class="text-[10px] text-slate-400 mt-2">目前使用匯率: 1 TWD ≈ {{ (1 / jpyRate).toFixed(2) }} JPY (1 JPY ≈ {{ jpyRate.toFixed(3) }} TWD)</div>
+          <button @click="saveJpyRate" class="w-full mt-3 bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">
+            更新匯率
+          </button>
+        </div>
+
+
+        <!-- 資料備份與還原 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-hard-drive text-ice-600"></i> 資料備份與還原
+          </h2>
+          <div class="text-[11px] text-slate-500 mb-4 leading-relaxed">
+            <p>強烈建議定期備份！將目前的行程、花費與所有照片匯出至手機儲存空間中。</p>
+          </div>
+  
+          <div class="grid grid-cols-2 gap-3">
+            <button @click="exportData" class="flex items-center justify-center gap-1.5 bg-ice-50 text-ice-700 font-bold py-2.5 rounded-xl text-sm border border-ice-100 hover:bg-ice-100 active:scale-95 transition">
+              <i class="fa-solid fa-download"></i> 匯出備份
+            </button>
+            <button @click="triggerImport" class="flex items-center justify-center gap-1.5 bg-slate-50 text-slate-700 font-bold py-2.5 rounded-xl text-sm border border-slate-200 hover:bg-slate-100 active:scale-95 transition">
+              <i class="fa-solid fa-upload"></i> 還原備份
+            </button>
+          </div>
+          <!-- 隱藏的檔案上傳輸入框 -->
+          <input type="file" ref="fileInputRef" accept=".json" class="hidden" @change="importData">
+        </div>
+  
+      </section>
+
+      <!-- ================= 彈出視窗 Modal: 首頁封面照片編輯 ================= -->
+      <div v-if="showBannerModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h3 class="font-bold text-slate-800">更換首頁封面照片</h3>
+            <button @click="showBannerModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+          </div>
+          <div class="space-y-3 text-xs">
+            <!-- 目前封面預覽 -->
+            <div class="w-full h-40 rounded-xl overflow-hidden bg-slate-100">
+              <img :src="bannerImageInput || bannerImage" class="w-full h-full object-cover block" />
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">選擇新照片</label>
+              <input type="file" @change="handleBannerUpload" accept="image/*" class="w-full text-slate-500 text-xs">
+            </div>
+          </div>
+          <button @click="saveBannerImage" class="w-full bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">
+            更新封面照片
+          </button>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ================= 底部固定分頁選單 (Bottom Tab Bar) ================= -->
+    <nav class="fixed bottom-0 left-0 right-0 z-30 max-w-md mx-auto px-4 pb-4">
+      <div class="flex bg-white/90 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-white/40 gap-1">
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.id"
+          @click="currentTab = tab.id"
+          :class="['flex-1 flex flex-col items-center justify-center h-14 rounded-xl transition-all duration-300', 
+                   currentTab === tab.id ? 'bg-ice-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-ice-600 hover:bg-ice-50']"
+        >
+          <i :class="[tab.icon, 'text-lg']"></i>
+          <span class="text-[10px] mt-0.5 font-medium">{{ tab.name }}</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ================= 彈出視窗 Modal: 行程新增/編輯 ================= -->
+    <div v-if="showItineraryModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">{{ isEditMode ? '編輯行程' : '新增行程' }}</h3>
+          <button @click="showItineraryModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <!-- 基本資訊：名稱與分類 (通用) -->
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">行程名稱 <span class="text-red-500">*</span></label>
+            <input v-model="formItinerary.name" type="text" placeholder="輸入名稱 (如: 長榮航空、小樽運河)" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">分類</label>
+            <select v-model="formItinerary.category" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+            </select>
+          </div>
+
+          <!-- ================= 航班專屬欄位 ================= -->
+          <div v-if="formItinerary.category === '航班'" class="space-y-3 p-3 bg-slate-50 border rounded-xl">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">航班編號</label>
+              <input v-model="formItinerary.flightNo" type="text" placeholder="例如: BR116" class="w-full bg-white border p-2 rounded-lg outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">出發機場</label>
+                <input v-model="formItinerary.depAirport" type="text" placeholder="例如: TPE 桃園" class="w-full bg-white border p-2 rounded-lg outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">出發時間</label>
+                <input v-model="formItinerary.depTime" type="time" class="w-full bg-white border p-2 rounded-lg outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">抵達機場</label>
+                <input v-model="formItinerary.arrAirport" type="text" placeholder="例如: CTS 新千歲" class="w-full bg-white border p-2 rounded-lg outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">抵達時間</label>
+                <input v-model="formItinerary.arrTime" type="time" class="w-full bg-white border p-2 rounded-lg outline-none">
+              </div>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">飛行時間</label>
+              <input v-model="formItinerary.flightDuration" type="text" placeholder="例如: 3小時30分" class="w-full bg-white border p-2 rounded-lg outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">導航地點 (搜尋用)</label>
+              <input v-model="formItinerary.location" type="text" placeholder="例如: New Chitose Airport" class="w-full bg-white border p-2 rounded-lg outline-none">
+            </div>
+          </div>
+
+          <!-- ================= 一般行程專屬欄位 ================= -->
+          <template v-else>
+            <div v-if="['景點','住宿','美食','購物'].includes(formItinerary.category)">
+              <label class="block font-bold text-slate-600 mb-1">營業時間</label>
+              <input v-model="formItinerary.openHours" type="text" placeholder="例如: 09:00 - 18:00" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div v-if="formItinerary.category === '景點'">
+              <label class="block font-bold text-slate-600 mb-1">門票費用</label>
+              <input v-model="formItinerary.ticket" type="text" placeholder="例如: 大人 1000日圓" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
+              <input v-model="formItinerary.location" type="text" placeholder="不填則預設搜尋行程名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+          </template>
+
+          <!-- 通用備註 -->
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">特色 & 備註</label>
+            <textarea v-model="formItinerary.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2"></textarea>
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button v-if="isEditMode" @click="confirmDeleteItinerary" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button @click="saveItinerary" class="flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl">儲存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 彈出視窗 Modal: 新增/編輯 購物清單 ================= -->
+    <div v-if="showShoppingModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">{{ isEditShoppingMode ? '編輯購物清單' : '新增購物想買清單' }}</h3>
+          <button @click="showShoppingModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">商品名稱 <span class="text-red-500">*</span></label>
+            <input v-model="formShopping.name" type="text" placeholder="例如: 白色戀人 巧克力禮盒" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">購買地點</label>
+            <input v-model="formShopping.location" type="text" placeholder="例如: 新千歲機場 / 唐吉訶德 狸小路店" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">數量</label>
+              <input v-model.number="formShopping.quantity" type="number" min="1" placeholder="1" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">幣別</label>
+              <select v-model="formShopping.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+                <option value="JPY">日幣 JPY</option>
+                <option value="TWD">台幣 TWD</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">價格</label>
+            <input v-model.number="formShopping.price" type="number" placeholder="例如: 980" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div v-if="formShopping.price && formShopping.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formShopping.price * jpyRate).toLocaleString() }}</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">照片上傳 (可多選，點擊縮圖可放大並左右滑動)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formShopping.images)" accept="image/*" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formShopping.images && formShopping.images.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(photo, pi) in formShopping.images" :key="pi" class="relative">
+                <img :src="photo.data" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" @click="openGallery(formShopping.images, pi)">
+                <button type="button" @click="formShopping.images.splice(pi, 1)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button v-if="isEditShoppingMode" @click="confirmDeleteShoppingItem(formShopping.id)" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button @click="saveShoppingItem" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 彈出視窗 Modal: 新增/編輯花費 ================= -->
+    <div v-if="showExpenseModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">{{ isEditExpenseMode ? '編輯花費' : '記錄花費' }}</h3>
+          <button @click="showExpenseModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">類別</label>
+            <select v-model="formExpense.category" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option v-for="cat in ['交通','飲食','住宿','門票','購物','其他']" :key="cat" :value="cat">{{ cat }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">消費名稱 <span class="text-red-500">*</span></label>
+            <input v-model="formExpense.name" type="text" placeholder="例如: 湯咖哩" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
+            <select v-model="formExpense.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="現金">現金</option>
+              <option value="信用卡">信用卡</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">金額 <span class="text-red-500">*</span></label>
+              <input v-model.number="formExpense.amount" type="number" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">幣別</label>
+              <select v-model="formExpense.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+                <option value="JPY">日幣 JPY</option>
+                <option value="TWD">台幣 TWD</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="formExpense.amount && formExpense.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formExpense.amount * jpyRate).toLocaleString() }}</div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button v-if="isEditExpenseMode" @click="confirmDeleteExpense(formExpense.id)" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button @click="saveExpense" class="flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl">{{ isEditExpenseMode ? '儲存變更' : '儲存紀錄' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 彈出視窗 Modal: 航班附加文件 (唯讀航班資訊 + 附件) ================= -->
+    <div v-if="showFlightModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">航班附加文件</h3>
+          <button @click="showFlightModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div class="bg-slate-50 border border-slate-100 rounded-xl p-3">
+            <div class="font-bold text-slate-700 mb-1">{{ activeFlightInfo.label }}</div>
+            <div class="text-slate-500">{{ activeFlightInfo.route }}</div>
+            <div class="text-[10px] mt-2 text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>如需修改航班內容，請至「行程」分頁編輯該航班</div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
+            <select v-model="formFlightDoc.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
+              <option value="現金">現金</option>
+              <option value="信用卡">信用卡</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">費用</label>
+              <input v-model.number="formFlightDoc.price" type="number" placeholder="例如: 12000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">幣別</label>
+              <select v-model="formFlightDoc.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+                <option value="JPY">日幣 JPY</option>
+                <option value="TWD">台幣 TWD</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="formFlightDoc.price && formFlightDoc.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formFlightDoc.price * jpyRate).toLocaleString() }}</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">相關文件 (機票/訂位截圖、PDF等，可多選)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formFlightDoc.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formFlightDoc.documents && formFlightDoc.documents.length" class="space-y-1.5">
+              <div v-for="(doc, di) in formFlightDoc.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
+                <button type="button" @click="formFlightDoc.documents.splice(di, 1)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+        </div>
+        <button @click="saveFlightInfo" :disabled="fileUploading" :class="['w-full font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
+      </div>
+    </div>
+
+    <!-- ================= 彈出視窗 Modal: 住宿補充資訊 (名稱唯讀，其餘可編輯) ================= -->
+    <div v-if="showHotelModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">住宿補充資訊</h3>
+          <button @click="showHotelModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">飯店名稱</label>
+            <div class="w-full bg-slate-100 border border-slate-200 p-2.5 rounded-xl text-slate-500">{{ formHotelInfo.name }}</div>
+            <div class="text-[10px] text-slate-400 mt-1"><i class="fa-solid fa-circle-info mr-1"></i>如需修改飯店名稱，請至「行程」分頁編輯</div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">電話</label>
+            <input v-model="formHotelInfo.phone" type="text" placeholder="例如: +81 11-208-5555" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">地址</label>
+            <input v-model="formHotelInfo.address" type="text" placeholder="飯店地址" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
+            <input v-model="formHotelInfo.location" type="text" placeholder="不填則預設搜尋飯店名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
+            <select v-model="formHotelInfo.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
+              <option value="現金">現金</option>
+              <option value="信用卡">信用卡</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">費用</label>
+              <input v-model.number="formHotelInfo.price" type="number" placeholder="例如: 15000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">幣別</label>
+              <select v-model="formHotelInfo.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+                <option value="JPY">日幣 JPY</option>
+                <option value="TWD">台幣 TWD</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="formHotelInfo.price && formHotelInfo.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formHotelInfo.price * jpyRate).toLocaleString() }}</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">相關文件 (訂房確認單等，可多選)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formHotelInfo.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formHotelInfo.documents && formHotelInfo.documents.length" class="space-y-1.5">
+              <div v-for="(doc, di) in formHotelInfo.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
+                <button type="button" @click="formHotelInfo.documents.splice(di, 1)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+        </div>
+        <button @click="saveHotelInfo" :disabled="fileUploading" :class="['w-full font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
+      </div>
+    </div>
+
+    <!-- ================= 彈出視窗 Modal: 新增/編輯租車 ================= -->
+    <div v-if="showCarModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">{{ isEditCarMode ? '編輯租車資訊' : '新增租車資訊' }}</h3>
+          <button @click="showCarModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">租車公司/地點 <span class="text-red-500">*</span></label>
+            <input v-model="formCar.name" type="text" placeholder="例如: TOYOTA Rent a Car 新千歲機場店" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
+            <input v-model="formCar.bookingNo" type="text" placeholder="例如: R-88902312" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">取車時間</label>
+            <input v-model="formCar.pickupTime" type="text" placeholder="例如: Day 1 14:30" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
+            <input v-model="formCar.location" type="text" placeholder="不填則預設搜尋租車地點名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
+            <select v-model="formCar.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
+              <option value="現金">現金</option>
+              <option value="信用卡">信用卡</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">費用</label>
+              <input v-model.number="formCar.price" type="number" placeholder="例如: 8000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">幣別</label>
+              <select v-model="formCar.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+                <option value="JPY">日幣 JPY</option>
+                <option value="TWD">台幣 TWD</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="formCar.price && formCar.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formCar.price * jpyRate).toLocaleString() }}</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">相關文件 (租車確認單等，可多選)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formCar.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formCar.documents && formCar.documents.length" class="space-y-1.5">
+              <div v-for="(doc, di) in formCar.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
+                <button type="button" @click="formCar.documents.splice(di, 1)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">備註</label>
+            <textarea v-model="formCar.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2" placeholder="例如: 需年滿20歲、需國際駕照正本"></textarea>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button v-if="isEditCarMode" @click="deleteCar" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button @click="saveCar" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 彈出視窗 Modal: 新增/編輯 一日遊 ================= -->
+    <div v-if="showDayTourModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">{{ isEditDayTourMode ? '編輯一日遊' : '新增一日遊' }}</h3>
+          <button @click="showDayTourModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">名稱 <span class="text-red-500">*</span></label>
+            <input v-model="formDayTour.name" type="text" placeholder="例如: 富良野薰衣草一日遊" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
+            <input v-model="formDayTour.bookingNo" type="text" placeholder="例如: KKD-20260207-001" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">集合/出發時間</label>
+            <input v-model="formDayTour.time" type="text" placeholder="例如: Day 2 08:30 於飯店大廳集合" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
+            <input v-model="formDayTour.location" type="text" placeholder="不填則預設搜尋名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
+            <select v-model="formDayTour.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
+              <option value="現金">現金</option>
+              <option value="信用卡">信用卡</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">費用</label>
+              <input v-model.number="formDayTour.price" type="number" placeholder="例如: 3500" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">幣別</label>
+              <select v-model="formDayTour.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+                <option value="JPY">日幣 JPY</option>
+                <option value="TWD">台幣 TWD</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="formDayTour.price && formDayTour.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formDayTour.price * jpyRate).toLocaleString() }}</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">相關文件 (預約確認單、票券等，可多選)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formDayTour.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formDayTour.documents && formDayTour.documents.length" class="space-y-1.5">
+              <div v-for="(doc, di) in formDayTour.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
+                <button type="button" @click="formDayTour.documents.splice(di, 1)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">備註</label>
+            <textarea v-model="formDayTour.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2" placeholder="例如: 需自備護照、含中文導覽"></textarea>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button v-if="isEditDayTourMode" @click="deleteDayTour" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button @click="saveDayTour" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 彈出視窗 Modal: 新增/編輯 其他預約 ================= -->
+    <div v-if="showOtherBookingModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">{{ isEditOtherBookingMode ? '編輯其他預約' : '新增其他預約' }}</h3>
+          <button @click="showOtherBookingModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">名稱 <span class="text-red-500">*</span></label>
+            <input v-model="formOtherBooking.name" type="text" placeholder="例如: 白色戀人公園門票 / 溫泉券" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
+            <input v-model="formOtherBooking.bookingNo" type="text" placeholder="例如: TIX-20260207-001" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">時間</label>
+            <input v-model="formOtherBooking.time" type="text" placeholder="例如: Day 3 全日有效" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
+            <input v-model="formOtherBooking.location" type="text" placeholder="不填則預設搜尋名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
+            <select v-model="formOtherBooking.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
+              <option value="現金">現金</option>
+              <option value="信用卡">信用卡</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">費用</label>
+              <input v-model.number="formOtherBooking.price" type="number" placeholder="例如: 1000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">幣別</label>
+              <select v-model="formOtherBooking.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+                <option value="JPY">日幣 JPY</option>
+                <option value="TWD">台幣 TWD</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="formOtherBooking.price && formOtherBooking.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formOtherBooking.price * jpyRate).toLocaleString() }}</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">相關文件 (預約確認單、票券等，可多選)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formOtherBooking.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formOtherBooking.documents && formOtherBooking.documents.length" class="space-y-1.5">
+              <div v-for="(doc, di) in formOtherBooking.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
+                <button type="button" @click="formOtherBooking.documents.splice(di, 1)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">備註</label>
+            <textarea v-model="formOtherBooking.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button v-if="isEditOtherBookingMode" @click="deleteOtherBooking" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button @click="saveOtherBooking" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 彈出視窗 Modal: 附件清單 ================= -->
+    <div v-if="docListModal.show" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[55] flex items-center justify-center p-4" @click.self="docListModal.show = false">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-3 max-h-[70vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800 text-sm truncate pr-2">{{ docListModal.title }} · 附件</h3>
+          <button @click="docListModal.show = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-1.5 text-xs">
+          <button v-for="(doc, di) in docListModal.documents" :key="di" type="button" @click="viewDocument(doc)" class="w-full flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 hover:bg-ice-50">
+            <span class="truncate flex items-center gap-1.5 text-ice-700"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</span>
+            <i class="fa-solid fa-chevron-right text-slate-300"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 彈出視窗 Modal: 附件預覽 (文件/PDF，含下載) ================= -->
+    <div v-if="previewDoc" class="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4" @click.self="previewDoc = null">
+      <div class="bg-white rounded-2xl p-4 max-w-md w-full max-h-[85vh] overflow-y-auto space-y-3">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800 text-sm truncate pr-2">{{ previewDoc.name }}</h3>
+          <button @click="previewDoc = null" class="text-slate-400 flex-shrink-0"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div>
+          <img v-if="previewDoc.type && previewDoc.type.startsWith('image/')" :src="previewDoc.data" class="w-full rounded-xl">
+          <iframe v-else-if="previewDoc.type === 'application/pdf'" :src="previewDoc.data" class="w-full h-[65vh] rounded-xl border border-slate-200"></iframe>
+          <div v-else class="text-xs text-slate-500 text-center py-6">此檔案類型無法直接預覽，請下載後查看。</div>
+        </div>
+        <a :href="previewDoc.data" :download="previewDoc.name" class="block text-center bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">下載檔案</a>
+      </div>
+    </div>
+
+    <!-- ================= 彈出視窗 Modal: 購物照片圖庫 (左右滑動瀏覽，無下載) ================= -->
+    <div v-if="galleryModal.show" class="fixed inset-0 bg-black/85 z-[65] flex flex-col" @click.self="closeGallery">
+      <div class="flex justify-between items-center p-4 text-white flex-shrink-0">
+        <span class="text-sm font-medium">{{ galleryModal.index + 1 }} / {{ galleryModal.images.length }}</span>
+        <button @click="closeGallery" class="text-white"><i class="fa-solid fa-xmark text-2xl"></i></button>
+      </div>
+      <div class="flex-1 relative overflow-hidden flex items-center justify-center px-2"
+           @touchstart="galleryTouchStart"
+           @touchend="galleryTouchEnd">
+        <button v-if="galleryModal.images.length > 1" @click.stop="prevGalleryImage" class="absolute left-2 z-10 text-white bg-black/30 rounded-full w-9 h-9 flex items-center justify-center">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <img v-if="galleryModal.images[galleryModal.index]" :src="galleryModal.images[galleryModal.index].data" class="max-w-full max-h-full object-contain select-none" draggable="false">
+        <button v-if="galleryModal.images.length > 1" @click.stop="nextGalleryImage" class="absolute right-2 z-10 text-white bg-black/30 rounded-full w-9 h-9 flex items-center justify-center">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+      <div v-if="galleryModal.images.length > 1" class="flex justify-center gap-1.5 p-4 flex-shrink-0">
+        <span v-for="(img, gi) in galleryModal.images" :key="gi" @click.stop="galleryModal.index = gi"
+              :class="['w-1.5 h-1.5 rounded-full cursor-pointer transition-all', gi === galleryModal.index ? 'bg-white w-3' : 'bg-white/40']"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+  const { createApp, ref, computed, watch } = Vue;
+
+  createApp({
+    setup() {
+      // --- 1. LocalStorage 初始化與自動存檔工具 ---
+      const initData = (key, defaultVal) => {
+        try {
+          const saved = localStorage.getItem(key);
+          return saved ? JSON.parse(saved) : defaultVal;
+        } catch (e) {
+          console.error(`讀取 ${key} 失敗:`, e);
+          return defaultVal;
+        }
+      };
+
+      const setupWatcher = (reactiveRef, storageKey) => {
+        watch(reactiveRef, (newVal) => {
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(newVal));
+          } catch (e) {
+            if (e.name === 'QuotaExceededError') {
+              alert('儲存空間已滿 (5MB上限)！請刪除部分照片或附件。');
+            }
+          }
+        }, { deep: true });
+      };
+
+      // 當前頁面 Tab
+      const currentTab = ref('itinerary');
+      const tabs = [
+        { id: 'itinerary', name: '行程', icon: 'fa-solid fa-map-location-dot' },
+        { id: 'info', name: '資訊', icon: 'fa-solid fa-circle-info' },
+        { id: 'shopping', name: '購物', icon: 'fa-solid fa-basket-shopping' },
+        { id: 'expenses', name: '花費', icon: 'fa-solid fa-wallet' },
+        { id: 'settings', name: '設定', icon: 'fa-solid fa-gear' },
+      ];
+
+      // --- 2. 狀態與資料定義 (全面接入 LocalStorage) ---
+      
+      // 設定與封面
+      const bannerImage = ref(initData('trip_banner', 'https://images.unsplash.com/photo-1542051841857-5f90071e7989?q=80&w=1920&auto=format&fit=crop'));
+      const jpyRate = ref(initData('trip_jpyRate', 0.215)); // 1 JPY ≈ 0.215 TWD
+      setupWatcher(bannerImage, 'trip_banner');
+      setupWatcher(jpyRate, 'trip_jpyRate');
+      
+      // 主行程資料
+      const defaultItinerary = [
+        [
+          { id: 1, category: '航班', name: '前往新千歲機場', flightNo: 'BR116', depAirport: 'TPE 桃園', depTime: '08:40', arrAirport: 'CTS 新千歲', arrTime: '13:10', flightDuration: '3小時30分', location: 'New Chitose Airport', note: '記得填寫 Visit Japan Web', transitTime: '飯店接駁車 45分鐘', transitIcon: 'fa-solid fa-bus' },
+          { id: 2, category: '住宿', name: '札幌索拉利亞西鐵飯店 Check-in', openHours: '15:00後', location: 'Solaria Nishitetsu Hotel Sapporo', note: '近大通公園', transitTime: '步行 10分鐘', transitIcon: 'fa-solid fa-person-walking' },
+          { id: 3, category: '美食', name: 'GARAKU 湯咖哩', openHours: '11:30 - 21:00', location: 'Soup Curry GARAKU', note: '必點雞腿湯咖哩', transitTime: '', transitIcon: '' }
+        ],
+        [
+          { id: 4, category: '景點', name: '小樽運河', openHours: '24小時開放', ticket: '免費', location: 'Otaru Canal', note: '傍晚點燈超夢幻', transitTime: 'JR電車 35分鐘', transitIcon: 'fa-solid fa-train' },
+          { id: 5, category: '美食', name: '小樽政壽司', openHours: '11:00 - 21:00', location: 'Otaru Masazushi Main Shop', note: '需提前預約', transitTime: '', transitIcon: '' }
+        ],
+        [], [], []
+      ];
+      const itineraryData = ref(initData('trip_itinerary', defaultItinerary));
+      setupWatcher(itineraryData, 'trip_itinerary');
+
+      // 資訊分頁補充資料
+      const flightExtras = ref(initData('trip_flightExtras', {}));
+      const hotelExtras = ref(initData('trip_hotelExtras', {}));
+      const carRentals = ref(initData('trip_carRentals', [{ id: 1, name: 'TOYOTA Rent a Car', bookingNo: 'R-88902312', pickupTime: 'Day 1 14:30', location: 'TOYOTA Rent a Car Shin-Chitose', note: '', documents: [], price: null, currency: 'JPY', payMethod: '' }]));
+      const dayTours = ref(initData('trip_dayTours', []));
+      const otherBookings = ref(initData('trip_otherBookings', []));
+      setupWatcher(flightExtras, 'trip_flightExtras');
+      setupWatcher(hotelExtras, 'trip_hotelExtras');
+      setupWatcher(carRentals, 'trip_carRentals');
+      setupWatcher(dayTours, 'trip_dayTours');
+      setupWatcher(otherBookings, 'trip_otherBookings');
+
+      // 購物與花費資料
+      const shoppingList = ref(initData('trip_shopping', [
+        { id: 1, name: '六花亭 奶油夾心餅乾', location: '新千歲機場', quantity: 3, price: 780, currency: 'JPY', images: [], bought: false }
+      ]));
+      const expenses = ref(initData('trip_expenses', [
+        { id: 1, category: '交通', name: 'JR Welcome Pass', date: '2026-02-06', amount: 2000, currency: 'JPY', payMethod: '現金' }
+      ]));
+      setupWatcher(shoppingList, 'trip_shopping');
+      setupWatcher(expenses, 'trip_expenses');
+
+
+     // --- 3. 基礎邏輯與共用函數 (含 Canvas 圖片壓縮) ---
+      
+      // Canvas 圖片壓縮工具函數
+      const compressImage = (file, maxWidth = 800, quality = 0.7) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+              let width = img.width;
+              let height = img.height;
+
+              // 計算縮放比例
+              if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              }
+
+              // 建立 Canvas
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              
+              // 在 Canvas 上繪製縮放後的圖片
+              ctx.drawImage(img, 0, 0, width, height);
+
+              // 導出為 JPEG 格式以節省空間 (忽略原本的 png/webp，強制轉 jpeg)
+              const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+              resolve(compressedDataUrl);
+            };
+            img.onerror = (err) => reject(err);
+          };
+          reader.onerror = (err) => reject(err);
+          reader.readAsDataURL(file);
+        });
+      };
+
+      const bannerImageInput = ref('');
+      const showBannerModal = ref(false);
+      const openBannerModal = () => { bannerImageInput.value = ''; showBannerModal.value = true; };
+      
+      // 封面照片上傳 (使用壓縮，保留較高畫質 1024px)
+      const handleBannerUpload = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          if (file.type.startsWith('image/')) {
+            try {
+              bannerImageInput.value = await compressImage(file, 1024, 0.8);
+            } catch (error) {
+              alert('封面圖片處理失敗');
+            }
+          }
+        }
+      };
+      
+      const saveBannerImage = () => {
+        if (!bannerImageInput.value) return;
+        bannerImage.value = bannerImageInput.value;
+        showBannerModal.value = false;
+      };
+
+      const fileUploading = ref(false);
+      
+      // 多檔案上傳 (支援圖片自動壓縮、跳過 PDF)
+      const handleDocUploadMulti = async (e, docsArray) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        
+        fileUploading.value = true;
+
+        for (const file of files) {
+          try {
+            if (file.type.startsWith('image/')) {
+              // 是圖片：進行壓縮 (最大寬度 800px，品質 70%)
+              const compressedData = await compressImage(file, 800, 0.7);
+              docsArray.push({ name: file.name, data: compressedData, type: 'image/jpeg' });
+            } else {
+              // 非圖片 (例如 PDF)：維持原樣轉 Base64
+              const data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => resolve(event.target.result);
+                reader.onerror = (err) => reject(err);
+                reader.readAsDataURL(file);
+              });
+              // 檢查 PDF 大小，避免單檔過大直接塞爆
+              if (file.size > 1024 * 1024) { // 超過 1MB
+                alert(`警告：檔案 ${file.name} 超過 1MB，LocalStorage 可能會容量不足！`);
+              }
+              docsArray.push({ name: file.name, data: data, type: file.type });
+            }
+          } catch (error) {
+            alert('檔案處理失敗: ' + file.name);
+          }
+        }
+        
+        fileUploading.value = false;
+        e.target.value = ''; // 重置 input 讓下次可以選擇相同檔案
+      };
+
+      const previewDoc = ref(null);
+      const viewDocument = (doc) => { if (doc) previewDoc.value = doc; };
+      const docListModal = ref({ show: false, title: '', documents: [] });
+      const openDocList = (title, documents) => { docListModal.value = { show: true, title, documents: documents || [] }; };
+
+      const galleryModal = ref({ show: false, images: [], index: 0 });
+      const galleryTouchStartX = ref(0);
+      const openGallery = (images, index) => { if (images && images.length) galleryModal.value = { show: true, images, index: index || 0 }; };
+      const closeGallery = () => { galleryModal.value.show = false; };
+      const nextGalleryImage = () => { const len = galleryModal.value.images.length; if (len) galleryModal.value.index = (galleryModal.value.index + 1) % len; };
+      const prevGalleryImage = () => { const len = galleryModal.value.images.length; if (len) galleryModal.value.index = (galleryModal.value.index - 1 + len) % len; };
+      const galleryTouchStart = (e) => { galleryTouchStartX.value = e.touches[0].clientX; };
+      const galleryTouchEnd = (e) => {
+        const deltaX = e.changedTouches[0].clientX - galleryTouchStartX.value;
+        if (Math.abs(deltaX) > 40) { if (deltaX < 0) nextGalleryImage(); else prevGalleryImage(); }
+      };
+
+      // --- 4. 行程分頁 (Itinerary) ---
+      const selectedDateIndex = ref(0);
+      const dateList = [
+        { week: 'Fri', date: '2/6', full: '2026-02-06' }, { week: 'Sat', date: '2/7', full: '2026-02-07' },
+        { week: 'Sun', date: '2/8', full: '2026-02-08' }, { week: 'Mon', date: '2/9', full: '2026-02-09' },
+        { week: 'Tue', date: '2/10', full: '2026-02-10' },
+      ];
+      const weather = ref({ condition: '粉雪降雪中', temp: '-3°C', feelsLike: '-7°C', icon: 'fa-regular fa-snowflake' });
+      const categories = ['景點', '住宿', '美食', '購物', '航班', '其他'];
+      const selectedCategory = ref('全部');
+
+      const filteredItinerary = computed(() => {
+        const list = itineraryData.value[selectedDateIndex.value] || [];
+        if (selectedCategory.value === '全部') return list;
+        return list.filter(item => item.category === selectedCategory.value);
+      });
+
+      const openMap = (locationName) => {
+        if (!locationName) return;
+        const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
+        window.open(url, '_blank');
+      };
+
+      const moveItem = (index, direction) => {
+        const currentList = itineraryData.value[selectedDateIndex.value];
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= currentList.length) return;
+        const temp = currentList[index];
+        currentList[index] = currentList[newIndex];
+        currentList[newIndex] = temp;
+      };
+
+      const showItineraryModal = ref(false);
+      const isEditMode = ref(false);
+      const initFormItinerary = () => ({ id: null, name: '', category: '景點', openHours: '', ticket: '', note: '', location: '', flightNo: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '' });
+      const formItinerary = ref(initFormItinerary());
+
+      const openAddModal = () => { isEditMode.value = false; formItinerary.value = initFormItinerary(); showItineraryModal.value = true; };
+      const editItinerary = (item) => { isEditMode.value = true; formItinerary.value = { ...initFormItinerary(), ...item }; showItineraryModal.value = true; };
+      const saveItinerary = () => {
+        if (!formItinerary.value.name) return alert('請填寫「行程名稱」後再儲存');
+        if (!itineraryData.value[selectedDateIndex.value]) itineraryData.value[selectedDateIndex.value] = [];
+        const currentList = itineraryData.value[selectedDateIndex.value];
+        if (!formItinerary.value.location) formItinerary.value.location = formItinerary.value.name;
+        
+        if (isEditMode.value) {
+          const idx = currentList.findIndex(i => i.id === formItinerary.value.id);
+          if (idx !== -1) currentList[idx] = { ...formItinerary.value };
+        } else {
+          formItinerary.value.id = Date.now();
+          currentList.push({ ...formItinerary.value });
+        }
+        showItineraryModal.value = false;
+      };
+      const confirmDeleteItinerary = () => {
+        if (confirm('確定要刪除這個行程嗎？')) {
+          const currentList = itineraryData.value[selectedDateIndex.value];
+          itineraryData.value[selectedDateIndex.value] = currentList.filter(i => i.id !== formItinerary.value.id);
+          showItineraryModal.value = false;
+        }
+      };
+
+      // --- 5. 匯率與費用顯示 ---
+      const twdInput = ref(1000);
+      const twdToJpyInput = ref(Number((1 / jpyRate.value).toFixed(3)));
+      const saveJpyRate = () => {
+        const num = Number(twdToJpyInput.value);
+        if (!num || num <= 0) return alert('請輸入有效的匯率數字');
+        jpyRate.value = 1 / num;
+        alert('匯率已更新');
+      };
+
+      const priceDisplay = (price, currency) => {
+        const num = Number(price);
+        if (!price || isNaN(num)) return '';
+        if (currency === 'JPY') {
+          const twd = Math.round(num * jpyRate.value);
+          return `¥ ${num.toLocaleString()} (約 NT$ ${twd.toLocaleString()})`;
+        }
+        return `NT$ ${num.toLocaleString()}`;
+      };
+
+      const payMethodIcon = (method) => {
+        const map = { '現金': 'fa-solid fa-coins text-slate-500', '信用卡': 'fa-solid fa-credit-card text-slate-500' };
+        return map[method] || '';
+      };
+
+      const validatePriceAndPayMethod = (obj) => {
+        if (obj.payMethod && !obj.price) { alert('已選擇付款方式，請務必填寫費用'); return false; }
+        if (obj.price && !obj.payMethod) { alert('已填寫費用，請務必選擇付款方式'); return false; }
+        return true;
+      };
+
+      // --- 6. 資訊分頁 (Info) 邏輯 ---
+      const itineraryFlights = computed(() => {
+        const list = [];
+        itineraryData.value.forEach((dayItems, dayIdx) => (dayItems || []).forEach(item => { if (item.category === '航班') list.push({ ...item, dayIndex: dayIdx }); }));
+        return list;
+      });
+      const flightsInfo = computed(() => itineraryFlights.value.map(f => {
+        const extra = flightExtras.value[f.id] || {};
+        return { id: f.id, dayIndex: f.dayIndex, label: f.name + (f.flightNo ? ` (${f.flightNo})` : ''), duration: f.flightDuration || '未填寫飛行時間', route: `${f.depAirport || '出發地'} ${f.depTime || '--:--'} ➔ ${f.arrAirport || '目的地'} ${f.arrTime || '--:--'}`, documents: extra.documents || [], price: extra.price || null, currency: extra.currency || 'JPY', payMethod: extra.payMethod || '' };
+      }));
+      const activeFlightInfo = ref({ label: '', route: '' });
+      const formFlightDoc = ref({ id: null, documents: [], price: null, currency: 'JPY', payMethod: '' });
+      const showFlightModal = ref(false);
+      const editFlightInfo = (f) => { activeFlightInfo.value = f; formFlightDoc.value = { id: f.id, documents: f.documents ? [...f.documents] : [], price: f.price || null, currency: f.currency || 'JPY', payMethod: f.payMethod || '' }; showFlightModal.value = true; };
+      const saveFlightInfo = () => {
+        if (!validatePriceAndPayMethod(formFlightDoc.value)) return;
+        flightExtras.value[formFlightDoc.value.id] = { documents: formFlightDoc.value.documents, price: formFlightDoc.value.price, currency: formFlightDoc.value.currency, payMethod: formFlightDoc.value.payMethod };
+        showFlightModal.value = false;
+      };
+
+      const itineraryHotels = computed(() => {
+        const list = [];
+        itineraryData.value.forEach((dayItems, dayIdx) => (dayItems || []).forEach(item => { if (item.category === '住宿') list.push({ ...item, dayIndex: dayIdx }); }));
+        return list;
+      });
+      const hotelsInfo = computed(() => itineraryHotels.value.map(h => {
+        const extra = hotelExtras.value[h.id] || {};
+        return { id: h.id, dayIndex: h.dayIndex, name: h.name, phone: extra.phone || '', address: extra.address || '', location: extra.location || h.location || h.name, documents: extra.documents || [], price: extra.price || null, currency: extra.currency || 'JPY', payMethod: extra.payMethod || '' };
+      }));
+      const showHotelModal = ref(false);
+      const formHotelInfo = ref({ id: null, name: '', phone: '', address: '', location: '', documents: [], price: null, currency: 'JPY', payMethod: '' });
+      const editHotelInfo = (h) => { formHotelInfo.value = { ...h, documents: h.documents ? [...h.documents] : [] }; showHotelModal.value = true; };
+      const saveHotelInfo = () => {
+        if (!validatePriceAndPayMethod(formHotelInfo.value)) return;
+        hotelExtras.value[formHotelInfo.value.id] = { phone: formHotelInfo.value.phone, address: formHotelInfo.value.address, location: formHotelInfo.value.location, documents: formHotelInfo.value.documents, price: formHotelInfo.value.price, currency: formHotelInfo.value.currency, payMethod: formHotelInfo.value.payMethod };
+        showHotelModal.value = false;
+      };
+
+      // 租車、一日遊、其他預約 的 CRUD 邏輯 (簡化共用模式)
+      const createCrud = (dataRef, initObj) => {
+        const showModal = ref(false);
+        const isEditMode = ref(false);
+        const formObj = ref(initObj());
+        const openAdd = () => { isEditMode.value = false; formObj.value = initObj(); showModal.value = true; };
+        const edit = (item) => { isEditMode.value = true; formObj.value = { ...initObj(), ...item, documents: item.documents ? [...item.documents] : [] }; showModal.value = true; };
+        const save = () => {
+          if (!formObj.value.name) return alert('請填寫必填欄位');
+          if (!validatePriceAndPayMethod(formObj.value)) return;
+          if (!formObj.value.location) formObj.value.location = formObj.value.name;
+          if (isEditMode.value) {
+            const idx = dataRef.value.findIndex(i => i.id === formObj.value.id);
+            if (idx !== -1) dataRef.value[idx] = { ...formObj.value };
+          } else {
+            formObj.value.id = Date.now();
+            dataRef.value.push({ ...formObj.value });
+          }
+          showModal.value = false;
+        };
+        const del = () => {
+          if (confirm('確定要刪除這筆資訊嗎？')) {
+            dataRef.value = dataRef.value.filter(i => i.id !== formObj.value.id);
+            showModal.value = false;
+          }
+        };
+        return { showModal, isEditMode, formObj, openAdd, edit, save, del };
+      };
+
+      const initCar = () => ({ id: null, name: '', bookingNo: '', pickupTime: '', location: '', note: '', documents: [], price: null, currency: 'JPY', payMethod: '' });
+      const car = createCrud(carRentals, initCar);
+      const initDayTour = () => ({ id: null, name: '', bookingNo: '', time: '', location: '', note: '', documents: [], price: null, currency: 'JPY', payMethod: '' });
+      const tour = createCrud(dayTours, initDayTour);
+      const initOther = () => ({ id: null, name: '', bookingNo: '', time: '', location: '', note: '', documents: [], price: null, currency: 'JPY', payMethod: '' });
+      const other = createCrud(otherBookings, initOther);
+
+
+      // --- 7. 購物分頁 (Shopping) ---
+      const showShoppingModal = ref(false);
+      const isEditShoppingMode = ref(false);
+      const initFormShopping = () => ({ id: null, name: '', location: '', quantity: 1, price: null, currency: 'JPY', images: [], bought: false });
+      const formShopping = ref(initFormShopping());
+
+      const openAddShoppingModal = () => { isEditShoppingMode.value = false; formShopping.value = initFormShopping(); showShoppingModal.value = true; };
+      const editShoppingItem = (item) => { isEditShoppingMode.value = true; formShopping.value = { ...initFormShopping(), ...item, images: item.images ? [...item.images] : [] }; showShoppingModal.value = true; };
+      const saveShoppingItem = () => {
+        if (!formShopping.value.name) return alert('請填寫「商品名稱」');
+        if (isEditShoppingMode.value) {
+          const idx = shoppingList.value.findIndex(i => i.id === formShopping.value.id);
+          if (idx !== -1) shoppingList.value[idx] = { ...formShopping.value };
+        } else {
+          formShopping.value.id = Date.now();
+          shoppingList.value.push({ ...formShopping.value });
+        }
+        showShoppingModal.value = false;
+      };
+      const confirmDeleteShoppingItem = (id) => {
+        if (confirm('確定要刪除這項購物清單項目嗎？')) {
+          shoppingList.value = shoppingList.value.filter(item => item.id !== id);
+          showShoppingModal.value = false;
+        }
+      };
+
+      let shoppingCardRefs = [];
+      const setShoppingCardRef = (el, idx) => { if (el) shoppingCardRefs[idx] = el; };
+      const draggingShopping = ref({ active: false, index: -1, offsetY: 0, startY: 0 });
+      const onGripPointerMove = (e) => {
+        const drag = draggingShopping.value;
+        if (!drag.active) return;
+        const deltaY = e.clientY - drag.startY;
+        drag.offsetY = deltaY;
+        const idx = drag.index;
+        const el = shoppingCardRefs[idx];
+        if (!el) return;
+        const height = el.offsetHeight + 12;
+        if (deltaY > height * 0.55 && idx < shoppingList.value.length - 1) {
+          const list = shoppingList.value;
+          [list[idx], list[idx + 1]] = [list[idx + 1], list[idx]];
+          drag.index = idx + 1;
+          drag.offsetY = deltaY - height;
+          drag.startY = e.clientY - drag.offsetY;
+        } else if (deltaY < -height * 0.55 && idx > 0) {
+          const list = shoppingList.value;
+          [list[idx], list[idx - 1]] = [list[idx - 1], list[idx]];
+          drag.index = idx - 1;
+          drag.offsetY = deltaY + height;
+          drag.startY = e.clientY - drag.offsetY;
+        }
+      };
+      const onGripPointerUp = () => { draggingShopping.value = { active: false, index: -1, offsetY: 0, startY: 0 }; document.removeEventListener('pointermove', onGripPointerMove); document.removeEventListener('pointerup', onGripPointerUp); };
+      const onGripPointerDown = (index, e) => { e.preventDefault(); draggingShopping.value = { active: true, index, offsetY: 0, startY: e.clientY }; document.addEventListener('pointermove', onGripPointerMove); document.addEventListener('pointerup', onGripPointerUp); };
+
+      // --- 8. 花費分頁 (Expenses) ---
+      const showExpenseModal = ref(false);
+      const isEditExpenseMode = ref(false);
+      const initFormExpense = () => ({ id: null, category: '飲食', name: '', amount: null, currency: 'JPY', payMethod: '現金', date: '' });
+      const formExpense = ref(initFormExpense());
+
+      const toJPY = (amount, currency) => {
+        const num = Number(amount) || 0;
+        return currency === 'TWD' ? Math.round(num / jpyRate.value) : num;
+      };
+
+      const autoExpenses = computed(() => {
+        const list = [];
+        flightsInfo.value.forEach(f => { if (f.price && f.payMethod) list.push({ key: 'flight-' + f.id, id: f.id, category: '交通', icon: 'fa-solid fa-plane', name: f.label, amount: f.price, currency: f.currency, payMethod: f.payMethod, dateLabel: 'Day ' + (f.dayIndex + 1), auto: true }); });
+        hotelsInfo.value.forEach(h => { if (h.price && h.payMethod) list.push({ key: 'hotel-' + h.id, id: h.id, category: '住宿', icon: 'fa-solid fa-hotel', name: h.name, amount: h.price, currency: h.currency, payMethod: h.payMethod, dateLabel: 'Day ' + (h.dayIndex + 1), auto: true }); });
+        carRentals.value.forEach(c => { if (c.price && c.payMethod) list.push({ key: 'car-' + c.id, id: c.id, category: '交通', icon: 'fa-solid fa-car', name: c.name, amount: c.price, currency: c.currency, payMethod: c.payMethod, dateLabel: c.pickupTime, auto: true }); });
+        dayTours.value.forEach(t => { if (t.price && t.payMethod) list.push({ key: 'tour-' + t.id, id: t.id, category: '門票', icon: 'fa-solid fa-person-hiking', name: t.name, amount: t.price, currency: t.currency, payMethod: t.payMethod, dateLabel: t.time, auto: true }); });
+        otherBookings.value.forEach(b => { if (b.price && b.payMethod) list.push({ key: 'booking-' + b.id, id: b.id, category: '其他', icon: 'fa-solid fa-ticket', name: b.name, amount: b.price, currency: b.currency, payMethod: b.payMethod, dateLabel: b.time, auto: true }); });
+        return list;
+      });
+
+      const allExpenses = computed(() => {
+        const manual = expenses.value.map(e => ({ ...e, key: 'manual-' + e.id, dateLabel: e.date, auto: false }));
+        return [...manual, ...autoExpenses.value];
+      });
+
+      const totalExpensesJPY = computed(() => allExpenses.value.reduce((sum, e) => sum + toJPY(e.amount, e.currency), 0));
+
+      const openAddExpenseModal = () => { isEditExpenseMode.value = false; formExpense.value = initFormExpense(); showExpenseModal.value = true; };
+      const editExpense = (exp) => {
+        if (exp.auto) return;
+        isEditExpenseMode.value = true;
+        formExpense.value = { id: exp.id, category: exp.category, name: exp.name, amount: exp.amount, currency: exp.currency || 'JPY', payMethod: exp.payMethod, date: exp.date };
+        showExpenseModal.value = true;
+      };
+      const saveExpense = () => {
+        if (!formExpense.value.name || !formExpense.value.amount) return alert('請填寫消費名稱與金額');
+        if (isEditExpenseMode.value) {
+          const idx = expenses.value.findIndex(e => e.id === formExpense.value.id);
+          if (idx !== -1) expenses.value[idx] = { ...expenses.value[idx], ...formExpense.value };
+        } else {
+          expenses.value.unshift({ id: Date.now(), ...formExpense.value, date: new Date().toISOString().split('T')[0] });
+        }
+        showExpenseModal.value = false;
+      };
+      const confirmDeleteExpense = (id) => {
+        if (confirm('確定要刪除這筆花費紀錄嗎？')) {
+          expenses.value = expenses.value.filter(e => e.id !== id);
+          showExpenseModal.value = false;
+        }
+      };
+      const getExpenseIcon = (cat) => {
+        const map = { '交通': 'fa-solid fa-bus', '飲食': 'fa-solid fa-utensils', '住宿': 'fa-solid fa-hotel', '門票': 'fa-solid fa-ticket', '購物': 'fa-solid fa-bag-shopping', '其他': 'fa-solid fa-coins' };
+        return map[cat] || 'fa-solid fa-coins';
+      };
+
+      const getCategoryBadgeClass = (cat) => {
+        const map = { '景點': 'bg-emerald-100 text-emerald-700', '住宿': 'bg-indigo-100 text-indigo-700', '美食': 'bg-amber-100 text-amber-700', '購物': 'bg-pink-100 text-pink-700', '航班': 'bg-slate-800 text-white', '其他': 'bg-slate-100 text-slate-700' };
+        return map[cat] || 'bg-slate-100 text-slate-700';
+      };
+
+      // --- 9. 資料備份與還原 (匯出 / 匯入 JSON) ---
+      const fileInputRef = ref(null);
+
+      // 需要備份的 localStorage Key 清單
+      const storageKeys = [
+        'trip_banner', 'trip_jpyRate', 'trip_itinerary', 
+        'trip_flightExtras', 'trip_hotelExtras', 'trip_carRentals', 
+        'trip_dayTours', 'trip_otherBookings', 'trip_shopping', 'trip_expenses'
+      ];
+
+      // 匯出功能
+      const exportData = () => {
+        const backup = {};
+        // 將目前的 localStorage 資料通通打包
+        storageKeys.forEach(key => {
+          const data = localStorage.getItem(key);
+          if (data) backup[key] = data;
+        });
+
+        // 轉成 JSON 檔案
+        const dataStr = JSON.stringify(backup);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+  
+        // 建立虛擬的 a 標籤來觸發下載
+        const link = document.createElement('a');
+        link.href = url;
+        const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
+        link.download = `TripBackup_${date}.json`; // 例如：TripBackup_20260901.json
+  
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      };
+
+      // 觸發隱藏的上傳按鈕
+      const triggerImport = () => {
+        if (fileInputRef.value) fileInputRef.value.click();
+      };
+
+      // 匯入功能
+      const importData = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const imported = JSON.parse(e.target.result);
+      
+            // 確保至少有一把我們的 Key，當作檔案驗證
+            const hasValidKey = storageKeys.some(key => Object.keys(imported).includes(key));
+            if (!hasValidKey) throw new Error('檔案格式不符');
+
+            if (confirm('警告：還原資料將會「完全覆蓋」目前的行程與花費紀錄！\n確定要繼續嗎？')) {
+              // 寫入 localStorage
+              for (const key in imported) {
+                if (storageKeys.includes(key) && imported[key]) {
+                  localStorage.setItem(key, imported[key]);
+                }
+              }
+              alert('資料還原成功！系統即將重新載入。');
+              window.location.reload(); // 重新整理網頁以套用最新資料
+            }
+          } catch (error) {
+            alert('檔案讀取失敗！請確認上傳的是正確的備份檔案 (.json)。');
+          }
+          event.target.value = ''; // 重置 input 讓下次可以選擇相同檔案
+        };
+        reader.readAsText(file);
+      };      
+
+      return {
+        currentTab, tabs, dateList, selectedDateIndex, weather, categories, selectedCategory,
+        filteredItinerary, openMap, moveItem, twdInput, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
+        isEditShoppingMode, openAddShoppingModal, editShoppingItem, saveShoppingItem, confirmDeleteShoppingItem,
+        setShoppingCardRef, draggingShopping, onGripPointerDown,
+        expenses, showExpenseModal, formExpense, isEditExpenseMode,
+        allExpenses, autoExpenses, totalExpensesJPY, openAddExpenseModal, editExpense, saveExpense, confirmDeleteExpense,
+        getExpenseIcon, showItineraryModal, isEditMode,
+        formItinerary, openAddModal, editItinerary, saveItinerary, confirmDeleteItinerary, getCategoryBadgeClass,
+        bannerImage, bannerImageInput, showBannerModal, openBannerModal, handleBannerUpload, saveBannerImage, handleDocUploadMulti, fileUploading,
+        twdToJpyInput, saveJpyRate,
+        previewDoc, viewDocument, docListModal, openDocList,
+        galleryModal, openGallery, closeGallery, nextGalleryImage, prevGalleryImage, galleryTouchStart, galleryTouchEnd,
+        flightsInfo, activeFlightInfo, formFlightDoc, showFlightModal, editFlightInfo, saveFlightInfo,
+        hotelsInfo, formHotelInfo, showHotelModal, editHotelInfo, saveHotelInfo,
+        carRentals, showCarModal: car.showModal, isEditCarMode: car.isEditMode, formCar: car.formObj, openAddCarModal: car.openAdd, editCar: car.edit, saveCar: car.save, deleteCar: car.del,
+        dayTours, showDayTourModal: tour.showModal, isEditDayTourMode: tour.isEditMode, formDayTour: tour.formObj, openAddDayTourModal: tour.openAdd, editDayTour: tour.edit, saveDayTour: tour.save, deleteDayTour: tour.del,
+        otherBookings, showOtherBookingModal: other.showModal, isEditOtherBookingMode: other.isEditMode, formOtherBooking: other.formObj, openAddOtherBookingModal: other.openAdd, editOtherBooking: other.edit, saveOtherBooking: other.save, deleteOtherBooking: other.del,
+        fileInputRef, exportData, triggerImport, importData
+      };
+    }
+  }).mount('#app');
+</script>
+</body>
+</html>
