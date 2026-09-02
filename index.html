@@ -554,6 +554,27 @@
           </button>
         </div>
 
+        <!-- 儲存空間使用量 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-database text-ice-600"></i> 儲存空間使用量
+          </h2>
+          <template v-if="storageInfo.supported">
+            <div class="flex justify-between text-xs text-slate-600 mb-1.5">
+              <span>已使用 {{ formatBytes(storageInfo.usage) }}</span>
+              <span>總額度約 {{ formatBytes(storageInfo.quota) }}</span>
+            </div>
+            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full bg-ice-600 rounded-full transition-all"
+                  :style="{ width: Math.min(100, (storageInfo.usage / storageInfo.quota) * 100) + '%' }"></div>
+            </div>
+            <button @click="checkStorageUsage" class="text-[11px] text-ice-600 mt-2 flex items-center gap-1">
+              <i class="fa-solid fa-rotate"></i> 重新整理
+            </button>
+          </template>
+          <div v-else class="text-xs text-slate-400">此瀏覽器不支援儲存空間查詢</div>
+        </div>
+
 
         <!-- 資料備份與還原 -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
@@ -1900,7 +1921,37 @@
           event.target.value = '';
         };
         reader.readAsText(file);
-      };  
+      }; 
+
+      const storageInfo = ref({ usage: 0, quota: 0, supported: true });
+
+      const checkStorageUsage = async () => {
+        if (!navigator.storage || !navigator.storage.estimate) {
+          storageInfo.value.supported = false;
+          return;
+        }
+        const { usage, quota } = await navigator.storage.estimate();
+        storageInfo.value = { usage, quota, supported: true };
+      };
+
+      const formatBytes = (bytes) => {
+        if (!bytes) return '0 MB';
+        const mb = bytes / (1024 * 1024);
+        return mb >= 1024 ? (mb / 1024).toFixed(2) + ' GB' : mb.toFixed(2) + ' MB';
+      };
+
+      // 進入設定分頁時自動檢查一次
+      watch(currentTab, (tab) => { if (tab === 'settings') checkStorageUsage(); });
+
+      const localStorageUsageKB = computed(() => {
+        let total = 0;
+        for (const key in localStorage) {
+          if (localStorage.hasOwnProperty(key)) {
+            total += (localStorage[key].length + key.length) * 2; // UTF-16，每字元約2 bytes
+          }
+        }
+        return (total / 1024).toFixed(1);
+      });
 
       return {
         currentTab, tabs, dateList, selectedDateIndex, weather, categories, selectedCategory,
