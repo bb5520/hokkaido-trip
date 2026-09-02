@@ -1825,7 +1825,7 @@
             const hasValidKey = storageKeys.some(key => Object.keys(imported).includes(key));
             if (!hasValidKey) throw new Error('檔案格式不符');
 
-            if (confirm('警告：還原資料將會「完全覆蓋」目前的行程與花費紀錄！\n確定要繼續嗎？')) {
+            if (confirm('警告：還原資料將會「完全覆蓋」目前的行程、資訊、購物、花費以及設定！\n確定要繼續嗎？')) {
               for (const key in imported) {
                 if (storageKeys.includes(key) && imported[key]) {
                   localStorage.setItem(key, imported[key]);
