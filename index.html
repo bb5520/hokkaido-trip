@@ -6,13 +6,26 @@
   <title>北海道冰雪之旅 - Trip App</title>
   
   <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/js/tailwind-play.js"></script>
   <!-- Vue 3 -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="assets/js/vue.global.prod.js"></script>
   <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="assets/css/all.min.css" />
   <!-- Google Fonts: Noto Sans TC & Zen Maru Gothic (日系圓潤感) -->
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/fonts.css" />
+
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: https://images.unsplash.com;
+    font-src 'self';
+    frame-src 'self' data:;
+    connect-src 'self';
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+  ">
 
   <!-- 讓瀏覽器知道這是一個可以安裝的 Web App -->
   <link rel="manifest" href="manifest.json" />
@@ -174,13 +187,13 @@
               
               <!-- 頂部類別標籤與操作 -->
               <div class="flex justify-between items-start mb-2">
-                <div class="flex items-center gap-2">
-                  <span :class="getCategoryBadgeClass(item.category)" class="px-2 py-0.5 rounded-md text-[11px] font-bold">
-                    {{ item.category }}
-                  </span>
-                  <h3 class="font-bold text-slate-800 text-base">{{ item.name }}</h3>
-                </div>
-                <div class="flex items-center space-x-1">
+                <div class="flex items-start gap-2 min-w-0 flex-1">
+                    <span :class="getCategoryBadgeClass(item.category)" class="px-2 py-0.5 rounded-md text-[11px] font-bold flex-shrink-0 whitespace-nowrap mt-0.5">
+                      {{ item.category }}
+                    </span>
+                    <h3 class="font-bold text-slate-800 text-base min-w-0">{{ item.name }}</h3>
+                  </div>
+                  <div class="flex items-center space-x-1 flex-shrink-0">
                   <!-- 上下移動拖曳按鈕 (模擬拖曳) -->
                   <button @click.stop="moveItem(idx, -1)" class="p-1 text-slate-300 hover:text-ice-600"><i class="fa-solid fa-chevron-up text-xs"></i></button>
                   <button @click.stop="moveItem(idx, 1)" class="p-1 text-slate-300 hover:text-ice-600"><i class="fa-solid fa-chevron-down text-xs"></i></button>
@@ -214,7 +227,7 @@
 
       <!-- ================= 2. 資訊 Tab ================= -->
       <section v-if="currentTab === 'info'" class="space-y-4">
-
+        
         <!-- 航班資訊 (同步自「行程」分頁，內容唯讀，僅可加附件) -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
           <div class="flex items-center justify-between mb-3">
@@ -231,6 +244,12 @@
                 <span class="text-ice-600">{{ f.duration }}</span>
               </div>
               <div class="text-slate-600">{{ f.route }}</div>
+              <div v-if="f.baggageChecked || f.baggageCarryon" class="text-slate-500 mt-1">
+                <i class="fa-solid fa-suitcase-rolling mr-1"></i>
+                <span v-if="f.baggageChecked">託運 {{ f.baggageChecked }}kg</span>
+                <span v-if="f.baggageChecked && f.baggageCarryon"> · </span>
+                <span v-if="f.baggageCarryon">隨身 {{ f.baggageCarryon }}kg</span>
+              </div>
               <div v-if="f.price || f.payMethod" class="flex items-center gap-1.5 mt-1.5 pr-8">
                 <i v-if="f.payMethod" :class="payMethodIcon(f.payMethod)" :title="f.payMethod"></i>
                 <span v-if="f.price" class="text-ice-700 font-bold">{{ priceDisplay(f.price, f.currency) }}</span>
@@ -797,6 +816,16 @@
             <div class="font-bold text-slate-700 mb-1">{{ activeFlightInfo.label }}</div>
             <div class="text-slate-500">{{ activeFlightInfo.route }}</div>
             <div class="text-[10px] mt-2 text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>如需修改航班內容，請至「行程」分頁編輯該航班</div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">託運行李 (kg)</label>
+              <input v-model="formFlightDoc.baggageChecked" type="text" placeholder="例如: 23" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">隨身行李 (kg)</label>
+              <input v-model="formFlightDoc.baggageCarryon" type="text" placeholder="例如: 7" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">付款方式</label>
@@ -1466,15 +1495,45 @@
       });
       const flightsInfo = computed(() => itineraryFlights.value.map(f => {
         const extra = flightExtras.value[f.id] || {};
-        return { id: f.id, dayIndex: f.dayIndex, label: f.name + (f.flightNo ? ` (${f.flightNo})` : ''), duration: f.flightDuration || '未填寫飛行時間', route: `${f.depAirport || '出發地'} ${f.depTime || '--:--'} ➔ ${f.arrAirport || '目的地'} ${f.arrTime || '--:--'}`, documents: extra.documents || [], price: extra.price || null, currency: extra.currency || 'JPY', payMethod: extra.payMethod || '' };
+        return { 
+          id: f.id, dayIndex: f.dayIndex, 
+          label: f.name + (f.flightNo ? ` (${f.flightNo})` : ''), 
+          duration: f.flightDuration || '未填寫飛行時間', 
+          route: `${f.depAirport || '出發地'} ${f.depTime || '--:--'} ➔ ${f.arrAirport || '目的地'} ${f.arrTime || '--:--'}`, 
+          documents: extra.documents || [], 
+          price: extra.price || null, 
+          currency: extra.currency || 'JPY', 
+          payMethod: extra.payMethod || '',
+          baggageChecked: extra.baggageChecked || '',
+          baggageCarryon: extra.baggageCarryon || ''
+        };
       }));
       const activeFlightInfo = ref({ label: '', route: '' });
-      const formFlightDoc = ref({ id: null, documents: [], price: null, currency: 'JPY', payMethod: '' });
+      const formFlightDoc = ref({ id: null, documents: [], price: null, currency: 'JPY', payMethod: '', baggageChecked: '', baggageCarryon: '' });
       const showFlightModal = ref(false);
-      const editFlightInfo = (f) => { activeFlightInfo.value = f; formFlightDoc.value = { id: f.id, documents: f.documents ? [...f.documents] : [], price: f.price || null, currency: f.currency || 'JPY', payMethod: f.payMethod || '' }; showFlightModal.value = true; };
+      const editFlightInfo = (f) => { 
+        activeFlightInfo.value = f; 
+        formFlightDoc.value = { 
+          id: f.id, 
+          documents: f.documents ? [...f.documents] : [], 
+          price: f.price || null, 
+          currency: f.currency || 'JPY', 
+          payMethod: f.payMethod || '',
+          baggageChecked: f.baggageChecked || '',
+          baggageCarryon: f.baggageCarryon || ''
+        }; 
+        showFlightModal.value = true; 
+      };
       const saveFlightInfo = () => {
         if (!validatePriceAndPayMethod(formFlightDoc.value)) return;
-        flightExtras.value[formFlightDoc.value.id] = { documents: formFlightDoc.value.documents, price: formFlightDoc.value.price, currency: formFlightDoc.value.currency, payMethod: formFlightDoc.value.payMethod };
+        flightExtras.value[formFlightDoc.value.id] = { 
+          documents: formFlightDoc.value.documents, 
+          price: formFlightDoc.value.price, 
+          currency: formFlightDoc.value.currency, 
+          payMethod: formFlightDoc.value.payMethod,
+          baggageChecked: formFlightDoc.value.baggageChecked,
+          baggageCarryon: formFlightDoc.value.baggageCarryon
+        };
         showFlightModal.value = false;
       };
 
@@ -1649,6 +1708,38 @@
         return map[cat] || 'bg-slate-100 text-slate-700';
       };
 
+      // ---- 備份檔加密工具 (Web Crypto API，瀏覽器原生，不需額外函式庫) ----
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      const bufToBase64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const base64ToBuf = (b64) => Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+
+      const deriveKey = async (password, salt) => {
+        const keyMaterial = await crypto.subtle.importKey(
+          'raw', encoder.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
+        );
+        return crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' },
+          keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+        );
+      };
+
+      const encryptBackup = async (plainTextJson, password) => {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const key = await deriveKey(password, salt);
+        const cipherBuf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode      (plainTextJson));
+        return { encrypted: true, v: 1, salt: bufToBase64(salt), iv: bufToBase64(iv), data:             bufToBase64(cipherBuf) };
+      };
+
+      const decryptBackup = async (payload, password) => {
+        const salt = base64ToBuf(payload.salt);
+        const iv = base64ToBuf(payload.iv);
+        const key = await deriveKey(password, salt);
+        const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, base64ToBuf      (payload.data));
+        return decoder.decode(plainBuf);
+      };
+
       // --- 9. 資料備份與還原 (匯出 / 匯入 JSON) ---
       const fileInputRef = ref(null);
 
@@ -1660,25 +1751,41 @@
       ];
 
       // 匯出功能
-      const exportData = () => {
+      const exportData = async () => {
         const backup = {};
-        // 將目前的 localStorage 資料通通打包
         storageKeys.forEach(key => {
           const data = localStorage.getItem(key);
           if (data) backup[key] = data;
         });
+        const plainTextJson = JSON.stringify(backup);
 
-        // 轉成 JSON 檔案
-        const dataStr = JSON.stringify(backup);
-        const blob = new Blob([dataStr], { type: 'application/json' });
+       const password = prompt('請設定一組密碼來加密此備份檔（內含護照、機票等敏感資訊）。\n若不想            加密，請直接按「取消」。');
+
+        let finalDataStr, filenameSuffix;
+        if (password) {
+          try {
+            finalDataStr = JSON.stringify(await encryptBackup(plainTextJson, password));
+            filenameSuffix = '_encrypted';
+          } catch (e) {
+            alert('加密失敗，將改為匯出未加密版本。');
+            finalDataStr = plainTextJson; filenameSuffix = '';
+          }
+        } else {
+          const proceed = confirm(
+            '⚠️ 警告：此備份檔含有護照、機票、訂房確認單等敏感資訊，且【未加密】。\n' +
+            '請勿隨意透過雲端同步、社群軟體傳送此檔案，並於使用後妥善保管或刪除。\n\n' +
+            '確定要繼續匯出未加密版本嗎？'
+          );
+          if (!proceed) return;
+          finalDataStr = plainTextJson; filenameSuffix = '';
+        }
+
+        const blob = new Blob([finalDataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-  
-        // 建立虛擬的 a 標籤來觸發下載
         const link = document.createElement('a');
         link.href = url;
         const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
-        link.download = `TripBackup_${date}.json`; // 例如：TripBackup_20260901.json
-  
+        link.download = `TripBackup_${date}${filenameSuffix}.json`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -1696,31 +1803,44 @@
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
           try {
-            const imported = JSON.parse(e.target.result);
-      
-            // 確保至少有一把我們的 Key，當作檔案驗證
+            const raw = JSON.parse(e.target.result);
+            let imported;
+
+            if (raw && raw.encrypted === true) {
+              const password = prompt('這是一份加密備份檔，請輸入密碼以還原：');
+              if (!password) { event.target.value = ''; return; }
+              try {
+                imported = JSON.parse(await decryptBackup(raw, password));
+              } catch (decErr) {
+                alert('密碼錯誤或檔案已損毀，無法還原。');
+                event.target.value = '';
+                return;
+              }
+            } else {
+              imported = raw;
+            }
+
             const hasValidKey = storageKeys.some(key => Object.keys(imported).includes(key));
             if (!hasValidKey) throw new Error('檔案格式不符');
 
             if (confirm('警告：還原資料將會「完全覆蓋」目前的行程與花費紀錄！\n確定要繼續嗎？')) {
-              // 寫入 localStorage
               for (const key in imported) {
                 if (storageKeys.includes(key) && imported[key]) {
                   localStorage.setItem(key, imported[key]);
                 }
               }
               alert('資料還原成功！系統即將重新載入。');
-              window.location.reload(); // 重新整理網頁以套用最新資料
+              window.location.reload();
             }
           } catch (error) {
             alert('檔案讀取失敗！請確認上傳的是正確的備份檔案 (.json)。');
           }
-          event.target.value = ''; // 重置 input 讓下次可以選擇相同檔案
+          event.target.value = '';
         };
         reader.readAsText(file);
-      };      
+      };  
 
       return {
         currentTab, tabs, dateList, selectedDateIndex, weather, categories, selectedCategory,
