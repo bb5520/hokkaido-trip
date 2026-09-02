@@ -14,6 +14,19 @@
   <!-- Google Fonts: Noto Sans TC & Zen Maru Gothic (日系圓潤感) -->
   <link rel="stylesheet" href="assets/css/fonts.css" />
 
+  <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: https://images.unsplash.com;
+  font-src 'self';
+  frame-src 'self' data:;
+  connect-src 'self';
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self';
+  ">
+  
   <!-- 讓瀏覽器知道這是一個可以安裝的 Web App -->
   <link rel="manifest" href="manifest.json" />
 
