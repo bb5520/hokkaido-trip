@@ -450,7 +450,7 @@
           <div class="flex items-start gap-3">
             <!-- 照片區 (可多張，右上角顯示張數，點擊放大並可左右滑動) -->
             <div class="relative flex-shrink-0" style="width:64px">
-              <img v-if="item.images && item.images.length" :src="item.images[0].data" @click="openGallery(item.images, 0)" class="w-16 h-16 rounded-lg object-cover cursor-pointer border border-slate-100">
+              <img v-if="item.images && item.images.length" :src="resolveBlobUrl(item.images[0].id)" @click="openGallery(item.images, 0)" class="w-16 h-16 rounded-lg object-cover cursor-pointer border border-slate-100">
               <div v-else class="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center text-slate-300">
                 <i class="fa-solid fa-image"></i>
               </div>
@@ -758,7 +758,7 @@
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formShopping.images)" accept="image/*" class="w-full text-slate-500 text-xs mb-1.5">
             <div v-if="formShopping.images && formShopping.images.length" class="flex flex-wrap gap-2 mt-1">
               <div v-for="(photo, pi) in formShopping.images" :key="pi" class="relative">
-                <img :src="photo.data" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" @click="openGallery(formShopping.images, pi)">
+                <img :src="resolveBlobUrl(photo.id)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" @click="openGallery(formShopping.images, pi)">
                 <button type="button" @click="formShopping.images.splice(pi, 1)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
               </div>
             </div>
@@ -1281,6 +1281,52 @@
       setupWatcher(shoppingList, 'trip_shopping');
       setupWatcher(expenses, 'trip_expenses');
 
+      // ---- IndexedDB 輕量封裝，專門用來存大型二進位資料（照片/PDF） ----
+      const DB_NAME = 'trip_blob_store';
+      const STORE_NAME = 'blobs';
+
+      const openBlobDB = () => new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => {
+          req.result.createObjectStore(STORE_NAME);
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+
+      let dbPromise = null;
+      const getDB = () => dbPromise || (dbPromise = openBlobDB());
+
+      const idbSet = async (id, dataUrl) => {
+        const db = await getDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).put(dataUrl, id);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+      };
+
+      const idbGet = async (id) => {
+        const db = await getDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readonly');
+          const req = tx.objectStore(STORE_NAME).get(id);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => reject(req.error);
+        });
+      };
+
+      const idbDelete = async (id) => {
+        const db = await getDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).delete(id);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+      };
+
 
      // --- 3. 基礎邏輯與共用函數 (含 Canvas 圖片壓縮) ---
       
@@ -1351,46 +1397,53 @@
       const handleDocUploadMulti = async (e, docsArray) => {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
-        
         fileUploading.value = true;
 
         for (const file of files) {
           try {
+            let dataUrl, type;
             if (file.type.startsWith('image/')) {
-              // 是圖片：進行壓縮 (最大寬度 800px，品質 70%)
-              const compressedData = await compressImage(file, 800, 0.7);
-              docsArray.push({ name: file.name, data: compressedData, type: 'image/jpeg' });
+              dataUrl = await compressImage(file, 800, 0.7);
+              type = 'image/jpeg';
             } else {
-              // 非圖片 (例如 PDF)：維持原樣轉 Base64
-              const data = await new Promise((resolve, reject) => {
+              dataUrl = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = (event) => resolve(event.target.result);
-                reader.onerror = (err) => reject(err);
+                reader.onload = (ev) => resolve(ev.target.result);
+                reader.onerror = reject;
                 reader.readAsDataURL(file);
               });
-              // 檢查 PDF 大小，避免單檔過大直接塞爆
-              if (file.size > 1024 * 1024) { // 超過 1MB
-                alert(`警告：檔案 ${file.name} 超過 1MB，LocalStorage 可能會容量不足！`);
-              }
-              docsArray.push({ name: file.name, data: data, type: file.type });
+              type = file.type;
             }
+            const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+            await idbSet(id, dataUrl);
+            blobUrlCache.value[id] = dataUrl; // 上傳當下就先寫進快取，畫面立刻有圖
+            docsArray.push({ id, name: file.name, type });
           } catch (error) {
             alert('檔案處理失敗: ' + file.name);
           }
         }
-        
         fileUploading.value = false;
-        e.target.value = ''; // 重置 input 讓下次可以選擇相同檔案
+        e.target.value = '';
       };
 
       const previewDoc = ref(null);
-      const viewDocument = (doc) => { if (doc) previewDoc.value = doc; };
+      const viewDocument = async (doc) => {
+        if (!doc) return;
+        const dataUrl = blobUrlCache.value[doc.id] || await idbGet(doc.id);
+        previewDoc.value = { ...doc, data: dataUrl };
+      };
       const docListModal = ref({ show: false, title: '', documents: [] });
       const openDocList = (title, documents) => { docListModal.value = { show: true, title, documents: documents || [] }; };
 
       const galleryModal = ref({ show: false, images: [], index: 0 });
       const galleryTouchStartX = ref(0);
-      const openGallery = (images, index) => { if (images && images.length) galleryModal.value = { show: true, images, index: index || 0 }; };
+      const openGallery = async (images, index) => {
+        if (!images || !images.length) return;
+        const resolved = await Promise.all(
+          images.map(async (img) => ({ ...img, data: blobUrlCache.value[img.id] || await idbGet(img.id) }))
+        );
+        galleryModal.value = { show: true, images: resolved, index: index || 0 };
+      };
       const closeGallery = () => { galleryModal.value.show = false; };
       const nextGalleryImage = () => { const len = galleryModal.value.images.length; if (len) galleryModal.value.index = (galleryModal.value.index + 1) % len; };
       const prevGalleryImage = () => { const len = galleryModal.value.images.length; if (len) galleryModal.value.index = (galleryModal.value.index - 1 + len) % len; };
@@ -1587,9 +1640,13 @@
         }
         showShoppingModal.value = false;
       };
-      const confirmDeleteShoppingItem = (id) => {
+      const confirmDeleteShoppingItem = async (id) => {
         if (confirm('確定要刪除這項購物清單項目嗎？')) {
-          shoppingList.value = shoppingList.value.filter(item => item.id !== id);
+          const item = shoppingList.value.find(i => i.id === id);
+          if (item?.images) {
+            for (const img of item.images) await idbDelete(img.id);
+          }
+         shoppingList.value = shoppingList.value.filter(item => item.id !== id);
           showShoppingModal.value = false;
         }
       };
