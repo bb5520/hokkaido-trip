@@ -1405,7 +1405,7 @@
       const openMap = (locationName) => {
         if (!locationName) return;
         const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
-        window.open(url, '_blank');
+        window.open(url, '_blank', 'noopener,noreferrer');
       };
 
       const moveItem = (index, direction) => {
