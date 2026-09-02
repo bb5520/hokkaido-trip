@@ -214,25 +214,6 @@
 
       <!-- ================= 2. 資訊 Tab ================= -->
       <section v-if="currentTab === 'info'" class="space-y-4">
-        
-        <!-- 匯率換算器 (台幣 TWD ➔ 日幣 JPY) -->
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i class="fa-solid fa-calculator text-ice-600"></i> 匯率換算 (台幣 TWD ➔ 日幣 JPY)
-          </h2>
-          <div class="flex items-center gap-2">
-            <div class="relative flex-1">
-              <span class="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">NT$</span>
-              <input v-model.number="twdInput" type="number" placeholder="輸入台幣金額" class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-ice-500">
-            </div>
-            <i class="fa-solid fa-arrow-right-long text-slate-400"></i>
-            <div class="flex-1 bg-ice-50 border border-ice-100 rounded-xl py-2 px-3 text-right">
-              <span class="text-xs text-slate-500 font-normal">約 ¥</span>
-              <span class="text-base font-bold text-ice-700 ml-1">{{ (twdInput / jpyRate).toFixed(0) }}</span>
-            </div>
-          </div>
-          <div class="text-[10px] text-slate-400 mt-2 text-right">當前參考匯率約 1 TWD ≈ {{ (1 / jpyRate).toFixed(2) }} JPY</div>
-        </div>
 
         <!-- 航班資訊 (同步自「行程」分頁，內容唯讀，僅可加附件) -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
@@ -545,7 +526,7 @@
           </h2>
           <div class="flex items-center gap-2">
             <span class="text-xs text-slate-500 font-bold whitespace-nowrap">1 台幣 (TWD) =</span>
-            <input v-model.number="twdToJpyInput" type="number" step="0.001" placeholder="4.65" class="flex-1 bg-slate-50 border p-2.5 rounded-xl outline-none text-sm font-bold">
+            <input v-model.number="twdToJpyInput" type="number" step="0.001" placeholder="4.65" class="flex-1 min-w-0 bg-slate-50 border p-2.5 rounded-xl outline-none text-sm font-bold">
             <span class="text-xs text-slate-500 font-bold whitespace-nowrap">日圓 (JPY)</span>
           </div>
           <div class="text-[10px] text-slate-400 mt-2">目前使用匯率: 1 TWD ≈ {{ (1 / jpyRate).toFixed(2) }} JPY (1 JPY ≈ {{ jpyRate.toFixed(3) }} TWD)</div>
@@ -1448,7 +1429,6 @@
       };
 
       // --- 5. 匯率與費用顯示 ---
-      const twdInput = ref(1000);
       const twdToJpyInput = ref(Number((1 / jpyRate.value).toFixed(3)));
       const saveJpyRate = () => {
         const num = Number(twdToJpyInput.value);
@@ -1744,7 +1724,7 @@
 
       return {
         currentTab, tabs, dateList, selectedDateIndex, weather, categories, selectedCategory,
-        filteredItinerary, openMap, moveItem, twdInput, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
+        filteredItinerary, openMap, moveItem, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
         isEditShoppingMode, openAddShoppingModal, editShoppingItem, saveShoppingItem, confirmDeleteShoppingItem,
         setShoppingCardRef, draggingShopping, onGripPointerDown,
         expenses, showExpenseModal, formExpense, isEditExpenseMode,
