@@ -1345,6 +1345,11 @@
       const handleBannerUpload = async (e) => {
         const file = e.target.files[0];
         if (file) {
+          const available = await checkQuotaAvailable();
+          if (!available) {
+            alert(`儲存空間已達 ${DISPLAY_QUOTA_GB}GB 上限，請先清理部分資料。`);
+            return;
+          }
           if (file.type.startsWith('image/')) {
             try {
               bannerImageInput.value = await compressImage(file, 1024, 0.8);
@@ -1367,9 +1372,24 @@
       const handleDocUploadMulti = async (e, docsArray) => {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
+
+        // 上傳前先檢查容量上限
+        const available = await checkQuotaAvailable();
+        if (!available) {
+          alert(`儲存空間已達 ${DISPLAY_QUOTA_GB}GB 上限，請先刪除部分照片或附件後再上傳。`);
+          e.target.value = '';
+          return;
+        }
+
         fileUploading.value = true;
 
         for (const file of files) {
+          // 每存一張前也檢查一次，避免單次上傳很多張時中途超過上限
+          const stillAvailable = await checkQuotaAvailable();
+          if (!stillAvailable) {
+            alert(`儲存空間已達 ${DISPLAY_QUOTA_GB}GB 上限，部分檔案未儲存，請刪除部分資料後再試。`);
+            break;
+          }
           try {
             let dataUrl, type;
             if (file.type.startsWith('image/')) {
@@ -1385,8 +1405,8 @@
               type = file.type;
             }
             const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-            await idbSet(id, dataUrl); // 大檔案存 IndexedDB
-            docsArray.push({ id, name: file.name, type }); // localStorage 只存這個小物件
+            await idbSet(id, dataUrl);
+            docsArray.push({ id, name: file.name, type });
           } catch (error) {
             alert('檔案處理失敗: ' + file.name);
           }
@@ -1925,13 +1945,23 @@
 
       const storageInfo = ref({ usage: 0, quota: 0, supported: true });
 
+      const DISPLAY_QUOTA_GB = 5; // 想要顯示 10GB 就改成 10
+      const DISPLAY_QUOTA_BYTES = DISPLAY_QUOTA_GB * 1024 * 1024 * 1024;
+
       const checkStorageUsage = async () => {
         if (!navigator.storage || !navigator.storage.estimate) {
           storageInfo.value.supported = false;
           return;
         }
-        const { usage, quota } = await navigator.storage.estimate();
-        storageInfo.value = { usage, quota, supported: true };
+        const { usage } = await navigator.storage.estimate();
+        storageInfo.value = { usage, quota: DISPLAY_QUOTA_BYTES, supported: true };
+      };
+
+      // 檢查目前用量是否已達上限，回傳 true 代表「還可以寫入」
+      const checkQuotaAvailable = async () => {
+        if (!navigator.storage || !navigator.storage.estimate) return true; // 不支援估算就不擋
+        const { usage } = await navigator.storage.estimate();
+        return usage < DISPLAY_QUOTA_BYTES;
       };
 
       const formatBytes = (bytes) => {
