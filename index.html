@@ -541,18 +541,18 @@
         </div>
 
         <!-- 旅行日期設定 -->
-        <div class="bg-white rounded-2xl py-4 px-3 shadow-sm border border-slate-100">
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
           <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
             <i class="fa-solid fa-calendar-days text-ice-600"></i> 旅行日期設定
           </h2>
-          <div class="grid gap-1.5 text-xs" style="grid-template-columns: 1fr 52px;">
-            <div class="overflow-hidden" style="min-width:0;">
+          <div class="flex items-end gap-2 text-xs">
+            <div class="flex-1 min-w-0">
               <label class="block font-bold text-slate-600 mb-1">出發日期</label>
-              <input v-model="tripStartDateInput" type="date" class="w-full bg-slate-50 border px-1 py-2.5 rounded-xl outline-none text-[12px]" style="min-width:0; max-width:100%;">
+              <input v-model="tripStartDateInput" type="date" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
-            <div class="overflow-hidden" style="min-width:0;">
-              <label class="block font-bold text-slate-600 mb-1 text-center">天數</label>
-              <input v-model.number="tripDaysInput" type="number" min="1" max="30" class="w-full bg-slate-50 border px-1 py-2.5 rounded-xl outline-none text-center text-xs">
+            <div class="w-20 flex-shrink-0">
+              <label class="block font-bold text-slate-600 mb-1">天數</label>
+              <input v-model.number="tripDaysInput" type="number" min="1" max="30" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none text-center">
             </div>
           </div>
           <button @click="saveTripDates" class="w-full mt-3 bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">
