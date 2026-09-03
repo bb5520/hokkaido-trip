@@ -795,7 +795,7 @@
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formShopping.images)" accept="image/*" class="w-full text-slate-500 text-xs mb-1.5">
             <div v-if="formShopping.images && formShopping.images.length" class="flex flex-wrap gap-2 mt-1">
               <div v-for="(photo, pi) in formShopping.images" :key="pi" class="relative">
-                <img :src="photo.data" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" @click="openGallery(formShopping.images, pi)">
+                <img :src="resolveBlobUrl(photo.id)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" @click="openGallery(formShopping.images, pi)">
                 <button type="button" @click="formShopping.images.splice(pi, 1)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
               </div>
             </div>
@@ -1229,11 +1229,14 @@
       </div>
       <div class="flex-1 relative overflow-hidden flex items-center justify-center px-2"
            @touchstart="galleryTouchStart"
+           @touchmove="galleryTouchMove"
            @touchend="galleryTouchEnd">
         <button v-if="galleryModal.images.length > 1" @click.stop="prevGalleryImage" class="absolute left-2 z-10 text-white bg-black/30 rounded-full w-9 h-9 flex items-center justify-center">
           <i class="fa-solid fa-chevron-left"></i>
         </button>
-        <img v-if="galleryModal.images[galleryModal.index]" :src="galleryModal.images[galleryModal.index].data" class="max-w-full max-h-full object-contain select-none" draggable="false">
+        <img v-if="galleryModal.images[galleryModal.index]" :src="resolveBlobUrl(galleryModal.images[galleryModal.index].id)"
+             :style="{ transform: `translate(${galleryPan.x}px, ${galleryPan.y}px) scale(${galleryZoom})` }"
+             class="max-w-full max-h-full object-contain select-none" draggable="false">
         <button v-if="galleryModal.images.length > 1" @click.stop="nextGalleryImage" class="absolute right-2 z-10 text-white bg-black/30 rounded-full w-9 h-9 flex items-center justify-center">
           <i class="fa-solid fa-chevron-right"></i>
         </button>
@@ -1454,15 +1457,72 @@
       const openDocList = (title, documents) => { docListModal.value = { show: true, title, documents: documents || [] }; };
 
       const galleryModal = ref({ show: false, images: [], index: 0 });
+      const galleryZoom = ref(1);
+      const galleryPan = ref({ x: 0, y: 0 });
+      const galleryPinchStartDist = ref(0);
+      const galleryPinchStartZoom = ref(1);
+      const galleryLastTap = ref(0);
+      const galleryDragStart = ref(null);
       const galleryTouchStartX = ref(0);
-      const openGallery = (images, index) => { if (images && images.length) galleryModal.value = { show: true, images, index: index || 0 }; };
+
+      const resetZoom = () => { galleryZoom.value = 1; galleryPan.value = { x: 0, y: 0 }; };
+
+      const openGallery = (images, index) => {
+        if (images && images.length) {
+          galleryModal.value = { show: true, images, index: index || 0 };
+          resetZoom();
+        }
+      };
       const closeGallery = () => { galleryModal.value.show = false; };
-      const nextGalleryImage = () => { const len = galleryModal.value.images.length; if (len) galleryModal.value.index = (galleryModal.value.index + 1) % len; };
-      const prevGalleryImage = () => { const len = galleryModal.value.images.length; if (len) galleryModal.value.index = (galleryModal.value.index - 1 + len) % len; };
-      const galleryTouchStart = (e) => { galleryTouchStartX.value = e.touches[0].clientX; };
+      const nextGalleryImage = () => {
+        if (galleryZoom.value > 1) return; // 放大時不切換
+        const len = galleryModal.value.images.length;
+        if (len) { galleryModal.value.index = (galleryModal.value.index + 1) % len; resetZoom(); }
+      };
+      const prevGalleryImage = () => {
+        if (galleryZoom.value > 1) return;
+        const len = galleryModal.value.images.length;
+        if (len) { galleryModal.value.index = (galleryModal.value.index - 1 + len) % len; resetZoom(); }
+      };
+
+      const getTouchDist = (touches) => {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      };
+
+      const galleryTouchStart = (e) => {
+        if (e.touches.length === 2) {
+          galleryPinchStartDist.value = getTouchDist(e.touches);
+          galleryPinchStartZoom.value = galleryZoom.value;
+        } else if (e.touches.length === 1) {
+          galleryTouchStartX.value = e.touches[0].clientX;
+          if (galleryZoom.value > 1) {
+            galleryDragStart.value = { x: e.touches[0].clientX - galleryPan.value.x, y: e.touches[0].clientY - galleryPan.value.y };
+          }
+          const now = Date.now();
+          if (now - galleryLastTap.value < 300) {
+            galleryZoom.value > 1 ? resetZoom() : (galleryZoom.value = 2.5); // 雙擊縮放
+          }
+          galleryLastTap.value = now;
+        }
+      };
+      const galleryTouchMove = (e) => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          const ratio = getTouchDist(e.touches) / galleryPinchStartDist.value;
+          galleryZoom.value = Math.min(4, Math.max(1, galleryPinchStartZoom.value * ratio)); // 雙指縮放
+        } else if (e.touches.length === 1 && galleryZoom.value > 1 && galleryDragStart.value) {
+          e.preventDefault();
+          galleryPan.value = { x: e.touches[0].clientX - galleryDragStart.value.x, y: e.touches[0].clientY - galleryDragStart.value.y };
+        }
+      };
       const galleryTouchEnd = (e) => {
-        const deltaX = e.changedTouches[0].clientX - galleryTouchStartX.value;
-        if (Math.abs(deltaX) > 40) { if (deltaX < 0) nextGalleryImage(); else prevGalleryImage(); }
+        galleryDragStart.value = null;
+        if (galleryZoom.value <= 1 && e.changedTouches && e.changedTouches.length === 1) {
+          const deltaX = e.changedTouches[0].clientX - galleryTouchStartX.value;
+          if (Math.abs(deltaX) > 40) { deltaX < 0 ? nextGalleryImage() : prevGalleryImage(); }
+        }
       };
       
       
@@ -2128,7 +2188,8 @@
         otherBookings, showOtherBookingModal: other.showModal, isEditOtherBookingMode: other.isEditMode, formOtherBooking: other.formObj, openAddOtherBookingModal: other.openAdd, editOtherBooking: other.edit, saveOtherBooking: other.save, deleteOtherBooking: other.del,
         fileInputRef, exportData, triggerImport, importData,
         storageInfo, checkStorageUsage, formatBytes,
-        tripStartDate, tripDays, tripStartDateInput, tripDaysInput, saveTripDates
+        tripStartDate, tripDays, tripStartDateInput, tripDaysInput, saveTripDates,
+        galleryZoom, galleryPan, galleryTouchMove, resetZoom
       };
     }
   }).mount('#app');
