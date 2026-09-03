@@ -555,9 +555,6 @@
               <input v-model.number="tripDaysInput" type="number" min="1" max="30" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none text-center">
             </div>
           </div>
-          <div class="text-[10px] text-slate-400 mt-2">
-            行程區間: {{ tripDateRangeLabel }}
-          </div>
           <button @click="saveTripDates" class="w-full mt-3 bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">
             更新旅行日期
           </button>
@@ -1632,13 +1629,6 @@
         alert('旅行日期已更新');
       };
 
-      const tripDateRangeLabel = computed(() => {
-        if (!dateList.value.length) return '';
-        const first = dateList.value[0];
-        const last = dateList.value[dateList.value.length - 1];
-        return `${first.full.replace(/-/g, '/')} ~ ${last.full.replace(/-/g, '/')}`;
-      });
-
       // --- 5. 匯率與費用顯示 ---
       const twdToJpyInput = ref(Number((1 / jpyRate.value).toFixed(3)));
       const saveJpyRate = () => {
@@ -2120,7 +2110,7 @@
         otherBookings, showOtherBookingModal: other.showModal, isEditOtherBookingMode: other.isEditMode, formOtherBooking: other.formObj, openAddOtherBookingModal: other.openAdd, editOtherBooking: other.edit, saveOtherBooking: other.save, deleteOtherBooking: other.del,
         fileInputRef, exportData, triggerImport, importData,
         storageInfo, checkStorageUsage, formatBytes,
-        tripStartDate, tripDays, tripStartDateInput, tripDaysInput, saveTripDates, tripDateRangeLabel
+        tripStartDate, tripDays, tripStartDateInput, tripDaysInput, saveTripDates
       };
     }
   }).mount('#app');
