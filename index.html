@@ -540,6 +540,26 @@
           </div>
         </div>
 
+        <!-- 旅行日期設定 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-calendar-days text-ice-600"></i> 旅行日期設定
+          </h2>
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">出發日期</label>
+              <input v-model="tripStartDateInput" type="date" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">旅行天數</label>
+              <input v-model.number="tripDaysInput" type="number" min="1" max="30" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+          </div>
+          <button @click="saveTripDates" class="w-full mt-3 bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">
+            更新旅行日期
+          </button>
+        </div>
+
         <!-- 匯率手動調整 -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
           <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -1496,11 +1516,51 @@
 
       // --- 4. 行程分頁 (Itinerary) ---
       const selectedDateIndex = ref(0);
-      const dateList = [
-        { week: 'Fri', date: '2/6', full: '2026-02-06' }, { week: 'Sat', date: '2/7', full: '2026-02-07' },
-        { week: 'Sun', date: '2/8', full: '2026-02-08' }, { week: 'Mon', date: '2/9', full: '2026-02-09' },
-        { week: 'Tue', date: '2/10', full: '2026-02-10' },
-      ];
+
+      // 旅行日期設定：出發日期 + 天數，可在「設定」分頁自訂
+      const tripStartDate = ref(initData('trip_startDate', '2026-02-06'));
+      const tripDays = ref(initData('trip_days', 5));
+      setupWatcher(tripStartDate, 'trip_startDate');
+      setupWatcher(tripDays, 'trip_days');
+
+      const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+      // 依照出發日期與天數自動產生每天的日期清單
+      const dateList = computed(() => {
+        const list = [];
+        const start = new Date(tripStartDate.value + 'T00:00:00');
+        for (let i = 0; i < tripDays.value; i++) {
+          const d = new Date(start);
+          d.setDate(d.getDate() + i);
+          list.push({
+            week: weekdayNames[d.getDay()],
+            date: `${d.getMonth() + 1}/${d.getDate()}`,
+            full: d.toISOString().split('T')[0]
+          });
+        }
+        return list;
+      });
+
+      // 天數變動時，自動增減 itineraryData 的天數陣列
+      watch(tripDays, (newDays, oldDays) => {
+        const days = Number(newDays);
+        if (!days || days < 1) return;
+        const currentLen = itineraryData.value.length;
+        if (days > currentLen) {
+          // 天數變多 -> 補上空的新天數
+          for (let i = currentLen; i < days; i++) itineraryData.value.push([]);
+        } else if (days < currentLen) {
+          // 天數變少 -> 若被砍掉的天數內有資料，需先確認
+          const hasDataToLose = itineraryData.value.slice(days).some(day => day && day.length > 0);
+          if (hasDataToLose && !confirm('縮短天數將會刪除超出天數範圍的行程資料，確定要繼續嗎？')) {
+            itineraryData.value.length; // 不做任何事，畫面上天數選項仍會依 tripDays 顯示，但資料保留
+            return;
+          }
+          itineraryData.value = itineraryData.value.slice(0, days);
+        }
+        // 修正目前選取的日期索引，避免超出範圍
+        if (selectedDateIndex.value >= days) selectedDateIndex.value = days - 1;
+      });
       const weather = ref({ condition: '粉雪降雪中', temp: '-3°C', feelsLike: '-7°C', icon: 'fa-regular fa-snowflake' });
       const categories = ['景點', '住宿', '美食', '購物', '航班', '其他'];
       const selectedCategory = ref('全部');
@@ -1554,6 +1614,20 @@
           itineraryData.value[selectedDateIndex.value] = currentList.filter(i => i.id !== formItinerary.value.id);
           showItineraryModal.value = false;
         }
+      };
+
+      const tripStartDateInput = ref(tripStartDate.value);
+      const tripDaysInput = ref(tripDays.value);
+
+      const saveTripDates = () => {
+        if (!tripStartDateInput.value) return alert('請選擇出發日期');
+        const days = Number(tripDaysInput.value);
+        if (!days || days < 1) return alert('請輸入有效的旅行天數');
+
+        tripStartDate.value = tripStartDateInput.value;
+        tripDays.value = days; // 這裡會觸發上面的 watch，自動調整 itineraryData 天數
+
+        alert('旅行日期已更新');
       };
 
       // --- 5. 匯率與費用顯示 ---
@@ -1881,7 +1955,8 @@
       const storageKeys = [
         'trip_banner', 'trip_jpyRate', 'trip_itinerary', 
         'trip_flightExtras', 'trip_hotelExtras', 'trip_carRentals', 
-        'trip_dayTours', 'trip_otherBookings', 'trip_shopping', 'trip_expenses'
+        'trip_dayTours', 'trip_otherBookings', 'trip_shopping', 'trip_expenses',
+        'trip_startDate', 'trip_days'
       ];
 
       // 匯出功能
@@ -2035,7 +2110,8 @@
         dayTours, showDayTourModal: tour.showModal, isEditDayTourMode: tour.isEditMode, formDayTour: tour.formObj, openAddDayTourModal: tour.openAdd, editDayTour: tour.edit, saveDayTour: tour.save, deleteDayTour: tour.del,
         otherBookings, showOtherBookingModal: other.showModal, isEditOtherBookingMode: other.isEditMode, formOtherBooking: other.formObj, openAddOtherBookingModal: other.openAdd, editOtherBooking: other.edit, saveOtherBooking: other.save, deleteOtherBooking: other.del,
         fileInputRef, exportData, triggerImport, importData,
-        storageInfo, checkStorageUsage, formatBytes
+        storageInfo, checkStorageUsage, formatBytes,
+        tripStartDate, tripDays, tripStartDateInput, tripDaysInput, saveTripDates
       };
     }
   }).mount('#app');
