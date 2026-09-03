@@ -485,14 +485,14 @@
       <!-- ================= 4. 花費 Tab ================= -->
       <section v-if="currentTab === 'expenses'" class="space-y-4">
         
-        <!-- 總花費統計卡片 (自動換算為日幣 JPY 加總，含手動紀錄 + 資訊分頁自動帶入的費用) -->
+        <!-- 總花費統計卡片 (自動換算為日幣 JPY 加總，含手動紀錄 + 資訊分頁自動帶入的金額) -->
         <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-md">
           <div class="text-xs text-slate-400">總花費統計 (換算為日幣 JPY)</div>
           <div class="text-3xl font-bold mt-1 text-amber-300">¥ {{ totalExpensesJPY.toLocaleString() }}</div>
           <div class="text-xs text-slate-400 mt-1">約合 NT$ {{ Math.round(totalExpensesJPY * jpyRate).toLocaleString() }}</div>
         </div>
 
-        <!-- 花費列表 (手動紀錄可編輯/刪除；來自「資訊」分頁的費用自動帶入，僅可在資訊分頁編輯) -->
+        <!-- 花費列表 (手動紀錄可編輯/刪除；來自「資訊」分頁的金額自動帶入，僅可在資訊分頁編輯) -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
           <div v-for="exp in allExpenses" :key="exp.key" class="p-3.5 flex items-center justify-between">
             <div class="flex items-center space-x-3">
@@ -679,6 +679,7 @@
           <div>
             <label class="block font-bold text-slate-600 mb-1">分類</label>
             <select v-model="formItinerary.category" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
               <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
             </select>
           </div>
@@ -724,7 +725,7 @@
               <input v-model="formItinerary.openHours" type="text" placeholder="例如: 09:00 - 18:00" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div v-if="formItinerary.category === '景點'">
-              <label class="block font-bold text-slate-600 mb-1">門票費用</label>
+              <label class="block font-bold text-slate-600 mb-1">門票金額</label>
               <input v-model="formItinerary.ticket" type="text" placeholder="例如: 大人 1000日圓" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
@@ -811,6 +812,7 @@
           <div>
             <label class="block font-bold text-slate-600 mb-1">類別</label>
             <select v-model="formExpense.category" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
               <option v-for="cat in ['交通','飲食','住宿','門票','購物','其他']" :key="cat" :value="cat">{{ cat }}</option>
             </select>
           </div>
@@ -821,6 +823,7 @@
           <div>
             <label class="block font-bold text-slate-600 mb-1">付款方式</label>
             <select v-model="formExpense.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
               <option value="現金">現金</option>
               <option value="信用卡">信用卡</option>
             </select>
@@ -880,7 +883,7 @@
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">費用</label>
+              <label class="block font-bold text-slate-600 mb-1">金額</label>
               <input v-model.number="formFlightDoc.price" type="number" placeholder="例如: 12000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
@@ -943,7 +946,7 @@
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">費用</label>
+              <label class="block font-bold text-slate-600 mb-1">金額</label>
               <input v-model.number="formHotelInfo.price" type="number" placeholder="例如: 15000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
@@ -1005,7 +1008,7 @@
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">費用</label>
+              <label class="block font-bold text-slate-600 mb-1">金額</label>
               <input v-model.number="formCar.price" type="number" placeholder="例如: 8000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
@@ -1074,7 +1077,7 @@
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">費用</label>
+              <label class="block font-bold text-slate-600 mb-1">金額</label>
               <input v-model.number="formDayTour.price" type="number" placeholder="例如: 3500" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
@@ -1143,7 +1146,7 @@
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">費用</label>
+              <label class="block font-bold text-slate-600 mb-1">金額</label>
               <input v-model.number="formOtherBooking.price" type="number" placeholder="例如: 1000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
@@ -1587,13 +1590,14 @@
 
       const showItineraryModal = ref(false);
       const isEditMode = ref(false);
-      const initFormItinerary = () => ({ id: null, name: '', category: '景點', openHours: '', ticket: '', note: '', location: '', flightNo: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '' });
+      const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', ticket: '', note: '', location: '', flightNo: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '' });
       const formItinerary = ref(initFormItinerary());
 
       const openAddModal = () => { isEditMode.value = false; formItinerary.value = initFormItinerary(); showItineraryModal.value = true; };
       const editItinerary = (item) => { isEditMode.value = true; formItinerary.value = { ...initFormItinerary(), ...item }; showItineraryModal.value = true; };
       const saveItinerary = () => {
         if (!formItinerary.value.name) return alert('請填寫「行程名稱」後再儲存');
+        if (!formItinerary.value.category) return alert('請選擇「分類」後再儲存');
         if (!itineraryData.value[selectedDateIndex.value]) itineraryData.value[selectedDateIndex.value] = [];
         const currentList = itineraryData.value[selectedDateIndex.value];
         if (!formItinerary.value.location) formItinerary.value.location = formItinerary.value.name;
@@ -1629,7 +1633,7 @@
         alert('旅行日期已更新');
       };
 
-      // --- 5. 匯率與費用顯示 ---
+      // --- 5. 匯率與金額顯示 ---
       const twdToJpyInput = ref(Number((1 / jpyRate.value).toFixed(3)));
       const saveJpyRate = () => {
         const num = Number(twdToJpyInput.value);
@@ -1654,8 +1658,8 @@
       };
 
       const validatePriceAndPayMethod = (obj) => {
-        if (obj.payMethod && !obj.price) { alert('已選擇付款方式，請務必填寫費用'); return false; }
-        if (obj.price && !obj.payMethod) { alert('已填寫費用，請務必選擇付款方式'); return false; }
+        if (obj.payMethod && !obj.price) { alert('已選擇付款方式，請務必填寫金額'); return false; }
+        if (obj.price && !obj.payMethod) { alert('已填寫金額，請務必選擇付款方式'); return false; }
         return true;
       };
 
@@ -1857,7 +1861,7 @@
       // --- 8. 花費分頁 (Expenses) ---
       const showExpenseModal = ref(false);
       const isEditExpenseMode = ref(false);
-      const initFormExpense = () => ({ id: null, category: '飲食', name: '', amount: null, currency: 'JPY', payMethod: '現金', date: '' });
+      const initFormExpense = () => ({ id: null, category: '', name: '', amount: null, currency: 'JPY', payMethod: '', date: '' });
       const formExpense = ref(initFormExpense());
 
       const toJPY = (amount, currency) => {
@@ -1890,6 +1894,7 @@
         showExpenseModal.value = true;
       };
       const saveExpense = () => {
+        if (!formExpense.value.category) return alert('請選擇「類別」後再儲存');
         if (!formExpense.value.name || !formExpense.value.amount) return alert('請填寫消費名稱與金額');
         if (isEditExpenseMode.value) {
           const idx = expenses.value.findIndex(e => e.id === formExpense.value.id);
