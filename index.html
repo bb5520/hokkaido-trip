@@ -709,17 +709,69 @@
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block font-bold text-slate-600 mb-1">出發機場</label>
-                <input v-model="formItinerary.depAirport" type="text" placeholder="例如: TPE 桃園" class="w-full bg-white border p-2 rounded-lg outline-none">
-              </div>
+  <label class="block font-bold text-slate-600 mb-1">出發機場</label>
+  <div class="relative">
+    <input
+      ref="depAirportInputRef"
+      v-model="formItinerary.depAirport"
+      @focus="openDepAirportDropdown"
+      @input="openDepAirportDropdown"
+      @blur="closeDepAirportDropdown"
+      type="text"
+      placeholder="輸入關鍵字搜尋，例如: 桃園 / TPE"
+      class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500">
+    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+  </div>
+</div>
+
+<teleport to="body">
+  <div v-if="depAirportOpen && filteredDepAirports.length"
+       :style="depAirportDropdownStyle"
+       class="fixed bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-[100]">
+    <button
+      v-for="ap in filteredDepAirports"
+      :key="ap"
+      type="button"
+      @mousedown.prevent="selectDepAirport(ap)"
+      class="w-full text-left px-3 py-2 text-xs hover:bg-ice-50 text-slate-700">
+      {{ ap }}
+    </button>
+  </div>
+</teleport>
               <div>
                 <label class="block font-bold text-slate-600 mb-1">出發時間</label>
                 <input v-model="formItinerary.depTime" type="time" class="w-full bg-white border p-2 rounded-lg outline-none">
               </div>
               <div>
-                <label class="block font-bold text-slate-600 mb-1">抵達機場</label>
-                <input v-model="formItinerary.arrAirport" type="text" placeholder="例如: CTS 新千歲" class="w-full bg-white border p-2 rounded-lg outline-none">
-              </div>
+  <label class="block font-bold text-slate-600 mb-1">抵達機場</label>
+  <div class="relative">
+    <input
+      ref="arrAirportInputRef"
+      v-model="formItinerary.arrAirport"
+      @focus="openArrAirportDropdown"
+      @input="openArrAirportDropdown"
+      @blur="closeArrAirportDropdown"
+      type="text"
+      placeholder="輸入關鍵字搜尋，例如: 新千歲 / CTS"
+      class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500">
+    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+  </div>
+</div>
+
+<teleport to="body">
+  <div v-if="arrAirportOpen && filteredArrAirports.length"
+       :style="arrAirportDropdownStyle"
+       class="fixed bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-[100]">
+    <button
+      v-for="ap in filteredArrAirports"
+      :key="ap"
+      type="button"
+      @mousedown.prevent="selectArrAirport(ap)"
+      class="w-full text-left px-3 py-2 text-xs hover:bg-ice-50 text-slate-700">
+      {{ ap }}
+    </button>
+  </div>
+</teleport>
               <div>
                 <label class="block font-bold text-slate-600 mb-1">抵達時間</label>
                 <input v-model="formItinerary.arrTime" type="time" class="w-full bg-white border p-2 rounded-lg outline-none">
@@ -1240,26 +1292,19 @@
            @touchstart="galleryTouchStart"
            @touchmove="galleryTouchMove"
            @touchend="galleryTouchEnd">
-        <button v-if="galleryModal.images.length > 1" @click.stop="prevGalleryImage" class="absolute left-2 z-10 text-white bg-black/30 rounded-full w-9 h-9 flex items-center justify-center">
-          <i class="fa-solid fa-chevron-left"></i>
-        </button>
         <img v-if="galleryModal.images[galleryModal.index]" :src="resolveBlobUrl(galleryModal.images[galleryModal.index].id)"
              :style="{ transform: `translate(${galleryPan.x}px, ${galleryPan.y}px) scale(${galleryZoom})` }"
              class="max-w-full max-h-full object-contain select-none" draggable="false">
-        <button v-if="galleryModal.images.length > 1" @click.stop="nextGalleryImage" class="absolute right-2 z-10 text-white bg-black/30 rounded-full w-9 h-9 flex items-center justify-center">
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
       </div>
       <div v-if="galleryModal.images.length > 1" class="flex justify-center gap-1.5 p-4 flex-shrink-0">
         <span v-for="(img, gi) in galleryModal.images" :key="gi" @click.stop="galleryModal.index = gi"
               :class="['w-1.5 h-1.5 rounded-full cursor-pointer transition-all', gi === galleryModal.index ? 'bg-white w-3' : 'bg-white/40']"></span>
       </div>
     </div>
-
   </div>
 
   <script>
-  const { createApp, ref, computed, watch } = Vue;
+  const { createApp, ref, computed, watch, nextTick } = Vue;
 
   createApp({
     setup() {
@@ -1517,15 +1562,22 @@
         }
       };
       const galleryTouchMove = (e) => {
-        if (e.touches.length === 2) {
-          e.preventDefault();
-          const ratio = getTouchDist(e.touches) / galleryPinchStartDist.value;
-          galleryZoom.value = Math.min(4, Math.max(1, galleryPinchStartZoom.value * ratio)); // 雙指縮放
-        } else if (e.touches.length === 1 && galleryZoom.value > 1 && galleryDragStart.value) {
-          e.preventDefault();
-          galleryPan.value = { x: e.touches[0].clientX - galleryDragStart.value.x, y: e.touches[0].clientY - galleryDragStart.value.y };
-        }
-      };
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const ratio = getTouchDist(e.touches) / galleryPinchStartDist.value;
+    const newZoom = Math.min(4, Math.max(1, galleryPinchStartZoom.value * ratio));
+    galleryZoom.value = newZoom;
+    // 縮到 1 倍時，位移量要一併歸零，避免照片偏移
+    if (newZoom <= 1) galleryPan.value = { x: 0, y: 0 };
+  } else if (e.touches.length === 1 && galleryZoom.value > 1) {
+    e.preventDefault();
+    // 從雙指縮放放開一指變成單指拖曳時，重新校正起始基準點，避免跳動
+    if (!galleryDragStart.value) {
+      galleryDragStart.value = { x: e.touches[0].clientX - galleryPan.value.x, y: e.touches[0].clientY - galleryPan.value.y };
+    }
+    galleryPan.value = { x: e.touches[0].clientX - galleryDragStart.value.x, y: e.touches[0].clientY - galleryDragStart.value.y };
+  }
+};
       const galleryTouchEnd = (e) => {
         galleryDragStart.value = null;
         if (galleryZoom.value <= 1 && e.changedTouches && e.changedTouches.length === 1) {
@@ -1670,8 +1722,20 @@
       const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', ticket: '', note: '', location: '', flightNo: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '' });
       const formItinerary = ref(initFormItinerary());
 
-      const openAddModal = () => { isEditMode.value = false; formItinerary.value = initFormItinerary(); showItineraryModal.value = true; };
-      const editItinerary = (item) => { isEditMode.value = true; formItinerary.value = { ...initFormItinerary(), ...item }; showItineraryModal.value = true; };
+      const openAddModal = () => {
+  isEditMode.value = false;
+  formItinerary.value = initFormItinerary();
+  depAirportOpen.value = false;
+  arrAirportOpen.value = false;
+  showItineraryModal.value = true;
+};
+const editItinerary = (item) => {
+  isEditMode.value = true;
+  formItinerary.value = { ...initFormItinerary(), ...item };
+  depAirportOpen.value = false;
+  arrAirportOpen.value = false;
+  showItineraryModal.value = true;
+};
       const saveItinerary = () => {
         if (!formItinerary.value.name) return alert('請填寫「行程名稱」後再儲存');
         if (!formItinerary.value.category) return alert('請選擇「分類」後再儲存');
@@ -1713,6 +1777,61 @@
 
         alert('旅行日期已更新');
       };
+
+      const airportOptions = [
+  'TPE 台北桃園', 'TSA 台北松山', 'KHH 高雄小港', 'RMQ 台中',
+  'CTS 札幌新千歲', 'OKD 札幌丘珠', 'HKD 函館', 'AXT 秋田',
+  'KUH 釧路', 'WKJ 稚內', 'MMB 女滿別', 'SHB 中標津', 'OBO 帶廣',
+  'NRT 東京成田', 'HND 東京羽田', 'KIX 大阪關西', 'ITM 大阪伊丹',
+  'NGO 名古屋中部', 'FUK 福岡'
+];
+
+const depAirportInputRef = ref(null);
+const arrAirportInputRef = ref(null);
+const depAirportOpen = ref(false);
+const arrAirportOpen = ref(false);
+const depAirportDropdownStyle = ref({});
+const arrAirportDropdownStyle = ref({});
+
+const filteredDepAirports = computed(() => {
+  const q = (formItinerary.value.depAirport || '').trim().toLowerCase();
+  if (!q) return airportOptions;
+  return airportOptions.filter(ap => ap.toLowerCase().includes(q));
+});
+const filteredArrAirports = computed(() => {
+  const q = (formItinerary.value.arrAirport || '').trim().toLowerCase();
+  if (!q) return airportOptions;
+  return airportOptions.filter(ap => ap.toLowerCase().includes(q));
+});
+
+const updateDepAirportPosition = () => {
+  const el = depAirportInputRef.value;
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  depAirportDropdownStyle.value = { top: rect.bottom + 4 + 'px', left: rect.left + 'px', width: rect.width + 'px' };
+};
+const updateArrAirportPosition = () => {
+  const el = arrAirportInputRef.value;
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  arrAirportDropdownStyle.value = { top: rect.bottom + 4 + 'px', left: rect.left + 'px', width: rect.width + 'px' };
+};
+
+// 彈窗內容捲動或視窗縮放時，即時跟著重新計算位置
+const repositionOpenDropdowns = () => {
+  if (depAirportOpen.value) updateDepAirportPosition();
+  if (arrAirportOpen.value) updateArrAirportPosition();
+};
+window.addEventListener('scroll', repositionOpenDropdowns, true);
+window.addEventListener('resize', repositionOpenDropdowns);
+
+const openDepAirportDropdown = () => { depAirportOpen.value = true; nextTick(updateDepAirportPosition); };
+const openArrAirportDropdown = () => { arrAirportOpen.value = true; nextTick(updateArrAirportPosition); };
+
+const selectDepAirport = (ap) => { formItinerary.value.depAirport = ap; depAirportOpen.value = false; };
+const selectArrAirport = (ap) => { formItinerary.value.arrAirport = ap; arrAirportOpen.value = false; };
+const closeDepAirportDropdown = () => { setTimeout(() => { depAirportOpen.value = false; }, 150); };
+const closeArrAirportDropdown = () => { setTimeout(() => { arrAirportOpen.value = false; }, 150); };
 
       // --- 5. 匯率與金額顯示 ---
       const twdToJpyInput = ref(Number((1 / jpyRate.value).toFixed(3)));
@@ -2198,7 +2317,12 @@
         fileInputRef, exportData, triggerImport, importData,
         storageInfo, checkStorageUsage, formatBytes,
         tripStartDate, tripDays, tripStartDateInput, tripDaysInput, saveTripDates,
-        galleryZoom, galleryPan, galleryTouchMove, resetZoom
+        galleryZoom, galleryPan, galleryTouchMove, resetZoom,
+        airportOptions, depAirportInputRef, arrAirportInputRef,
+depAirportOpen, arrAirportOpen, depAirportDropdownStyle, arrAirportDropdownStyle,
+filteredDepAirports, filteredArrAirports,
+openDepAirportDropdown, openArrAirportDropdown,
+selectDepAirport, selectArrAirport, closeDepAirportDropdown, closeArrAirportDropdown
       };
     }
   }).mount('#app');
