@@ -545,15 +545,18 @@
           <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
             <i class="fa-solid fa-calendar-days text-ice-600"></i> 旅行日期設定
           </h2>
-          <div class="space-y-3 text-xs">
-            <div>
+          <div class="flex items-end gap-2 text-xs">
+            <div class="flex-1 min-w-0">
               <label class="block font-bold text-slate-600 mb-1">出發日期</label>
               <input v-model="tripStartDateInput" type="date" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">旅行天數</label>
-              <input v-model.number="tripDaysInput" type="number" min="1" max="30" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <div class="w-20 flex-shrink-0">
+              <label class="block font-bold text-slate-600 mb-1">天數</label>
+              <input v-model.number="tripDaysInput" type="number" min="1" max="30" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none text-center">
             </div>
+          </div>
+          <div class="text-[10px] text-slate-400 mt-2">
+            行程區間: {{ tripDateRangeLabel }}
           </div>
           <button @click="saveTripDates" class="w-full mt-3 bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">
             更新旅行日期
@@ -1529,7 +1532,8 @@
       const dateList = computed(() => {
         const list = [];
         const start = new Date(tripStartDate.value + 'T00:00:00');
-        for (let i = 0; i < tripDays.value; i++) {
+        // 天數 N 代表 N 夜，日期籤會顯示 N+1 天 (含最後一天回程日)
+        for (let i = 0; i <= tripDays.value; i++) {
           const d = new Date(start);
           d.setDate(d.getDate() + i);
           list.push({
@@ -1542,25 +1546,23 @@
       });
 
       // 天數變動時，自動增減 itineraryData 的天數陣列
-      watch(tripDays, (newDays, oldDays) => {
+      watch(tripDays, (newDays) => {
         const days = Number(newDays);
         if (!days || days < 1) return;
+        const targetLen = days + 1; // N 夜 = N+1 個日期籤
         const currentLen = itineraryData.value.length;
-        if (days > currentLen) {
-          // 天數變多 -> 補上空的新天數
-          for (let i = currentLen; i < days; i++) itineraryData.value.push([]);
-        } else if (days < currentLen) {
-          // 天數變少 -> 若被砍掉的天數內有資料，需先確認
-          const hasDataToLose = itineraryData.value.slice(days).some(day => day && day.length > 0);
+        if (targetLen > currentLen) {
+          for (let i = currentLen; i < targetLen; i++) itineraryData.value.push([]);
+        } else if (targetLen < currentLen) {
+          const hasDataToLose = itineraryData.value.slice(targetLen).some(day => day && day.length > 0);
           if (hasDataToLose && !confirm('縮短天數將會刪除超出天數範圍的行程資料，確定要繼續嗎？')) {
-            itineraryData.value.length; // 不做任何事，畫面上天數選項仍會依 tripDays 顯示，但資料保留
             return;
           }
-          itineraryData.value = itineraryData.value.slice(0, days);
+          itineraryData.value = itineraryData.value.slice(0, targetLen);
         }
-        // 修正目前選取的日期索引，避免超出範圍
-        if (selectedDateIndex.value >= days) selectedDateIndex.value = days - 1;
+        if (selectedDateIndex.value >= targetLen) selectedDateIndex.value = targetLen - 1;
       });
+
       const weather = ref({ condition: '粉雪降雪中', temp: '-3°C', feelsLike: '-7°C', icon: 'fa-regular fa-snowflake' });
       const categories = ['景點', '住宿', '美食', '購物', '航班', '其他'];
       const selectedCategory = ref('全部');
@@ -1629,6 +1631,13 @@
 
         alert('旅行日期已更新');
       };
+
+      const tripDateRangeLabel = computed(() => {
+        if (!dateList.value.length) return '';
+        const first = dateList.value[0];
+        const last = dateList.value[dateList.value.length - 1];
+        return `${first.full.replace(/-/g, '/')} ~ ${last.full.replace(/-/g, '/')}`;
+      });
 
       // --- 5. 匯率與費用顯示 ---
       const twdToJpyInput = ref(Number((1 / jpyRate.value).toFixed(3)));
@@ -2111,7 +2120,7 @@
         otherBookings, showOtherBookingModal: other.showModal, isEditOtherBookingMode: other.isEditMode, formOtherBooking: other.formObj, openAddOtherBookingModal: other.openAdd, editOtherBooking: other.edit, saveOtherBooking: other.save, deleteOtherBooking: other.del,
         fileInputRef, exportData, triggerImport, importData,
         storageInfo, checkStorageUsage, formatBytes,
-        tripStartDate, tripDays, tripStartDateInput, tripDaysInput, saveTripDates
+        tripStartDate, tripDays, tripStartDateInput, tripDaysInput, saveTripDates, tripDateRangeLabel
       };
     }
   }).mount('#app');
