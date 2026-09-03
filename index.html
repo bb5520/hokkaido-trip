@@ -278,7 +278,9 @@
           </div>
           <div class="space-y-3 text-xs">
             <div v-for="h in hotelsInfo" :key="h.id" class="border-b border-slate-100 pb-2 last:border-b-0 last:pb-0 relative">
-              <div class="text-[10px] text-ice-600 font-bold mb-1">Day {{ h.dayIndex + 1 }}</div>
+              <div class="text-[10px] text-ice-600 font-bold mb-1">
+                Day {{ h.dayIndex + 1 }}<span v-if="h.dayIndexEnd > h.dayIndex"> - Day {{ h.dayIndexEnd + 1 }}</span>
+              </div>
               <div class="font-bold text-slate-800 text-sm pr-8">{{ h.name }}</div>
               <div v-if="h.phone" class="text-slate-500 mt-1"><i class="fa-solid fa-phone mr-1"></i>{{ h.phone }}</div>
               <div v-if="h.address" class="text-slate-500"><i class="fa-solid fa-location-dot mr-1"></i>{{ h.address }}</div>
@@ -1639,10 +1641,41 @@
         itineraryData.value.forEach((dayItems, dayIdx) => (dayItems || []).forEach(item => { if (item.category === '住宿') list.push({ ...item, dayIndex: dayIdx }); }));
         return list;
       });
-      const hotelsInfo = computed(() => itineraryHotels.value.map(h => {
-        const extra = hotelExtras.value[h.id] || {};
-        return { id: h.id, dayIndex: h.dayIndex, name: h.name, phone: extra.phone || '', address: extra.address || '', location: extra.location || h.location || h.name, documents: extra.documents || [], price: extra.price || null, currency: extra.currency || 'JPY', payMethod: extra.payMethod || '' };
+
+     // 將「連續天數 + 同名稱」的住宿行程合併成一個區間 (例如 Day1-Day3 都是同一間飯店)
+     const groupedHotelStays = computed(() => {
+       const flat = itineraryHotels.value; // 已經是依照天數順序排列
+       const groups = [];
+       flat.forEach(h => {
+         const last = groups[groups.length - 1];
+         if (last && last.name === h.name && h.dayIndex === last.endDay + 1) {
+           // 名稱相同且緊接在前一筆的隔一天 -> 合併進同一組
+           last.endDay = h.dayIndex;
+         } else {
+           // 開新的一組，primaryId 用「第一天」那筆行程的 id，補充資訊都存在這底下
+           groups.push({ name: h.name, startDay: h.dayIndex, endDay: h.dayIndex, primaryId: h.id, location: h.location });
+         }
+       });
+       return groups;
+     });
+
+      const hotelsInfo = computed(() => groupedHotelStays.value.map(g => {
+        const extra = hotelExtras.value[g.primaryId] || {};
+        return {
+          id: g.primaryId,
+          dayIndex: g.startDay,
+          dayIndexEnd: g.endDay,
+          name: g.name,
+          phone: extra.phone || '',
+          address: extra.address || '',
+          location: extra.location || g.location || g.name,
+          documents: extra.documents || [],
+          price: extra.price || null,
+          currency: extra.currency || 'JPY',
+          payMethod: extra.payMethod || ''
+        };
       }));
+
       const showHotelModal = ref(false);
       const formHotelInfo = ref({ id: null, name: '', phone: '', address: '', location: '', documents: [], price: null, currency: 'JPY', payMethod: '' });
       const editHotelInfo = (h) => { formHotelInfo.value = { ...h, documents: h.documents ? [...h.documents] : [] }; showHotelModal.value = true; };
