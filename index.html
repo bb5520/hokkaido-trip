@@ -279,7 +279,7 @@
           <div class="space-y-3 text-xs">
             <div v-for="h in hotelsInfo" :key="h.id" class="border-b border-slate-100 pb-2 last:border-b-0 last:pb-0 relative">
               <div class="text-[10px] text-ice-600 font-bold mb-1">
-                Day {{ h.dayIndex + 1 }}<span v-if="h.dayIndexEnd > h.dayIndex"> - Day {{ h.dayIndexEnd + 1 }}</span>
+                Day {{ h.dayIndex + 1 }}<span v-if="h.dayIndexEnd > h.dayIndex"> ~ Day {{ h.dayIndexEnd + 1 }}</span>
               </div>
               <div class="font-bold text-slate-800 text-sm pr-8">{{ h.name }}</div>
               <div v-if="h.phone" class="text-slate-500 mt-1"><i class="fa-solid fa-phone mr-1"></i>{{ h.phone }}</div>
