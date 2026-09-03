@@ -279,7 +279,9 @@
           <div class="space-y-3 text-xs">
             <div v-for="h in hotelsInfo" :key="h.id" class="border-b border-slate-100 pb-2 last:border-b-0 last:pb-0 relative">
               <div class="text-[10px] text-ice-600 font-bold mb-1">
-                Day {{ h.dayIndex + 1 }}<span v-if="h.dayIndexEnd > h.dayIndex"> ~ Day {{ h.dayIndexEnd + 1 }}</span>
+                {{ dateList[h.dayIndex] ? dateList[h.dayIndex].date : '' }}<span v-if="h.dayIndexEnd > h.dayIndex"> ~ {{ dateList[h.dayIndexEnd] ? dateList[h.dayIndexEnd].date : '' }}</span>
+                (Day {{ h.dayIndex + 1 }}<span v-if="h.dayIndexEnd > h.dayIndex"> ~ Day {{ h.dayIndexEnd + 1 }}</span>)
+                <span v-if="h.dayIndexEnd > h.dayIndex"> · {{ h.dayIndexEnd - h.dayIndex }}晚</span>
               </div>
               <div class="font-bold text-slate-800 text-sm pr-8">{{ h.name }}</div>
               <div v-if="h.phone" class="text-slate-500 mt-1"><i class="fa-solid fa-phone mr-1"></i>{{ h.phone }}</div>
@@ -547,11 +549,11 @@
           </h2>
           <div class="space-y-3 text-xs">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">出發日期</label>
+              <label class="block font-bold text-slate-600 mb-1">出發日期 <span class="text-red-500">*</span></label>
               <input v-model="tripStartDateInput" type="date" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
-              <label class="block font-bold text-slate-600 mb-1">天數</label>
+              <label class="block font-bold text-slate-600 mb-1">天數 <span class="text-red-500">*</span></label>
               <input v-model.number="tripDaysInput" type="number" min="1" max="30" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
           </div>
@@ -674,10 +676,16 @@
           <!-- 基本資訊：名稱與分類 (通用) -->
           <div>
             <label class="block font-bold text-slate-600 mb-1">行程名稱 <span class="text-red-500">*</span></label>
-            <input v-model="formItinerary.name" type="text" placeholder="輸入名稱 (如: 長榮航空、小樽運河)" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
+            <input v-if="formItinerary.category !== '航班'" v-model="formItinerary.name" type="text" placeholder="輸入名稱 (如: 長榮航空、小樽運河)" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
+            <select v-else v-model="formItinerary.name" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
+              <option value="去程">去程</option>
+              <option value="回程">回程</option>
+              <option value="轉機">轉機</option>
+            </select>
           </div>
           <div>
-            <label class="block font-bold text-slate-600 mb-1">分類</label>
+            <label class="block font-bold text-slate-600 mb-1">分類 <span class="text-red-500">*</span></label>
             <select v-model="formItinerary.category" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
               <option value="">未選擇</option>
               <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
@@ -810,7 +818,7 @@
         </div>
         <div class="space-y-3 text-xs">
           <div>
-            <label class="block font-bold text-slate-600 mb-1">類別</label>
+            <label class="block font-bold text-slate-600 mb-1">類別 <span class="text-red-500">*</span></label>
             <select v-model="formExpense.category" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
               <option value="">未選擇</option>
               <option v-for="cat in ['交通','飲食','住宿','門票','購物','其他']" :key="cat" :value="cat">{{ cat }}</option>
@@ -1600,7 +1608,11 @@
         if (!formItinerary.value.category) return alert('請選擇「分類」後再儲存');
         if (!itineraryData.value[selectedDateIndex.value]) itineraryData.value[selectedDateIndex.value] = [];
         const currentList = itineraryData.value[selectedDateIndex.value];
-        if (!formItinerary.value.location) formItinerary.value.location = formItinerary.value.name;
+        if (!formItinerary.value.location) {
+          formItinerary.value.location = formItinerary.value.category === '航班'
+            ? (formItinerary.value.arrAirport || formItinerary.value.depAirport || formItinerary.value.name)
+            : formItinerary.value.name;
+        }
         
         if (isEditMode.value) {
           const idx = currentList.findIndex(i => i.id === formItinerary.value.id);
