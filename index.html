@@ -75,6 +75,15 @@
     body { background-color: #eef4f8; }
     /* Vue 尚未接管畫面前，先隱藏整個 App，避免出現未渲染的 {{ }} 模板閃爍畫面 */
     [v-cloak] { display: none !important; }
+
+    input[type="date"] {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      -webkit-appearance: none;
+      appearance: none;
+      font-size: 16px; /* 避免 iOS 對焦時自動放大版面，反而造成跑版 */
+    }
   </style>
 </head>
 <body class="text-slate-700 antialiased selection:bg-ice-200">
@@ -548,7 +557,7 @@
             <i class="fa-solid fa-calendar-days text-ice-600"></i> 旅行日期設定
           </h2>
           <div class="space-y-3 text-xs">
-            <div>
+            <div class="overflow-hidden">
               <label class="block font-bold text-slate-600 mb-1">出發日期 <span class="text-red-500">*</span></label>
               <input v-model="tripStartDateInput" type="date" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
