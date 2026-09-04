@@ -247,7 +247,7 @@
           </div>
           <div class="space-y-3 text-xs">
             <div v-for="f in flightsInfo" :key="f.id" class="bg-slate-50 p-3 rounded-xl border border-slate-100 relative">
-              <div class="text-[10px] text-ice-600 font-bold mb-1">Day {{ f.dayIndex + 1 }}</div>
+              <div class="text-[10px] text-ice-600 font-bold mb-1">{{ dateList[f.dayIndex] ? dateList[f.dayIndex].date : '' }} (Day {{ f.dayIndex + 1 }})</div>
               <div class="font-bold text-slate-700 mb-1 flex justify-between pr-8">
                 <span>{{ f.label }}</span>
                 <span class="text-ice-600">{{ f.duration }}</span>
@@ -496,16 +496,25 @@
       <!-- ================= 4. 花費 Tab ================= -->
       <section v-if="currentTab === 'expenses'" class="space-y-4">
         
-        <!-- 總花費統計卡片 (自動換算為日幣 JPY 加總，含手動紀錄 + 資訊分頁自動帶入的金額) -->
+        <!-- 總花費統計卡片 (自動換算為日幣 JPY 加總，含手動紀錄 + 資訊分頁自動帶入的金額；會依「花費類別」篩選結果計算) -->
         <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-md">
-          <div class="text-xs text-slate-400">總花費統計 (換算為日幣 JPY)</div>
+          <div class="text-xs text-slate-400">{{ selectedExpenseCategory === '全部' ? '總花費統計' : selectedExpenseCategory + ' 花費統計' }} (換算為日幣 JPY)</div>
           <div class="text-3xl font-bold mt-1 text-amber-300">¥ {{ totalExpensesJPY.toLocaleString() }}</div>
           <div class="text-xs text-slate-400 mt-1">約合 NT$ {{ Math.round(totalExpensesJPY * jpyRate).toLocaleString() }}</div>
         </div>
 
+        <!-- 花費類別篩選下拉選單 -->
+        <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl shadow-sm border border-slate-100">
+          <span class="text-xs font-bold text-slate-500"><i class="fa-solid fa-filter mr-1"></i>花費類別</span>
+          <select v-model="selectedExpenseCategory" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none text-slate-700 font-medium">
+            <option value="全部">全部類別</option>
+            <option v-for="cat in ['交通','飲食','住宿','門票','購物','其他']" :key="cat" :value="cat">{{ cat }}</option>
+          </select>
+        </div>
+
         <!-- 花費列表 (手動紀錄可編輯/刪除；來自「資訊」分頁的金額自動帶入，僅可在資訊分頁編輯) -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
-          <div v-for="exp in allExpenses" :key="exp.key" class="p-3.5 flex items-center justify-between">
+          <div v-for="exp in filteredExpenses" :key="exp.key" class="p-3.5 flex items-center justify-between">
             <div class="flex items-center space-x-3">
               <div class="w-10 h-10 rounded-xl bg-ice-50 text-ice-600 flex items-center justify-center text-base font-bold">
                 <i :class="exp.icon || getExpenseIcon(exp.category)"></i>
@@ -528,7 +537,7 @@
               </div>
             </div>
           </div>
-          <div v-if="allExpenses.length === 0" class="text-slate-400 text-center py-6 text-sm">尚未新增花費紀錄</div>
+          <div v-if="filteredExpenses.length === 0" class="text-slate-400 text-center py-6 text-sm">{{ selectedExpenseCategory === '全部' ? '尚未新增花費紀錄' : '此類別尚無花費紀錄' }}</div>
         </div>
 
         <!-- 新增花費浮動按鈕 -->
@@ -2063,6 +2072,7 @@
       const isEditExpenseMode = ref(false);
       const initFormExpense = () => ({ id: null, category: '', name: '', amount: null, currency: 'JPY', payMethod: '', date: '' });
       const formExpense = ref(initFormExpense());
+      const selectedExpenseCategory = ref('全部');
 
       const toJPY = (amount, currency) => {
         const num = Number(amount) || 0;
@@ -2071,11 +2081,64 @@
 
       const autoExpenses = computed(() => {
         const list = [];
-        flightsInfo.value.forEach(f => { if (f.price && f.payMethod) list.push({ key: 'flight-' + f.id, id: f.id, category: '交通', icon: 'fa-solid fa-plane', name: f.label, amount: f.price, currency: f.currency, payMethod: f.payMethod, dateLabel: 'Day ' + (f.dayIndex + 1), auto: true }); });
-        hotelsInfo.value.forEach(h => { if (h.price && h.payMethod) list.push({ key: 'hotel-' + h.id, id: h.id, category: '住宿', icon: 'fa-solid fa-hotel', name: h.name, amount: h.price, currency: h.currency, payMethod: h.payMethod, dateLabel: 'Day ' + (h.dayIndex + 1), auto: true }); });
+
+        // 新增一個小工具：根據出發日期與天數(dayIndex)計算出正確的 YYYY-MM-DD
+        const getLocalYMD = (dayIndex) => {
+          const d = new Date(tripStartDate.value + 'T00:00:00');
+          d.setDate(d.getDate() + dayIndex);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}`;
+        };
+        
+        // --- 航班花費加總 (將名稱統一為「機票」) ---
+        const flightGroup = {};
+        flightsInfo.value.forEach(f => { 
+          if (f.price && f.payMethod) {
+            const groupKey = f.currency + '_' + f.payMethod;
+            if (!flightGroup[groupKey]) {
+              flightGroup[groupKey] = { 
+                key: 'flight-group-' + groupKey, 
+                id: 'flight-group-' + groupKey, 
+                category: '交通', 
+                icon: 'fa-solid fa-plane', 
+                name: '機票', 
+                amount: 0, 
+                currency: f.currency, 
+                payMethod: f.payMethod, 
+                dateLabel: getLocalYMD(f.dayIndex), // 這裡替換為自動計算的 年-月-日
+                auto: true 
+              };
+            }
+            flightGroup[groupKey].amount += f.price;
+          } 
+        });
+        Object.values(flightGroup).forEach(item => list.push(item));
+
+        // --- 住宿花費 ---
+        hotelsInfo.value.forEach(h => { 
+          if (h.price && h.payMethod) {
+            list.push({ 
+              key: 'hotel-' + h.id, 
+              id: h.id, 
+              category: '住宿', 
+              icon: 'fa-solid fa-hotel', 
+              name: h.name, 
+              amount: h.price, 
+              currency: h.currency, 
+              payMethod: h.payMethod, 
+              dateLabel: getLocalYMD(h.dayIndex), // 這裡替換為自動計算的 年-月-日
+              auto: true 
+            });
+          } 
+        });
+
+        // 租車、一日遊、其他預約 (備註：這些由於原本是讓使用者自由輸入的文字欄位，所以會維持顯示你填寫的文字)
         carRentals.value.forEach(c => { if (c.price && c.payMethod) list.push({ key: 'car-' + c.id, id: c.id, category: '交通', icon: 'fa-solid fa-car', name: c.name, amount: c.price, currency: c.currency, payMethod: c.payMethod, dateLabel: c.pickupTime, auto: true }); });
         dayTours.value.forEach(t => { if (t.price && t.payMethod) list.push({ key: 'tour-' + t.id, id: t.id, category: '門票', icon: 'fa-solid fa-person-hiking', name: t.name, amount: t.price, currency: t.currency, payMethod: t.payMethod, dateLabel: t.time, auto: true }); });
         otherBookings.value.forEach(b => { if (b.price && b.payMethod) list.push({ key: 'booking-' + b.id, id: b.id, category: '其他', icon: 'fa-solid fa-ticket', name: b.name, amount: b.price, currency: b.currency, payMethod: b.payMethod, dateLabel: b.time, auto: true }); });
+        
         return list;
       });
 
@@ -2084,7 +2147,13 @@
         return [...manual, ...autoExpenses.value];
       });
 
-      const totalExpensesJPY = computed(() => allExpenses.value.reduce((sum, e) => sum + toJPY(e.amount, e.currency), 0));
+      // 依照選定的花費類別篩選出的花費清單 (統計卡片仍顯示全部花費總額，不受篩選影響)
+      const filteredExpenses = computed(() => {
+        if (selectedExpenseCategory.value === '全部') return allExpenses.value;
+        return allExpenses.value.filter(e => e.category === selectedExpenseCategory.value);
+      });
+
+      const totalExpensesJPY = computed(() => filteredExpenses.value.reduce((sum, e) => sum + toJPY(e.amount, e.currency), 0));
 
       const openAddExpenseModal = () => { isEditExpenseMode.value = false; formExpense.value = initFormExpense(); showExpenseModal.value = true; };
       const editExpense = (exp) => {
@@ -2300,8 +2369,8 @@
         filteredItinerary, openMap, moveItem, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
         isEditShoppingMode, openAddShoppingModal, editShoppingItem, saveShoppingItem, confirmDeleteShoppingItem,
         setShoppingCardRef, draggingShopping, onGripPointerDown,
-        expenses, showExpenseModal, formExpense, isEditExpenseMode,
-        allExpenses, autoExpenses, totalExpensesJPY, openAddExpenseModal, editExpense, saveExpense, confirmDeleteExpense,
+        expenses, showExpenseModal, formExpense, isEditExpenseMode, selectedExpenseCategory,
+        allExpenses, autoExpenses, filteredExpenses, totalExpensesJPY, openAddExpenseModal, editExpense, saveExpense, confirmDeleteExpense,
         getExpenseIcon, showItineraryModal, isEditMode,
         formItinerary, openAddModal, editItinerary, saveItinerary, confirmDeleteItinerary, getCategoryBadgeClass,
         bannerImage, bannerImageInput, showBannerModal, openBannerModal, handleBannerUpload, saveBannerImage, handleDocUploadMulti, fileUploading,
