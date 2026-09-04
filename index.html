@@ -1484,20 +1484,15 @@
             break;
           }
           try {
-            let dataUrl, type;
-            if (file.type.startsWith('image/')) {
-              // ⭐️ 修正處：寬度上限拉高到 3000（接近原圖尺寸），品質提升到 0.95（近乎無損壓縮）
-              dataUrl = await compressImage(file, 3000, 0.95); 
-              type = 'image/jpeg';
-            } else {
-              dataUrl = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (ev) => resolve(ev.target.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-              });
-              type = file.type;
-            }
+            // ⭐️ 修正處：直接讀取原始檔案，不再經過 compressImage 壓縮，保留 100% 原始畫質與原始檔案格式 (PNG/JPEG)
+            const dataUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = (ev) => resolve(ev.target.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+            const type = file.type;
+
             const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
             await idbSet(id, dataUrl);
             docsArray.push({ id, name: file.name, type });
