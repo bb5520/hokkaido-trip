@@ -283,7 +283,7 @@
             <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
               <i class="fa-solid fa-hotel text-ice-600"></i> 住宿資訊
             </h2>
-            <span class="text-[10px] text-slate-400">名稱同步自「行程」</span>
+            <span class="text-[10px] text-slate-400">同步自「行程」</span>
           </div>
           <div class="space-y-3 text-xs">
             <div v-for="h in hotelsInfo" :key="h.id" class="border-b border-slate-100 pb-2 last:border-b-0 last:pb-0 relative">
@@ -431,7 +431,7 @@
                 </button>
               </div>
             </div>
-            <div v-if="carRentals.length === 0" class="text-slate-400 text-center py-2">這趟旅程沒有租車，尚未新增資訊</div>
+            <div v-if="carRentals.length === 0" class="text-slate-400 text-center py-2">尚未新增租車資訊</div>
           </div>
         </div>
 
@@ -484,7 +484,7 @@
           </div>
         </div>
 
-        <div v-if="shoppingList.length === 0" class="text-slate-400 text-center py-6 text-sm">尚未新增購物清單項目</div>
+        <div v-if="shoppingList.length === 0" class="text-slate-400 text-center py-6 text-sm">尚未新增購物清單</div>
 
         <!-- 新增購物清單浮動按鈕 -->
         <button @click="openAddShoppingModal" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
