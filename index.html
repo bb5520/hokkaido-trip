@@ -1283,11 +1283,13 @@
           <button @click="previewDoc = null" class="text-slate-400 flex-shrink-0"><i class="fa-solid fa-xmark text-lg"></i></button>
         </div>
         <div>
-          <img v-if="previewDoc.type && previewDoc.type.startsWith('image/')" :src="previewDoc.data" class="w-full rounded-xl">
-          <iframe v-else-if="previewDoc.type === 'application/pdf'" :src="previewDoc.data" class="w-full h-[65vh] rounded-xl border border-slate-200"></iframe>
+          <!-- 修正處：將 previewDoc.data 替換為 resolveBlobUrl(previewDoc.id) -->
+          <img v-if="previewDoc.type && previewDoc.type.startsWith('image/')" :src="resolveBlobUrl(previewDoc.id)" class="w-full rounded-xl">
+          <iframe v-else-if="previewDoc.type === 'application/pdf'" :src="resolveBlobUrl(previewDoc.id)" class="w-full h-[65vh] rounded-xl border border-slate-200"></iframe>
           <div v-else class="text-xs text-slate-500 text-center py-6">此檔案類型無法直接預覽，請下載後查看。</div>
         </div>
-        <a :href="previewDoc.data" :download="previewDoc.name" class="block text-center bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">下載檔案</a>
+        <!-- 修正處：下載連結也一併修正 -->
+        <a :href="resolveBlobUrl(previewDoc.id)" :download="previewDoc.name" class="block text-center bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">下載檔案</a>
       </div>
     </div>
 
