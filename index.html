@@ -1486,7 +1486,7 @@
           try {
             let dataUrl, type;
             if (file.type.startsWith('image/')) {
-              dataUrl = await compressImage(file, 800, 0.7);
+              dataUrl = await compressImage(file, 1200, 0.85);
               type = 'image/jpeg';
             } else {
               dataUrl = await new Promise((resolve, reject) => {
