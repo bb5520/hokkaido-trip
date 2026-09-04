@@ -866,7 +866,7 @@
             <div v-if="formShopping.images && formShopping.images.length" class="flex flex-wrap gap-2 mt-1">
               <div v-for="(photo, pi) in formShopping.images" :key="pi" class="relative">
                 <img :src="resolveBlobUrl(photo.id)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" @click="openGallery(formShopping.images, pi)">
-                <button type="button" @click="removeDocument(formShopping.images, pi)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" @click="formShopping.images.splice(pi, 1)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
               </div>
             </div>
             <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
@@ -979,7 +979,7 @@
             <div v-if="formFlightDoc.documents && formFlightDoc.documents.length" class="space-y-1.5">
               <div v-for="(doc, di) in formFlightDoc.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
                 <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
-                <button type="button" @click="removeDocument(formFlightDoc.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" @click="formFlightDoc.documents.splice(di, 1)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
               </div>
             </div>
             <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
@@ -1782,22 +1782,9 @@
         }
         showItineraryModal.value = false;
       };
-      const confirmDeleteItinerary = async () => {
+      const confirmDeleteItinerary = () => {
         if (confirm('確定要刪除這個行程嗎？')) {
           const currentList = itineraryData.value[selectedDateIndex.value];
-          
-          // 檢查並刪除可能關聯的航班或住宿附件
-          const flightExtra = flightExtras.value[formItinerary.value.id];
-          if (flightExtra && flightExtra.documents) {
-            for (const d of flightExtra.documents) await idbDelete(d.id);
-            delete flightExtras.value[formItinerary.value.id];
-          }
-          const hotelExtra = hotelExtras.value[formItinerary.value.id];
-          if (hotelExtra && hotelExtra.documents) {
-            for (const d of hotelExtra.documents) await idbDelete(d.id);
-            delete hotelExtras.value[formItinerary.value.id];
-          }
-
           itineraryData.value[selectedDateIndex.value] = currentList.filter(i => i.id !== formItinerary.value.id);
           showItineraryModal.value = false;
         }
@@ -2001,15 +1988,6 @@
         showHotelModal.value = false;
       };
 
-      // ⭐️ 1. 新增：真正從資料庫與畫面上徹底刪除檔案的工具函數
-      const removeDocument = async (docArray, index) => {
-        const doc = docArray[index];
-        if (doc && doc.id) {
-          await idbDelete(doc.id); // 徹底從底層資料庫刪除
-        }
-        docArray.splice(index, 1); // 從畫面上移除
-      };
-
       // 租車、一日遊、其他預約 的 CRUD 邏輯 (簡化共用模式)
       const createCrud = (dataRef, initObj) => {
         const showModal = ref(false);
@@ -2030,17 +2008,15 @@
           }
           showModal.value = false;
         };
-        const del = async () => {
+        const del = () => {
           if (confirm('確定要刪除這筆資訊嗎？')) {
-            if (formObj.value.documents) {
-              for (const doc of formObj.value.documents) await idbDelete(doc.id);
-            }
             dataRef.value = dataRef.value.filter(i => i.id !== formObj.value.id);
             showModal.value = false;
           }
         };
         return { showModal, isEditMode, formObj, openAdd, edit, save, del };
       };
+
       const initCar = () => ({ id: null, name: '', bookingNo: '', pickupTime: '', location: '', note: '', documents: [], price: null, currency: 'JPY', payMethod: '' });
       const car = createCrud(carRentals, initCar);
       const initDayTour = () => ({ id: null, name: '', bookingNo: '', time: '', location: '', note: '', documents: [], price: null, currency: 'JPY', payMethod: '' });
@@ -2420,7 +2396,7 @@
         expenses, showExpenseModal, formExpense, isEditExpenseMode, selectedExpenseCategory,
         allExpenses, autoExpenses, filteredExpenses, totalExpensesJPY, openAddExpenseModal, editExpense, saveExpense, confirmDeleteExpense,
         getExpenseIcon, showItineraryModal, isEditMode,
-        removeDocument,formItinerary, openAddModal, editItinerary, saveItinerary, confirmDeleteItinerary, getCategoryBadgeClass,
+        formItinerary, openAddModal, editItinerary, saveItinerary, confirmDeleteItinerary, getCategoryBadgeClass,
         bannerImage, bannerImageInput, showBannerModal, openBannerModal, handleBannerUpload, saveBannerImage, handleDocUploadMulti, fileUploading,
         twdToJpyInput, saveJpyRate,
         previewDoc, viewDocument, docListModal, openDocList,
