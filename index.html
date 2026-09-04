@@ -2345,15 +2345,22 @@
       const DISPLAY_QUOTA_GB = 5; // 想要顯示 10GB 就改成 10
       const DISPLAY_QUOTA_BYTES = DISPLAY_QUOTA_GB * 1024 * 1024 * 1024;
 
-      const checkStorageUsage = async () => {
+      const checkStorageUsage = async (e) => {
         if (!navigator.storage || !navigator.storage.estimate) {
           storageInfo.value.supported = false;
+          // 確保是手動點擊才跳出提示
+          if (e instanceof Event) alert('此瀏覽器不支援儲存空間查詢');
           return;
         }
         const { usage } = await navigator.storage.estimate();
         storageInfo.value = { usage, quota: DISPLAY_QUOTA_BYTES, supported: true };
+        
+        // 只有當帶有 Event (代表是使用者透過滑鼠或手指點擊按鈕) 時，才跳出提示視窗
+        if (e instanceof Event) {
+          alert('儲存空間使用量重新整理完成！');
+        }
       };
-
+      
       // 檢查目前用量是否已達上限，回傳 true 代表「還可以寫入」
       const checkQuotaAvailable = async () => {
         if (!navigator.storage || !navigator.storage.estimate) return true; // 不支援估算就不擋
