@@ -866,7 +866,7 @@
             <div v-if="formShopping.images && formShopping.images.length" class="flex flex-wrap gap-2 mt-1">
               <div v-for="(photo, pi) in formShopping.images" :key="pi" class="relative">
                 <img :src="resolveBlobUrl(photo.id)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" @click="openGallery(formShopping.images, pi)">
-                <button type="button" @click="formShopping.images.splice(pi, 1)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" @click="removeDocument(formShopping.images, pi)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
               </div>
             </div>
             <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
@@ -979,7 +979,7 @@
             <div v-if="formFlightDoc.documents && formFlightDoc.documents.length" class="space-y-1.5">
               <div v-for="(doc, di) in formFlightDoc.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
                 <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
-                <button type="button" @click="formFlightDoc.documents.splice(di, 1)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" @click="removeDocument(formFlightDoc.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
               </div>
             </div>
             <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
@@ -1507,6 +1507,19 @@
         }
         fileUploading.value = false;
         e.target.value = '';
+      };
+
+      // 真正的刪除檔案功能 (不僅從陣列移除，也徹底從底層資料庫刪除)
+      const removeDocument = async (array, index) => {
+        const doc = array[index];
+        if (doc && doc.id) {
+          try {
+            await idbDelete(doc.id); // 呼叫底層資料庫徹底刪除該檔案
+          } catch (e) {
+            console.error('資料庫檔案刪除失敗', e);
+          }
+        }
+        array.splice(index, 1); // 從畫面上移除
       };
 
       const previewDoc = ref(null);
@@ -2397,7 +2410,7 @@
         allExpenses, autoExpenses, filteredExpenses, totalExpensesJPY, openAddExpenseModal, editExpense, saveExpense, confirmDeleteExpense,
         getExpenseIcon, showItineraryModal, isEditMode,
         formItinerary, openAddModal, editItinerary, saveItinerary, confirmDeleteItinerary, getCategoryBadgeClass,
-        bannerImage, bannerImageInput, showBannerModal, openBannerModal, handleBannerUpload, saveBannerImage, handleDocUploadMulti, fileUploading,
+        bannerImage, bannerImageInput, showBannerModal, openBannerModal, handleBannerUpload, saveBannerImage, handleDocUploadMulti, removeDocument, fileUploading,
         twdToJpyInput, saveJpyRate,
         previewDoc, viewDocument, docListModal, openDocList,
         galleryModal, openGallery, closeGallery, nextGalleryImage, prevGalleryImage, galleryTouchStart, galleryTouchEnd,
