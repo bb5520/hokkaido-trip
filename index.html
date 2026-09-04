@@ -1357,27 +1357,23 @@
       const jpyRate = ref(initData('trip_jpyRate', 0.215)); // 1 JPY ≈ 0.215 TWD
       setupWatcher(bannerImage, 'trip_banner');
       setupWatcher(jpyRate, 'trip_jpyRate');
+
+      // 旅行日期設定：出發日期 + 天數，可在「設定」分頁自訂
+      const todayString = new Date().toISOString().split('T')[0];
+      const tripStartDate = ref(initData('trip_startDate', todayString));
+      const tripDays = ref(initData('trip_days', 3));
+      setupWatcher(tripStartDate, 'trip_startDate');
+      setupWatcher(tripDays, 'trip_days');
       
       // 主行程資料
-      const defaultItinerary = [
-        [
-          { id: 1, category: '航班', name: '前往新千歲機場', flightNo: 'BR116', depAirport: 'TPE 桃園', depTime: '08:40', arrAirport: 'CTS 新千歲', arrTime: '13:10', flightDuration: '3小時30分', location: 'New Chitose Airport', note: '記得填寫 Visit Japan Web', transitTime: '飯店接駁車 45分鐘', transitIcon: 'fa-solid fa-bus' },
-          { id: 2, category: '住宿', name: '札幌索拉利亞西鐵飯店 Check-in', openHours: '15:00後', location: 'Solaria Nishitetsu Hotel Sapporo', note: '近大通公園', transitTime: '步行 10分鐘', transitIcon: 'fa-solid fa-person-walking' },
-          { id: 3, category: '美食', name: 'GARAKU 湯咖哩', openHours: '11:30 - 21:00', location: 'Soup Curry GARAKU', note: '必點雞腿湯咖哩', transitTime: '', transitIcon: '' }
-        ],
-        [
-          { id: 4, category: '景點', name: '小樽運河', openHours: '24小時開放', ticket: '免費', location: 'Otaru Canal', note: '傍晚點燈超夢幻', transitTime: 'JR電車 35分鐘', transitIcon: 'fa-solid fa-train' },
-          { id: 5, category: '美食', name: '小樽政壽司', openHours: '11:00 - 21:00', location: 'Otaru Masazushi Main Shop', note: '需提前預約', transitTime: '', transitIcon: '' }
-        ],
-        [], [], []
-      ];
+      const defaultItinerary = Array.from({ length: tripDays.value + 1 }, () => []);
       const itineraryData = ref(initData('trip_itinerary', defaultItinerary));
       setupWatcher(itineraryData, 'trip_itinerary');
 
       // 資訊分頁補充資料
       const flightExtras = ref(initData('trip_flightExtras', {}));
       const hotelExtras = ref(initData('trip_hotelExtras', {}));
-      const carRentals = ref(initData('trip_carRentals', [{ id: 1, name: 'TOYOTA Rent a Car', bookingNo: 'R-88902312', pickupTime: 'Day 1 14:30', location: 'TOYOTA Rent a Car Shin-Chitose', note: '', documents: [], price: null, currency: 'JPY', payMethod: '' }]));
+      const carRentals = ref(initData('trip_carRentals', []));
       const dayTours = ref(initData('trip_dayTours', []));
       const otherBookings = ref(initData('trip_otherBookings', []));
       setupWatcher(flightExtras, 'trip_flightExtras');
@@ -1387,12 +1383,8 @@
       setupWatcher(otherBookings, 'trip_otherBookings');
 
       // 購物與花費資料
-      const shoppingList = ref(initData('trip_shopping', [
-        { id: 1, name: '六花亭 奶油夾心餅乾', location: '新千歲機場', quantity: 3, price: 780, currency: 'JPY', images: [], bought: false }
-      ]));
-      const expenses = ref(initData('trip_expenses', [
-        { id: 1, category: '交通', name: 'JR Welcome Pass', date: '2026-02-06', amount: 2000, currency: 'JPY', payMethod: '現金' }
-      ]));
+      const shoppingList = ref(initData('trip_shopping', []));
+      const expenses = ref(initData('trip_expenses', []));
       setupWatcher(shoppingList, 'trip_shopping');
       setupWatcher(expenses, 'trip_expenses');
       
@@ -1657,12 +1649,6 @@
 
       // --- 4. 行程分頁 (Itinerary) ---
       const selectedDateIndex = ref(0);
-
-      // 旅行日期設定：出發日期 + 天數，可在「設定」分頁自訂
-      const tripStartDate = ref(initData('trip_startDate', '2026-02-06'));
-      const tripDays = ref(initData('trip_days', 5));
-      setupWatcher(tripStartDate, 'trip_startDate');
-      setupWatcher(tripDays, 'trip_days');
 
       const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
