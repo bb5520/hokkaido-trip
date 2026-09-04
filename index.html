@@ -1673,6 +1673,42 @@
         });
       };
 
+      // ---- 終極清道夫：自動清理幽靈檔案 ----
+      const cleanOrphanedFiles = async () => {
+        try {
+          const db = await getDB();
+          const keys = await new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const req = tx.objectStore(STORE_NAME).getAllKeys();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+          });
+
+          // 收集目前「真正有在用」的所有照片 ID
+          const usedIds = new Set();
+          shoppingList.value.forEach(item => (item.images || []).forEach(img => usedIds.add(img.id)));
+          Object.values(flightExtras.value).forEach(extra => (extra.documents || []).forEach(doc => usedIds.add(doc.id)));
+          Object.values(hotelExtras.value).forEach(extra => (extra.documents || []).forEach(doc => usedIds.add(doc.id)));
+          carRentals.value.forEach(car => (car.documents || []).forEach(doc => usedIds.add(doc.id)));
+          dayTours.value.forEach(tour => (tour.documents || []).forEach(doc => usedIds.add(doc.id)));
+          otherBookings.value.forEach(booking => (booking.documents || []).forEach(doc => usedIds.add(doc.id)));
+
+          // 比對資料庫，把沒在用的 ID 全部徹底刪除
+          for (const key of keys) {
+            if (!usedIds.has(key)) {
+              await idbDelete(key);
+            }
+          }
+        } catch (e) {
+          console.error('清理幽靈檔案失敗', e);
+        }
+      };
+
+      // App 啟動後 3 秒，在背景偷偷幫你自動執行一次大掃除
+      setTimeout(cleanOrphanedFiles, 3000);
+
+      const blobUrlCache = ref({}); // { [id]: dataUrl }
+
       const blobUrlCache = ref({}); // { [id]: dataUrl }
 
       const resolveBlobUrl = (id) => {
@@ -2357,16 +2393,18 @@
       const checkStorageUsage = async (e) => {
         if (!navigator.storage || !navigator.storage.estimate) {
           storageInfo.value.supported = false;
-          // 確保是手動點擊才跳出提示
           if (e instanceof Event) alert('此瀏覽器不支援儲存空間查詢');
           return;
         }
+        
+        // ⭐️ 核心魔法：在估算容量之前，強制執行一次幽靈檔案大掃除！
+        await cleanOrphanedFiles();
+
         const { usage } = await navigator.storage.estimate();
         storageInfo.value = { usage, quota: DISPLAY_QUOTA_BYTES, supported: true };
         
-        // 只有當帶有 Event (代表是使用者透過滑鼠或手指點擊按鈕) 時，才跳出提示視窗
         if (e instanceof Event) {
-          alert('儲存空間使用量重新整理完成！');
+          alert('儲存空間重新整理完成！已自動清理多餘的幽靈照片。');
         }
       };
       
