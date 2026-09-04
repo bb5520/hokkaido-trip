@@ -1486,8 +1486,8 @@
           try {
             let dataUrl, type;
             if (file.type.startsWith('image/')) {
-              // ⭐️ 修正處：將解析度一口氣提升到 1920，品質提升到 0.9 (90%)
-              dataUrl = await compressImage(file, 1920, 0.9); 
+              // ⭐️ 修正處：寬度上限拉高到 3000（接近原圖尺寸），品質提升到 0.95（近乎無損壓縮）
+              dataUrl = await compressImage(file, 3000, 0.95); 
               type = 'image/jpeg';
             } else {
               dataUrl = await new Promise((resolve, reject) => {
