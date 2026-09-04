@@ -1509,7 +1509,35 @@
       };
 
       const previewDoc = ref(null);
-      const viewDocument = (doc) => { if (doc) previewDoc.value = doc; };
+      
+      // 升級版的預覽功能：若是圖片，開啟與購物清單相同的全螢幕畫廊模式
+      const viewDocument = (doc) => { 
+        if (!doc) return; 
+        
+        if (doc.type && doc.type.startsWith('image/')) {
+          // 自動尋找目前開啟的視窗，抓取對應的附件陣列 (這樣才能支援左右滑動切換多張照片)
+          let sourceArray = [];
+          if (docListModal.value.show) sourceArray = docListModal.value.documents;
+          else if (showFlightModal.value) sourceArray = formFlightDoc.value.documents;
+          else if (showHotelModal.value) sourceArray = formHotelInfo.value.documents;
+          else if (car.showModal.value) sourceArray = car.formObj.value.documents;
+          else if (tour.showModal.value) sourceArray = tour.formObj.value.documents;
+          else if (other.showModal.value) sourceArray = other.formObj.value.documents;
+          else sourceArray = [doc]; // 預防萬一找不到來源，就只顯示當前這一張
+
+          // 幫畫廊過濾出「只含圖片」的陣列
+          const imageDocs = sourceArray.filter(d => d.type && d.type.startsWith('image/'));
+          if (imageDocs.length === 0) imageDocs.push(doc);
+
+          // 找出目前點擊的是清單中的第幾張，並開啟畫廊
+          const idx = imageDocs.findIndex(d => d.id === doc.id);
+          openGallery(imageDocs, idx !== -1 ? idx : 0);
+        } else {
+          // 非圖片檔案 (如 PDF)，維持原本有「下載檔案」按鈕的單一預覽模式
+          previewDoc.value = doc; 
+        }
+      };
+
       const docListModal = ref({ show: false, title: '', documents: [] });
       const openDocList = (title, documents) => { docListModal.value = { show: true, title, documents: documents || [] }; };
 
