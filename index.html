@@ -613,6 +613,9 @@
             <button @click="checkStorageUsage" class="text-[11px] text-ice-600 mt-2 flex items-center gap-1">
               <i class="fa-solid fa-rotate"></i> 重新整理
             </button>
+            <button @click="compactBlobDB" class="text-[11px] text-red-500 mt-2 flex items-center gap-1">
+              <i class="fa-solid fa-broom"></i> 徹底釋放空間（重建資料庫）
+            </button>
           </template>
           <div v-else class="text-xs text-slate-400">此瀏覽器不支援儲存空間查詢</div>
         </div>
@@ -1719,6 +1722,43 @@
         return blobUrlCache.value[id];
       };
       
+      // 徹底重建 IndexedDB，強制釋放已刪除資料佔用的磁碟空間
+      const compactBlobDB = async () => {
+        // 1. 收集目前「真正還在用」的所有檔案 id
+        const usedIds = new Set();
+        shoppingList.value.forEach(item => (item.images || []).forEach(img => usedIds.add(img.id)));
+        Object.values(flightExtras.value).forEach(e => (e.documents || []).forEach(d => usedIds.add(d.id)));
+        Object.values(hotelExtras.value).forEach(e => (e.documents || []).forEach(d => usedIds.add(d.id)));
+        carRentals.value.forEach(c => (c.documents || []).forEach(d => usedIds.add(d.id)));
+        dayTours.value.forEach(t => (t.documents || []).forEach(d => usedIds.add(d.id)));
+        otherBookings.value.forEach(b => (b.documents || []).forEach(d => usedIds.add(d.id)));
+
+        // 2. 把這些檔案的實際內容讀進記憶體
+        const survivors = {};
+        for (const id of usedIds) {
+          const data = await idbGet(id);
+          if (data) survivors[id] = data;
+        }
+
+        // 3. 關閉現有連線，並「整個刪除」資料庫檔案（這一步才會真正釋放磁碟空間）
+        const db = await getDB();
+        db.close();
+        dbPromise = null;
+        await new Promise((resolve) => {
+          const req = indexedDB.deleteDatabase(DB_NAME);
+          req.onsuccess = () => resolve();
+          req.onerror = () => resolve();   // 就算失敗也繼續，避免卡住
+          req.onblocked = () => resolve();
+        });
+
+        // 4. 用全新的資料庫檔案，把還在使用的檔案寫回去
+        for (const [id, data] of Object.entries(survivors)) {
+          await idbSet(id, data);
+        }
+
+        await checkStorageUsage(); // 重新整理顯示的用量
+        alert('儲存空間已徹底壓實！');
+      };
 
       // --- 4. 行程分頁 (Itinerary) ---
       const selectedDateIndex = ref(0);
