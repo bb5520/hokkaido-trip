@@ -1709,8 +1709,6 @@
 
       const blobUrlCache = ref({}); // { [id]: dataUrl }
 
-      const blobUrlCache = ref({}); // { [id]: dataUrl }
-
       const resolveBlobUrl = (id) => {
         if (!blobUrlCache.value[id]) {
           idbGet(id).then(dataUrl => {
