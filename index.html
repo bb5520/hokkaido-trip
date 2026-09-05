@@ -1665,7 +1665,7 @@
         });
       };
 
-      // ---- 終極清道夫：自動清理幽靈檔案 (升級版) ----
+      // ---- 終極清道夫：自動清理幽靈檔案 (升級即時版) ----
       const cleanOrphanedFiles = async () => {
         try {
           const db = await getDB();
@@ -1676,8 +1676,6 @@
             req.onerror = () => reject(req.error);
           });
 
-          // 1. 【重點修復】同步清理 localStorage 中殘留的無效 Extras
-          // 避免在「行程」刪除航班/住宿後，這裡還抓著照片 ID 不放
           const activeFlightIds = new Set(flightsInfo.value.map(f => String(f.id)));
           let flightExtrasChanged = false;
           for (const id in flightExtras.value) {
@@ -1698,7 +1696,6 @@
           }
           if (hotelExtrasChanged) hotelExtras.value = { ...hotelExtras.value };
 
-          // 2. 收集目前「真正有在用」的所有照片 ID
           const usedIds = new Set();
           shoppingList.value.forEach(item => (item.images || []).forEach(img => usedIds.add(img.id)));
           Object.values(flightExtras.value).forEach(extra => (extra.documents || []).forEach(doc => usedIds.add(doc.id)));
@@ -1707,18 +1704,49 @@
           dayTours.value.forEach(tour => (tour.documents || []).forEach(doc => usedIds.add(doc.id)));
           otherBookings.value.forEach(booking => (booking.documents || []).forEach(doc => usedIds.add(doc.id)));
 
-          // 3. 比對資料庫，把沒在用的 ID 全部徹底刪除
-          let deletedCount = 0;
           for (const key of keys) {
             if (!usedIds.has(key)) {
               await idbDelete(key);
-              deletedCount++;
+              delete blobUrlCache.value[key]; // 重點：同步清除記憶體快取
             }
           }
-          console.log(`清理完成: 移除了 ${deletedCount} 個無效檔案`);
         } catch (e) {
           console.error('清理幽靈檔案失敗', e);
         }
+      };
+
+      // --- 精準容量計算 (完全繞過 iOS 遲鈍的實體檔案估算) ---
+      const calculateExactStorage = async () => {
+        let totalBytes = 0;
+        
+        // 1. 計算 LocalStorage 使用量
+        for (const key in localStorage) {
+          if (localStorage.hasOwnProperty(key)) {
+            totalBytes += (localStorage[key].length + key.length) * 2;
+          }
+        }
+
+        // 2. 計算 IndexedDB (照片/PDF) 實際使用量
+        try {
+          const db = await getDB();
+          const records = await new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const req = tx.objectStore(STORE_NAME).getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => reject(req.error);
+          });
+          
+          records.forEach(dataUrl => {
+            if (typeof dataUrl === 'string') {
+               // Base64 格式轉回實體大小，約為字串長度的 3/4 (0.75)
+               totalBytes += Math.round(dataUrl.length * 0.75);
+            }
+          });
+        } catch (e) {
+          console.error('計算 IDB 容量失敗', e);
+        }
+
+        return totalBytes;
       };
 
       // App 啟動後 3 秒，在背景偷偷幫你自動執行一次大掃除
@@ -2402,20 +2430,15 @@
       const DISPLAY_QUOTA_BYTES = DISPLAY_QUOTA_GB * 1024 * 1024 * 1024;
 
       const checkStorageUsage = async (e) => {
-        if (!navigator.storage || !navigator.storage.estimate) {
-          storageInfo.value.supported = false;
-          if (e instanceof Event) alert('此瀏覽器不支援儲存空間查詢');
-          return;
-        }
-        
-        // ⭐️ 核心魔法：在估算容量之前，強制執行一次幽靈檔案大掃除！
+        // 先執行大掃除，確保剛刪除的檔案從資料庫拔除
         await cleanOrphanedFiles();
 
-        const { usage } = await navigator.storage.estimate();
-        storageInfo.value = { usage, quota: DISPLAY_QUOTA_BYTES, supported: true };
+        // 放棄使用 navigator.storage.estimate()，改用精準容量計算
+        const exactBytes = await calculateExactStorage();
+        storageInfo.value = { usage: exactBytes, quota: DISPLAY_QUOTA_BYTES, supported: true };
         
         if (e instanceof Event) {
-          alert('儲存空間重新整理完成！已自動清理多餘的幽靈照片。\n\n⚠️ 注意：iPhone (iOS) 系統底層有「容量估算快取」的現象。即使檔案已徹底刪除，容量數字可能不會立刻下降。只要確認畫面上的照片已刪除，容量實際上就已釋放，請安心繼續使用！');
+          alert('儲存空間重新整理完成！已為您即時計算最新容量。');
         }
       };
       
