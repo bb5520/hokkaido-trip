@@ -91,9 +91,9 @@
   <div id="app" v-cloak class="max-w-md mx-auto min-h-screen bg-[#eef4f8] shadow-2xl relative flex flex-col pb-24">
 
     <!-- 頁首 Banner 區塊 (固定高度，用 object-cover 縮放填滿) -->
-    <div class="relative w-full h-56 overflow-hidden bg-slate-800">
+    <div class="relative w-full h-56 overflow-hidden bg-slate-300">
       <!-- 頁首背景圖片 -->
-      <img :src="bannerImage" alt="北海道之旅" class="w-full h-full object-contain block" />
+      <img :src="bannerImage" alt="北海道之旅" class="w-full h-full object-cover block" />
       
       <!-- 漸層遮罩讓文字與Tab更清晰 -->
       <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10"></div>
@@ -650,8 +650,8 @@
           </div>
           <div class="space-y-3 text-xs">
             <!-- 目前封面預覽 -->
-            <div class="w-full h-40 rounded-xl overflow-hidden bg-slate-800">
-              <img :src="bannerImageInput || bannerImage" class="w-full h-full object-contain block" />
+            <div class="w-full h-40 rounded-xl overflow-hidden bg-slate-100">
+              <img :src="bannerImageInput || bannerImage" class="w-full h-full object-cover block" />
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">選擇新照片</label>
