@@ -1,0 +1,15 @@
+{
+  "name": "北海道冰雪之旅 - Trip App",
+  "short_name": "北海道之旅",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#eef4f8",
+  "theme_color": "#eef4f8",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
