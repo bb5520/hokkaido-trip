@@ -97,6 +97,7 @@ b2.addEventListener("click",function(){mn.style.display="none";logout()});
 lb.addEventListener("click",function(){if(sb)login();else msg.textContent="尚未連線，請稍後再試"});
 pw.addEventListener("keydown",function(e){if(e.key==="Enter")lb.click()});
 document.addEventListener("visibilitychange",function(){if(!document.hidden)syncNow()});
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-sync]");if(!t)return;var a=t.getAttribute("data-sync");if(a==="logout")logout();else if(a==="now")syncNow()});
 window.addEventListener("online",syncNow);
 if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
 if(!sb){readyRes();chip.style.display="block";setSt("同步元件未載入，請重新整理",true)}else{
