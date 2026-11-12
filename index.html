@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>北海道冰雪之旅 - Trip App</title>
-  
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+  <script src="sync.js"></script>
   <!-- Tailwind CSS -->
   <script src="assets/js/tailwind-play.js"></script>
   <!-- Vue 3 -->
@@ -16,12 +18,12 @@
 
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: https://images.unsplash.com;
     font-src 'self';
     frame-src 'self' data:;
-    connect-src 'self';
+    connect-src 'self' https://*.supabase.co;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
@@ -1511,6 +1513,7 @@
 
             const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
             await idbSet(id, dataUrl);
+            if (window.SYNC) window.SYNC.up(id);
             docsArray.push({ id, name: file.name, type });
           } catch (error) {
             alert('檔案處理失敗: ' + file.name);
@@ -1666,7 +1669,7 @@
         return new Promise((resolve, reject) => {
           const tx = db.transaction(STORE_NAME, 'readonly');
           const req = tx.objectStore(STORE_NAME).get(id);
-          req.onsuccess = () => resolve(req.result || null);
+          req.onsuccess = () => resolve(req.result || (window.SYNC ? window.SYNC.down(id) : null));
           req.onerror = () => reject(req.error);
         });
       };
