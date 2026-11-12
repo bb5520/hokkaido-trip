@@ -99,7 +99,7 @@ pw.addEventListener("keydown",function(e){if(e.key==="Enter")lb.click()});
 document.addEventListener("visibilitychange",function(){if(!document.hidden)syncNow()});
 window.addEventListener("online",syncNow);
 if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
-if(!sb){readyRes()}else{
+if(!sb){readyRes();chip.style.display="block";setSt("同步元件未載入，請重新整理",true)}else{
  sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_OUT"){authed=false;chip.style.display="none";ov.style.display="flex"}});
  sb.auth.getSession().then(function(r){if(r.data&&r.data.session)onAuthed();else{readyRes();ov.style.display="flex"}}).catch(function(){readyRes()})}
 })();
