@@ -4,7 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>北海道冰雪之旅 - Trip App</title>
-  
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+  <script src="sync.js"></script>
+  <script src="souvenir.js"></script>
   <!-- Tailwind CSS -->
   <script src="assets/js/tailwind-play.js"></script>
   <!-- Vue 3 -->
@@ -16,12 +19,12 @@
 
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: https://images.unsplash.com;
     font-src 'self';
     frame-src 'self' data:;
-    connect-src 'self';
+    connect-src 'self' https://*.supabase.co;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
@@ -429,8 +432,8 @@
 
 
       <!-- ================= 3. 購物清單 Tab ================= -->
-      <section v-if="currentTab === 'shopping'" class="space-y-3">
-
+      <section v-if="currentTab === 'shopping'" id="souv-host" class="space-y-3"></section>
+      <section v-if="false" class="space-y-3">
         <div v-for="(item, idx) in shoppingList" :key="item.id"
              :ref="el => setShoppingCardRef(el, idx)"
              :style="draggingShopping.active && draggingShopping.index === idx ? { transform: 'translateY(' + draggingShopping.offsetY + 'px)', zIndex: 50, position: 'relative' } : {}"
@@ -627,6 +630,21 @@
           </div>
           <!-- 隱藏的檔案上傳輸入框 -->
           <input type="file" ref="fileInputRef" accept=".json" class="hidden" @change="importData">
+        </div>
+
+        <!-- 帳號與同步 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-cloud text-ice-600"></i> 帳號與雲端同步
+          </h2>
+          <div class="grid grid-cols-2 gap-3">
+            <button data-sync="now" class="flex items-center justify-center gap-1.5 bg-ice-50 text-ice-700 font-bold py-2.5 rounded-xl text-sm border border-ice-100 active:scale-95 transition">
+              <i class="fa-solid fa-rotate"></i> 立即同步
+            </button>
+            <button data-sync="logout" class="flex items-center justify-center gap-1.5 bg-red-50 text-red-600 font-bold py-2.5 rounded-xl text-sm border border-red-100 active:scale-95 transition">
+              <i class="fa-solid fa-right-from-bracket"></i> 登出
+            </button>
+          </div>
         </div>
   
       </section>
@@ -1511,6 +1529,7 @@
 
             const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
             await idbSet(id, dataUrl);
+            if (window.SYNC) window.SYNC.up(id);
             docsArray.push({ id, name: file.name, type });
           } catch (error) {
             alert('檔案處理失敗: ' + file.name);
@@ -1666,7 +1685,7 @@
         return new Promise((resolve, reject) => {
           const tx = db.transaction(STORE_NAME, 'readonly');
           const req = tx.objectStore(STORE_NAME).get(id);
-          req.onsuccess = () => resolve(req.result || null);
+          req.onsuccess = () => resolve(req.result || (window.SYNC ? window.SYNC.down(id) : null));
           req.onerror = () => reject(req.error);
         });
       };
@@ -1719,6 +1738,7 @@
           carRentals.value.forEach(car => (car.documents || []).forEach(doc => usedIds.add(doc.id)));
           dayTours.value.forEach(tour => (tour.documents || []).forEach(doc => usedIds.add(doc.id)));
           otherBookings.value.forEach(booking => (booking.documents || []).forEach(doc => usedIds.add(doc.id)));
+          try { JSON.parse(localStorage.getItem('trip_souvenirs') || '[]').forEach(x => { if (x.img) usedIds.add(x.img); if (x.rcpt) usedIds.add(x.rcpt); }); } catch (e) {}
 
           for (const key of keys) {
             if (!usedIds.has(key)) {
@@ -2327,7 +2347,7 @@
       const storageKeys = [
         'trip_banner', 'trip_jpyRate', 'trip_itinerary', 
         'trip_flightExtras', 'trip_hotelExtras', 'trip_carRentals', 
-        'trip_dayTours', 'trip_otherBookings', 'trip_shopping', 'trip_expenses',
+        'trip_dayTours', 'trip_otherBookings', 'trip_shopping', 'trip_expenses', 'trip_souvenirs',
         'trip_startDate', 'trip_days'
       ];
 
