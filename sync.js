@@ -1,6 +1,6 @@
 (function(){"use strict";
 var SB_URL="https://cpisljizfsovmygzhhpy.supabase.co",SB_KEY="sb_publishable_72orf9crARS0-Rfb67sFWA_x0i0GuhT";
-var KEYS=["trip_banner","trip_jpyRate","trip_itinerary","trip_flightExtras","trip_hotelExtras","trip_carRentals","trip_dayTours","trip_otherBookings","trip_shopping","trip_expenses","trip_startDate","trip_days"];
+var KEYS=["trip_banner","trip_jpyRate","trip_itinerary","trip_flightExtras","trip_hotelExtras","trip_carRentals","trip_dayTours","trip_otherBookings","trip_shopping","trip_expenses","trip_souvenirs","trip_startDate","trip_days","souv"];
 var BUCKET="trip-files",DB="trip_blob_store",ST="blobs";
 var rawSet=Storage.prototype.setItem,rawGet=Storage.prototype.getItem;
 function lraw(k){return rawGet.call(localStorage,k)}
@@ -41,6 +41,7 @@ function flushBlobs(){
  return p}
 var pend={},neg={};
 window.SYNC={
+ touch:function(k){if(KEYS.indexOf(k)<0)return;dirty[k]=1;ls("sync_dirty",dirty);sched()},
  up:function(id){if(bq.indexOf(id)<0){bq.push(id);ls("sync_blobq",bq)}flushBlobs().catch(function(){})},
  down:function(id){return ready.then(function(){
   if(!sb||!authed)return null;
@@ -99,6 +100,7 @@ pw.addEventListener("keydown",function(e){if(e.key==="Enter")lb.click()});
 document.addEventListener("visibilitychange",function(){if(!document.hidden)syncNow()});
 document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-sync]");if(!t)return;var a=t.getAttribute("data-sync");if(a==="logout")logout();else if(a==="now")syncNow()});
 window.addEventListener("online",syncNow);
+window.addEventListener("message",function(e){if(e.origin!==location.origin||!e.data||typeof e.data.souvFs!=="boolean")return;var f=document.querySelector('iframe[src="souvenir.html"]');if(!f)return;if(e.data.souvFs){if(f.dataset.o==null)f.dataset.o=f.style.cssText;f.style.cssText="position:fixed;inset:0;width:100%;height:100dvh;z-index:60;border:0;background:transparent"}else if(f.dataset.o!=null){f.style.cssText=f.dataset.o;delete f.dataset.o}});
 if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
 if(!sb){readyRes();chip.style.display="block";setSt("同步元件未載入，請重新整理",true)}else{
  sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_OUT"){authed=false;chip.style.display="none";ov.style.display="flex"}});
