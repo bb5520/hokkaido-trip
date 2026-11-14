@@ -116,7 +116,7 @@ function draw(){
  [["store","🏪 依店家"],["who","👤 依人"],["stats","📊 統計"]].forEach(function(m){var act=m[0]==="stats"?view==="stats":(view==="list"&&grp===m[0]),b=h("button","flex-1 py-2 rounded-xl text-sm "+(act?"bg-ice-600 text-white font-bold":"text-slate-500"),m[1]);on(b,"click",function(){if(m[0]==="stats")view="stats";else{view="list";grp=m[0];fg=""}draw()});sg.appendChild(b)});
  root.appendChild(up);root.appendChild(fm);root.appendChild(sg);
  if(view==="stats")stats();else list();
- var f=h("button","fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl z-40","＋");f.setAttribute("aria-label","新增伴手禮");on(f,"click",function(){openSheet(null)});root.appendChild(f)}
+ var f=h("button","fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40");f.appendChild(h("i","fa-solid fa-plus"));f.setAttribute("aria-label","新增伴手禮");on(f,"click",function(){openSheet(null)});root.appendChild(f)}
 /* 切到「伴手禮」分頁時，Vue 會建立 #souv-host，這裡偵測到就接手畫面 */
 function tryMount(){var r=document.getElementById("souv-host");if(r&&r!==root){root=r;load();draw()}else if(!r)root=null}
 new MutationObserver(tryMount).observe(document.documentElement,{childList:true,subtree:true});
