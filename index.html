@@ -4,9 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>北海道冰雪之旅 - Trip App</title>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-  <script src="sync.js"></script>
+  
   <!-- Tailwind CSS -->
   <script src="assets/js/tailwind-play.js"></script>
   <!-- Vue 3 -->
@@ -18,12 +16,12 @@
 
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval';
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: https://images.unsplash.com;
     font-src 'self';
     frame-src 'self' data:;
-    connect-src 'self' https://*.supabase.co;
+    connect-src 'self';
     object-src 'none';
     base-uri 'self';
     form-action 'self';
@@ -431,87 +429,7 @@
 
 
       <!-- ================= 3. 購物清單 Tab ================= -->
-      <!-- ================= 3. 購物清單 Tab (伴手禮整理版) ================= -->
       <section v-if="currentTab === 'shopping'" class="space-y-3">
-
-        <button @click="shopBatchPick" :disabled="fileUploading" class="w-full bg-ice-50 text-ice-700 font-bold py-2.5 rounded-xl text-sm border border-ice-100 active:scale-95 transition">
-          <i :class="fileUploading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-camera'" class="mr-1"></i>{{ fileUploading ? '照片處理中...' : '批次上傳照片' }}
-        </button>
-        <input type="file" ref="shopBatchInput" accept="image/*" multiple class="hidden" @change="shopBatchUpload">
-
-        <!-- 分組切換 -->
-        <div class="flex gap-1 bg-white border border-slate-100 rounded-2xl p-1 shadow-sm">
-          <button @click="shopSetGroup('location')" :class="['flex-1 py-2 rounded-xl text-sm flex items-center justify-center gap-1.5 transition', shopGroupBy === 'location' ? 'bg-ice-600 text-white font-bold' : 'text-slate-500']"><i class="fa-solid fa-store"></i>依地點分組</button>
-          <button @click="shopSetGroup('who')" :class="['flex-1 py-2 rounded-xl text-sm flex items-center justify-center gap-1.5 transition', shopGroupBy === 'who' ? 'bg-ice-600 text-white font-bold' : 'text-slate-500']"><i class="fa-solid fa-user"></i>依人分組</button>
-        </div>
-
-        <!-- 篩選 -->
-        <div v-if="shopGroups.length > 1" class="flex gap-2 overflow-x-auto no-scrollbar py-0.5">
-          <button v-for="n in shopPills" :key="n" @click="shopFilter = n" :class="['flex-shrink-0 px-3.5 py-1.5 rounded-2xl text-sm border transition', (shopFilter === n || (!shopFilter && n === '')) ? 'bg-ice-600 text-white border-ice-600 font-bold' : 'bg-white text-slate-500 border-slate-100']">{{ n || '全部' }}</button>
-        </div>
-
-        <!-- 分組輪播 -->
-        <div v-for="g in shopVisibleGroups" :key="g.key" class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100">
-          <div class="flex justify-between items-center text-xs font-bold text-slate-500 mb-2 gap-2">
-            <span class="flex items-center gap-1.5 text-slate-800 text-sm min-w-0"><i :class="shopGroupBy === 'who' ? 'fa-solid fa-user' : 'fa-solid fa-store'" class="text-ice-600"></i><span class="truncate">{{ g.key }}</span></span>
-            <span class="flex-shrink-0">已買 {{ g.done }} / {{ g.items.length }} 款</span>
-          </div>
-          <div data-cs class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
-            <div v-for="(item, ii) in g.items" :key="item.id" :class="['flex-none w-full snap-center', item.bought ? 'opacity-60' : '']">
-              <div class="relative rounded-xl bg-ice-100 overflow-hidden flex items-center justify-center text-5xl cursor-pointer" style="aspect-ratio:4/3" @click="item.images && item.images.length ? openGallery(item.images, 0) : null">
-                <img v-if="item.images && item.images.length" :src="resolveBlobUrl(item.images[0].id)" class="w-full h-full object-cover">
-                <span v-else>🎁</span>
-                <span class="absolute left-2 bottom-2 bg-slate-900/80 text-white text-xs font-bold rounded-lg px-2 py-0.5">× {{ item.quantity || 1 }}</span>
-                <span v-if="item.images && item.images.length > 1" class="absolute left-2 top-2 bg-slate-900/80 text-white text-xs font-bold rounded-lg px-2 py-0.5">{{ item.images.length }} 張</span>
-                <button @click.stop="item.bought = !item.bought" :class="['absolute right-2 top-2 w-9 h-9 rounded-xl border-2 text-white text-lg leading-none', item.bought ? 'bg-emerald-500 border-emerald-500' : 'bg-white/70 border-slate-300']">{{ item.bought ? '✓' : '' }}</button>
-                <button v-if="ii > 0" @click.stop="shopScroll($event, -1)" class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/60 text-white text-xl leading-none">‹</button>
-                <button v-if="ii < g.items.length - 1" @click.stop="shopScroll($event, 1)" class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/60 text-white text-xl leading-none">›</button>
-              </div>
-              <div class="pt-2 flex gap-2">
-                <div class="flex-1 min-w-0 space-y-1.5">
-                  <div class="font-bold text-slate-800 text-sm" :class="{'line-through text-slate-400': item.bought}">{{ item.name || '（未命名，請點編輯補上）' }}</div>
-                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
-                    <span class="flex items-center gap-1 text-ice-700 font-bold"><i :class="shopGroupBy === 'who' ? 'fa-solid fa-store' : 'fa-solid fa-user'"></i>{{ shopGroupBy === 'who' ? (item.location || '未填地點') : (item.who || '未指定') }}</span>
-                    <span v-if="item.price" class="text-ice-700 font-bold">{{ priceDisplay(item.price, item.currency) }}</span>
-                    <button v-if="item.link" @click.stop="shopOpenLink(item.link)" class="flex items-center gap-1 text-ice-600"><i class="fa-solid fa-link"></i>{{ shopHost(item.link) }}</button>
-                    <button v-if="item.receipts && item.receipts.length" @click.stop="openGallery(item.receipts, 0)" class="flex items-center gap-1 text-ice-600"><i class="fa-solid fa-receipt"></i>收據 {{ item.receipts.length }}</button>
-                  </div>
-                  <div v-if="item.note" class="text-[11px] text-slate-500">{{ item.note }}</div>
-                </div>
-                <div class="flex flex-col gap-1 flex-shrink-0">
-                  <button @click.stop="editShoppingItem(item)" class="p-1.5 text-ice-600"><i class="fa-solid fa-pen text-sm"></i></button>
-                  <button @click.stop="confirmDeleteShoppingItem(item.id)" class="p-1.5 text-red-400"><i class="fa-solid fa-trash text-sm"></i></button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="shoppingList.length === 0" class="text-slate-400 text-center py-6 text-sm">還沒有項目，點右下角「＋」或「批次上傳照片」開始</div>
-
-        <!-- 統計 -->
-        <div v-if="shoppingList.length" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <h2 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-user text-ice-600"></i> 依人統計</h2>
-          <div v-for="s in shopStats.who" :key="s.name" class="py-1.5 text-xs">
-            <div class="flex justify-between"><span>{{ s.name }}</span><b class="text-slate-800">{{ s.n }} 款</b></div>
-            <div class="h-1.5 rounded bg-ice-100 mt-1 overflow-hidden"><div class="h-full bg-ice-600" :style="{ width: (s.n / shoppingList.length * 100) + '%' }"></div></div>
-          </div>
-        </div>
-        <div v-if="shoppingList.length" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <h2 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-store text-ice-600"></i> 依地點統計</h2>
-          <div v-for="s in shopStats.store" :key="s.name" class="py-1.5 text-xs">
-            <div class="flex justify-between"><span>{{ s.name }}</span><b class="text-slate-800">{{ s.n }} 款</b></div>
-            <div class="h-1.5 rounded bg-ice-100 mt-1 overflow-hidden"><div class="h-full bg-ice-600" :style="{ width: (s.n / shoppingList.length * 100) + '%' }"></div></div>
-          </div>
-        </div>
-
-        <button @click="openAddShoppingModal" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
-          <i class="fa-solid fa-plus"></i>
-        </button>
-      </section>
-
-      <!-- 舊版購物清單 (已停用，保留以便還原) -->
-      <section v-if="false" class="space-y-3">
 
         <div v-for="(item, idx) in shoppingList" :key="item.id"
              :ref="el => setShoppingCardRef(el, idx)"
@@ -709,21 +627,6 @@
           </div>
           <!-- 隱藏的檔案上傳輸入框 -->
           <input type="file" ref="fileInputRef" accept=".json" class="hidden" @change="importData">
-        </div>
-
-        <!-- 帳號與同步 -->
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i class="fa-solid fa-cloud text-ice-600"></i> 帳號與雲端同步
-          </h2>
-          <div class="grid grid-cols-2 gap-3">
-            <button data-sync="now" class="flex items-center justify-center gap-1.5 bg-ice-50 text-ice-700 font-bold py-2.5 rounded-xl text-sm border border-ice-100 active:scale-95 transition">
-              <i class="fa-solid fa-rotate"></i> 立即同步
-            </button>
-            <button data-sync="logout" class="flex items-center justify-center gap-1.5 bg-red-50 text-red-600 font-bold py-2.5 rounded-xl text-sm border border-red-100 active:scale-95 transition">
-              <i class="fa-solid fa-right-from-bracket"></i> 登出
-            </button>
-          </div>
         </div>
   
       </section>
@@ -944,7 +847,6 @@
       <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
         <div class="flex justify-between items-center border-b pb-2">
           <h3 class="font-bold text-slate-800">{{ isEditShoppingMode ? '編輯購物清單' : '新增購物想買清單' }}</h3>
-          <span v-if="shopBatchActive" class="text-[11px] text-ice-600 font-bold">📷 第 {{ shopQueueTotal - shopQueue.length }} / {{ shopQueueTotal }} 張　<button type="button" @click="shopEndBatch" class="underline">結束批次</button></span>
           <button @click="showShoppingModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
         </div>
         <div class="space-y-3 text-xs">
@@ -954,8 +856,7 @@
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">購買地點</label>
-            <input v-model="formShopping.location" list="shop-store-list" type="text" placeholder="例如: 新千歲機場 / 唐吉訶德 狸小路店" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-            <datalist id="shop-store-list"><option v-for="s in shopStoreList" :key="s" :value="s"></option></datalist>
+            <input v-model="formShopping.location" type="text" placeholder="例如: 新千歲機場 / 唐吉訶德 狸小路店" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
@@ -975,29 +876,6 @@
             <input v-model.number="formShopping.price" type="number" placeholder="例如: 980" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div v-if="formShopping.price && formShopping.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formShopping.price * jpyRate).toLocaleString() }}</div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">誰要買</label>
-            <input v-model="formShopping.who" list="shop-who-list" maxlength="20" type="text" placeholder="例如: 媽媽" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-            <datalist id="shop-who-list"><option v-for="w in shopWhoList" :key="w" :value="w"></option></datalist>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">連結</label>
-            <input v-model="formShopping.link" type="url" inputmode="url" maxlength="500" placeholder="https://" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">備註</label>
-            <textarea v-model="formShopping.note" maxlength="200" rows="2" placeholder="口味、尺寸、注意事項…" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none"></textarea>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">收據 (可多選)</label>
-            <input type="file" multiple @change="shopUploadReceipts" accept="image/*" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formShopping.receipts && formShopping.receipts.length" class="flex flex-wrap gap-2 mt-1">
-              <div v-for="(r, ri) in formShopping.receipts" :key="r.id" class="relative">
-                <img :src="resolveBlobUrl(r.id)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" @click="openGallery(formShopping.receipts, ri)">
-                <button type="button" @click="shopRemoveReceipt(ri)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-          </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">照片上傳 (可多選，點擊縮圖可放大並左右滑動)</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formShopping.images)" accept="image/*" class="w-full text-slate-500 text-xs mb-1.5">
@@ -1633,7 +1511,6 @@
 
             const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
             await idbSet(id, dataUrl);
-            if (window.SYNC) window.SYNC.up(id);
             docsArray.push({ id, name: file.name, type });
           } catch (error) {
             alert('檔案處理失敗: ' + file.name);
@@ -1789,7 +1666,7 @@
         return new Promise((resolve, reject) => {
           const tx = db.transaction(STORE_NAME, 'readonly');
           const req = tx.objectStore(STORE_NAME).get(id);
-          req.onsuccess = () => resolve(req.result || (window.SYNC ? window.SYNC.down(id) : null));
+          req.onsuccess = () => resolve(req.result || null);
           req.onerror = () => reject(req.error);
         });
       };
@@ -1837,7 +1714,6 @@
 
           const usedIds = new Set();
           shoppingList.value.forEach(item => (item.images || []).forEach(img => usedIds.add(img.id)));
-          shoppingList.value.forEach(item => (item.receipts || []).forEach(img => usedIds.add(img.id)));
           Object.values(flightExtras.value).forEach(extra => (extra.documents || []).forEach(doc => usedIds.add(doc.id)));
           Object.values(hotelExtras.value).forEach(extra => (extra.documents || []).forEach(doc => usedIds.add(doc.id)));
           carRentals.value.forEach(car => (car.documents || []).forEach(doc => usedIds.add(doc.id)));
@@ -2290,90 +2166,6 @@
       const onGripPointerUp = () => { draggingShopping.value = { active: false, index: -1, offsetY: 0, startY: 0 }; document.removeEventListener('pointermove', onGripPointerMove); document.removeEventListener('pointerup', onGripPointerUp); };
       const onGripPointerDown = (index, e) => { e.preventDefault(); draggingShopping.value = { active: true, index, offsetY: 0, startY: e.clientY }; document.addEventListener('pointermove', onGripPointerMove); document.addEventListener('pointerup', onGripPointerUp); };
 
-      // --- 7b. 購物清單：伴手禮整理版 (分組 / 輪播 / 統計 / 批次上傳) ---
-      const shopGroupBy = ref('location');
-      const shopFilter = ref('');
-      const shopSetGroup = (k) => { shopGroupBy.value = k; shopFilter.value = ''; };
-      const shopKey = (it) => shopGroupBy.value === 'who' ? (it.who || '未指定') : (it.location || '未填地點');
-      const shopGroups = computed(() => {
-        const m = {}, order = [];
-        shoppingList.value.forEach(it => { const k = shopKey(it); if (!m[k]) { m[k] = []; order.push(k); } m[k].push(it); });
-        return order.map(k => ({ key: k, items: m[k], done: m[k].filter(i => i.bought).length }));
-      });
-      const shopPills = computed(() => [''].concat(shopGroups.value.map(g => g.key)));
-      const shopVisibleGroups = computed(() => (shopFilter.value && shopGroups.value.some(g => g.key === shopFilter.value)) ? shopGroups.value.filter(g => g.key === shopFilter.value) : shopGroups.value);
-      const shopStats = computed(() => {
-        const tally = (get, fb) => { const m = {}; shoppingList.value.forEach(i => { const k = get(i) || fb; m[k] = (m[k] || 0) + 1; }); return Object.keys(m).map(k => ({ name: k, n: m[k] })).sort((a, b) => b.n - a.n); };
-        return { who: tally(i => i.who, '未指定'), store: tally(i => i.location, '未填地點') };
-      });
-      const shopUniq = (get) => { const l = []; shoppingList.value.forEach(i => { const v = get(i); if (v && !l.includes(v)) l.push(v); }); return l; };
-      const shopWhoList = computed(() => shopUniq(i => i.who));
-      const shopStoreList = computed(() => shopUniq(i => i.location));
-      const shopScroll = (e, d) => { const cs = e.currentTarget.closest('[data-cs]'); if (cs) cs.scrollBy({ left: d * cs.clientWidth, behavior: 'smooth' }); };
-
-      // 連結：只允許 http/https，開啟前先確認
-      const shopHost = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u; } };
-      const shopSafeUrl = (s) => { s = (s || '').trim(); if (!s) return ''; if (!/^https?:\/\//i.test(s)) s = 'https://' + s; try { const u = new URL(s); return /^https?:$/.test(u.protocol) ? u.href : ''; } catch (e) { return ''; } };
-      const shopOpenLink = (raw) => {
-        const u = shopSafeUrl(raw);
-        if (!u) return alert('連結格式不正確');
-        if (confirm('即將開啟外部連結：\n' + shopHost(u) + '\n要前往嗎？')) window.open(u, '_blank', 'noopener,noreferrer');
-      };
-
-      // 收據 (存在 item.receipts，檔案同樣放 IndexedDB 並自動同步)
-      const shopUploadReceipts = async (e) => {
-        formShopping.value.receipts = [...(formShopping.value.receipts || [])];
-        await handleDocUploadMulti(e, formShopping.value.receipts);
-      };
-      const shopRemoveReceipt = (i) => { formShopping.value.receipts = (formShopping.value.receipts || []).filter((_, k) => k !== i); };
-
-      // 批次上傳照片：每張建立一筆，再依序跳出編輯視窗
-      const shopBatchInput = ref(null);
-      const shopQueue = ref([]);
-      const shopQueueTotal = ref(0);
-      const shopBatchActive = ref(false);
-      const shopBatchPick = () => { if (shopBatchInput.value) shopBatchInput.value.click(); };
-      const shopNext = () => {
-        const x = shopQueue.value.shift();
-        if (!x) { shopBatchActive.value = false; return; }
-        shopBatchActive.value = true;
-        editShoppingItem(x);
-      };
-      const shopEndBatch = () => { shopQueue.value = []; };
-      const shopBatchUpload = async (e) => {
-        const files = Array.from(e.target.files || []).slice(0, 30);
-        e.target.value = '';
-        if (!files.length) return;
-        fileUploading.value = true;
-        const added = [];
-        for (const file of files) {
-          try {
-            if (!(await checkQuotaAvailable())) { alert(`儲存空間已達 ${DISPLAY_QUOTA_GB}GB 上限，部分照片未儲存。`); break; }
-            const dataUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onload = ev => res(ev.target.result); r.onerror = rej; r.readAsDataURL(file); });
-            const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-            await idbSet(id, dataUrl);
-            if (window.SYNC) window.SYNC.up(id);
-            added.push({ id: Date.now() + added.length, name: '', location: '', who: '', link: '', note: '', quantity: 1, price: null, currency: 'JPY', images: [{ id, name: file.name, type: file.type }], receipts: [], bought: false });
-          } catch (err) { /* 略過讀取失敗的照片 */ }
-        }
-        fileUploading.value = false;
-        if (!added.length) return alert('無法讀取照片');
-        shoppingList.value.push(...added);
-        shopQueue.value = added.slice();
-        shopQueueTotal.value = added.length;
-        shopNext();
-      };
-      watch(showShoppingModal, (open) => {
-        if (open) return;
-        if (shopQueue.value.length) nextTick(shopNext); else shopBatchActive.value = false;
-      });
-
-      const shopX = {
-        shopGroupBy, shopFilter, shopSetGroup, shopGroups, shopPills, shopVisibleGroups, shopStats, shopWhoList, shopStoreList, shopScroll,
-        shopOpenLink, shopHost, shopUploadReceipts, shopRemoveReceipt,
-        shopBatchInput, shopBatchPick, shopBatchUpload, shopQueue, shopQueueTotal, shopBatchActive, shopEndBatch
-      };
-
       // --- 8. 花費分頁 (Expenses) ---
       const showExpenseModal = ref(false);
       const isEditExpenseMode = ref(false);
@@ -2679,7 +2471,7 @@
         currentTab, tabs, dateList, selectedDateIndex, categories, selectedCategory,
         filteredItinerary, openMap, openDirections, moveItem, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
         isEditShoppingMode, openAddShoppingModal, editShoppingItem, saveShoppingItem, confirmDeleteShoppingItem,
-        setShoppingCardRef, draggingShopping, onGripPointerDown, ...shopX,
+        setShoppingCardRef, draggingShopping, onGripPointerDown,
         expenses, showExpenseModal, formExpense, isEditExpenseMode, selectedExpenseCategory,
         allExpenses, autoExpenses, filteredExpenses, totalExpensesJPY, openAddExpenseModal, editExpense, saveExpense, confirmDeleteExpense,
         getExpenseIcon, showItineraryModal, isEditMode,
