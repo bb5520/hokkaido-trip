@@ -98,7 +98,7 @@ function login(){lb.disabled=true;msg.textContent="";
 function wipeLocal(){KEYS.concat(["sync_dirty","sync_meta","sync_blobq","sync_seeded"]).forEach(function(k){localStorage.removeItem(k)});for(var wi=localStorage.length-1;wi>=0;wi--){var wk=localStorage.key(wi);if(wk&&wk.indexOf("sb-")===0)localStorage.removeItem(wk)}var q=indexedDB.deleteDatabase(DB);q.onsuccess=q.onerror=q.onblocked=function(){location.reload()}}
 function logout(){syncNow().then(function(){var n=Object.keys(dirty).length+bq.length;
  if(!confirm(n?"還有 "+n+" 項資料尚未同步到雲端，登出會遺失它們。確定要登出嗎？":"登出會清除這支手機上的本機資料（雲端資料不受影響）。確定嗎？"))return;
- rawSet.call(localStorage,"sync_out","1");lockOn();mn.style.display="none";chip.style.display="none";em.value="";pw.value="";msg.textContent="";return sb.auth.signOut().catch(function(){}).then(wipeLocal)})}
+ rawSet.call(localStorage,"sync_out","1");lockOn();mn.style.display="none";chip.style.display="none";em.value="";pw.value="";msg.textContent="";return sb.auth.signOut({scope:"local"}).catch(function(){}).then(wipeLocal)})}
 chip.addEventListener("click",function(){if(mode==="reload"){location.reload();return}mn.style.display=mn.style.display==="flex"?"none":"flex"});
 b1.addEventListener("click",function(){mn.style.display="none";syncNow()});
 b2.addEventListener("click",function(){mn.style.display="none";logout()});
