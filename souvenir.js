@@ -21,81 +21,80 @@ function shrink(f){return new Promise(function(res,rej){var fr=new FileReader();
 function store(d){var id="souv_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);return iput(id,d).then(function(){cache[id]=d;if(window.SYNC)window.SYNC.up(id);return id})}
 /* 對話框與放大檢視 */
 function btn(label,cls,fn){return function(close){var b=h("button","flex-1 font-bold py-2.5 rounded-xl text-sm "+cls,label);on(b,"click",function(){close();if(fn)fn()});return b}}
-function dlg(msg,btns){var ov=h("div","fixed inset-0 z-[98] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"),bx=h("div","bg-white rounded-3xl p-5 w-full max-w-xs shadow-2xl"),row=h("div","flex gap-2 mt-4");bx.appendChild(h("div","text-center text-sm font-bold text-slate-800 whitespace-pre-line break-all",msg));btns.forEach(function(b){row.appendChild(b(function(){ov.remove()}))});bx.appendChild(row);ov.appendChild(bx);document.body.appendChild(ov)}
-function ask(msg,fn,label){dlg(msg,[btn("取消","bg-slate-100 text-slate-600"),btn(label||"刪除","bg-red-100 text-red-600",fn)])}
+function dlg(msg,btns){var ov=h("div","fixed inset-0 z-[98] bg-black/45 flex items-center justify-center p-5"),bx=h("div","bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl"),row=h("div","flex gap-2 mt-4");bx.appendChild(h("div","text-center font-bold text-slate-800 text-sm whitespace-pre-line break-all",msg));btns.forEach(function(b){row.appendChild(b(function(){ov.remove()}))});bx.appendChild(row);ov.appendChild(bx);document.body.appendChild(ov)}
+function ask(msg,fn,label){dlg(msg,[btn("取消","bg-slate-100 text-slate-600"),btn(label||"刪除","bg-red-600 text-white",fn)])}
 function askLink(u){dlg("即將開啟外部連結：\n"+host(u)+"\n要前往嗎？",[btn("取消","bg-slate-100 text-slate-600"),function(close){var a=h("a","flex-1 text-center font-bold py-2.5 rounded-xl text-sm bg-ice-600 text-white","前往");a.href=u;a.target="_blank";a.rel="noopener noreferrer";on(a,"click",function(){setTimeout(close,50)});return a}])}
-function zoom(ids,i){var ov=h("div","fixed inset-0 z-[90] bg-black/85 flex items-center justify-center p-4"),im=h("img","max-w-full max-h-full rounded-xl"),sx=0,mv=false,x=ib("absolute top-4 right-4 text-white text-2xl p-1","fa-xmark");
- function show(){blob(ids[i]).then(function(d){if(d)im.src=d})}
+function zoom(ids,i){
+ var ov=h("div","fixed inset-0 bg-black/85 z-[65] flex flex-col"),tp=h("div","flex justify-between items-center p-4 text-white flex-shrink-0"),ct=h("span","text-sm font-medium"),x=h("button","text-white"),mid=h("div","flex-1 relative overflow-hidden flex items-center justify-center px-2"),im=h("img","max-w-full max-h-full object-contain select-none"),dots=h("div","flex justify-center gap-1.5 p-4 flex-shrink-0"),sx=0;
+ x.appendChild(h("i","fa-solid fa-xmark text-2xl"));tp.appendChild(ct);tp.appendChild(x);
+ function show(){ct.textContent=(i+1)+" / "+ids.length;blob(ids[i]).then(function(d){if(d)im.src=d});dots.textContent="";if(ids.length>1)ids.forEach(function(_,k){var d=h("span","h-1.5 rounded-full cursor-pointer "+(k===i?"bg-white w-3":"bg-white/40 w-1.5"));on(d,"click",function(e){e.stopPropagation();i=k;show()});dots.appendChild(d)})}
  function go(d){if(ids.length<2)return;i=(i+d+ids.length)%ids.length;show()}
- ov.appendChild(im);ov.appendChild(x);
- if(ids.length>1)[["fa-chevron-left",-1,"left-3"],["fa-chevron-right",1,"right-3"]].forEach(function(a){var b=ib("absolute top-1/2 -mt-5 "+a[2]+" w-10 h-10 rounded-full bg-white/25 text-white text-sm",a[0]);on(b,"click",function(e){e.stopPropagation();go(a[1])});ov.appendChild(b)});
- on(ov,"touchstart",function(e){sx=e.changedTouches[0].clientX;mv=false});
- on(ov,"touchend",function(e){var d=e.changedTouches[0].clientX-sx;if(Math.abs(d)>50){mv=true;go(d>0?-1:1)}});
- on(ov,"click",function(){if(mv){mv=false;return}ov.remove()});
- document.body.appendChild(ov);show()}
-/* 新增 / 編輯視窗（版型與其他分頁的新增視窗相同） */
+ on(mid,"touchstart",function(e){sx=e.changedTouches[0].clientX});
+ on(mid,"touchend",function(e){var d=e.changedTouches[0].clientX-sx;if(Math.abs(d)>40)go(d>0?-1:1)});
+ on(x,"click",function(){ov.remove()});on(ov,"click",function(e){if(e.target===ov||e.target===mid)ov.remove()});
+ mid.appendChild(im);ov.appendChild(tp);ov.appendChild(mid);ov.appendChild(dots);document.body.appendChild(ov);show()}
+/* 新增 / 編輯視窗（版型與其他分頁的新增視窗一致） */
 var IC="w-full bg-slate-50 border p-2.5 rounded-xl outline-none";
 function field(l,n){var d=h("div");d.appendChild(h("label","block font-bold text-slate-600 mb-1",l));d.appendChild(n);return d}
 function dl(id,k){var d=h("datalist"),seen={};d.id=id;items.forEach(function(x){if(x[k]&&!seen[x[k]]){seen[x[k]]=1;var o=h("option");o.value=x[k];d.appendChild(o)}});return d}
-function upl(label,get,set){
- var w=h("div"),f=h("input","w-full text-slate-500 text-xs mb-1.5"),pv=h("div","flex flex-wrap gap-2 mt-1"),bz=h("div","text-[11px] text-ice-600 mt-1 hidden");
- f.type="file";f.accept="image/*";bz.appendChild(fi("fa-spinner fa-spin mr-1"));bz.appendChild(document.createTextNode("檔案讀取中，請稍候..."));
- function paint(){pv.textContent="";var id=get();if(!id)return;var t=h("div","relative"),im=h("img","w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer"),x=ib("absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center","fa-xmark");setImg(im,id);on(im,"click",function(){zoom([id],0)});on(x,"click",function(){set("");paint()});t.appendChild(im);t.appendChild(x);pv.appendChild(t)}
- on(f,"change",function(){var file=f.files[0];f.value="";if(!file)return;bz.classList.remove("hidden");shrink(file).then(store).then(function(id){set(id);paint()}).catch(function(){toast("無法讀取圖片")}).then(function(){bz.classList.add("hidden")})});
- w.appendChild(h("label","block font-bold text-slate-600 mb-1",label));w.appendChild(f);w.appendChild(pv);w.appendChild(bz);paint();return w}
-function openSheet(x,hdr){
+function photo(label,get,set,ui){
+ var f=h("input","w-full text-slate-500 text-xs mb-1.5"),box=h("div","flex flex-wrap gap-2 mt-1"),d=field(label,f);f.type="file";f.accept="image/*";
+ function paint(){box.textContent="";var id=get();if(!id)return;var t=h("div","relative"),im=h("img","w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer"),x=h("button","absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center");x.type="button";x.appendChild(h("i","fa-solid fa-xmark"));setImg(im,id);on(im,"click",function(){zoom([id],0)});on(x,"click",function(){set("");paint()});t.appendChild(im);t.appendChild(x);box.appendChild(t)}
+ on(f,"change",function(){var file=f.files[0];f.value="";if(!file)return;ui.n++;ui.upd();shrink(file).then(store).then(function(id){set(id)}).catch(function(){toast("無法讀取圖片")}).then(function(){ui.n--;ui.upd();paint()})});
+ d.appendChild(box);paint();return d}
+function openSheet(x,sub){
  ed=x||null;img=x?x.img||"":"";rcp=x?x.rcpt||"":"";
- var ov=h("div","fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"),bx=h("div","bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto"),bd=h("div","space-y-3 text-xs");
- function close(){queue=[];ov.remove()}
- var top=h("div","flex justify-between items-center border-b pb-2"),xb=ib("text-slate-400","fa-xmark text-lg");
- top.appendChild(h("h3","font-bold text-slate-800",hdr||(x?"編輯伴手禮":"新增伴手禮")));top.appendChild(xb);on(xb,"click",close);
+ var ov=h("div","fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"),bx=h("div","bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto"),hd=h("div","flex justify-between items-center border-b pb-2"),xb=h("button","text-slate-400"),body=h("div","space-y-3 text-xs");
+ hd.appendChild(h("h3","font-bold text-slate-800",sub?"批次新增伴手禮（"+sub+"）":(ed?"編輯伴手禮":"新增伴手禮")));xb.appendChild(h("i","fa-solid fa-xmark text-lg"));hd.appendChild(xb);
  var fs=h("input",IC),fw=h("input",IC),fk=h("input",IC),fq=h("input",IC),fn=h("textarea",IC);
  fs.value=x?x.store:(grp==="store"?fg:"");fw.value=x?x.who:(grp==="who"?fg:"");fk.value=x?x.link:"";fq.value=x?x.qty:1;fn.value=x?x.note:"";
- fs.placeholder="例如: 唐吉訶德 狸小路店";fw.placeholder="例如: 媽媽";fk.placeholder="https://";fk.type="url";fq.type="number";fq.min="1";fq.placeholder="1";fn.rows=2;
+ fs.type="text";fw.type="text";fk.type="url";fq.type="number";fq.min="1";fs.placeholder="例如: 唐吉訶德";fw.placeholder="例如: 媽媽";fk.placeholder="https://";fq.placeholder="1";fn.rows=2;
  fs.maxLength=40;fw.maxLength=20;fk.maxLength=500;fn.maxLength=200;fs.setAttribute("list","sv-stores");fw.setAttribute("list","sv-whos");
- function qv(){var v=parseInt(fq.value,10);return isFinite(v)&&v>0?Math.min(v,999):1}
- bd.appendChild(dl("sv-stores","store"));bd.appendChild(dl("sv-whos","who"));
- bd.appendChild(field("店家",fs));
- var g2=h("div","grid grid-cols-2 gap-2");g2.appendChild(field("數量",fq));g2.appendChild(field("誰要買",fw));bd.appendChild(g2);
- bd.appendChild(field("連結",fk));
- bd.appendChild(upl("圖片上傳",function(){return img},function(v){img=v}));
- bd.appendChild(upl("收據上傳",function(){return rcp},function(v){rcp=v}));
- bd.appendChild(field("備註",fn));
- var row=h("div","flex gap-2 pt-2"),sv=h("button","flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl",queue.length?"儲存並下一張":"儲存");
- if(ed&&!hdr){var del=h("button","flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl","刪除");on(del,"click",function(){ask("確定刪除這筆嗎？",function(){var i=items.indexOf(x);if(i>-1)items.splice(i,1);save();ov.remove();draw();toast("已刪除")})});row.appendChild(del)}
+ function qv(){var v=parseInt(String(fq.value).replace(/\D/g,""),10);return isFinite(v)&&v>0?Math.min(v,999):1}
+ var sp=h("div","text-[11px] text-ice-600 mt-1"),ui={n:0,upd:function(){sp.style.display=ui.n?"block":"none";sv.disabled=ui.n>0;sv.className="flex-1 font-bold py-2.5 rounded-xl "+(ui.n?"bg-slate-300 text-slate-500 cursor-not-allowed":"bg-ice-600 text-white");sv.textContent=ui.n?"讀取中...":lab}};
+ sp.appendChild(h("i","fa-solid fa-spinner fa-spin mr-1"));sp.appendChild(document.createTextNode("檔案讀取中，請稍候..."));sp.style.display="none";
+ var lab=ed?(queue.length?"儲存並下一張":"儲存"):"儲存",sv=h("button","flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl",lab),ft=h("div","flex gap-2 pt-2");
+ body.appendChild(dl("sv-stores","store"));body.appendChild(dl("sv-whos","who"));
+ body.appendChild(field("店家",fs));
+ var g2=h("div","grid grid-cols-2 gap-2");g2.appendChild(field("數量",fq));g2.appendChild(field("誰要買",fw));body.appendChild(g2);
+ body.appendChild(field("連結",fk));
+ body.appendChild(photo("圖片上傳（點擊縮圖可放大）",function(){return img},function(v){img=v},ui));
+ body.appendChild(photo("收據上傳",function(){return rcp},function(v){rcp=v},ui));body.appendChild(sp);
+ body.appendChild(field("備註",fn));
+ if(ed&&!sub){var del=h("button","flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl","刪除");on(del,"click",function(){ask("確定刪除這筆嗎？",function(){var i=items.indexOf(ed);if(i>-1)items.splice(i,1);save();ov.remove();draw();toast("已刪除")})});ft.appendChild(del)}
+ on(xb,"click",function(){queue=[];ov.remove()});
  on(sv,"click",function(){
   var raw=fk.value.trim(),lk=nurl(raw);if(raw&&!lk){toast("連結格式不正確");return}
   var d={store:fs.value.trim(),qty:qv(),who:fw.value.trim(),link:lk,img:img,rcpt:rcp,note:fn.value.trim()},old=ed?Object.assign({},ed):null,isNew=!ed;
   if(ed)Object.assign(ed,d);else{d.id=Date.now();d.done=false;items.push(d)}
   if(!save()){if(old)Object.assign(ed,old);else if(isNew)items.pop();return}
   ov.remove();draw();if(queue.length)nextQ();else toast(isNew?"已新增":"已儲存")});
- row.appendChild(sv);bx.appendChild(top);bx.appendChild(bd);bx.appendChild(row);ov.appendChild(bx);document.body.appendChild(ov)}
+ ft.appendChild(sv);bx.appendChild(hd);bx.appendChild(body);bx.appendChild(ft);ov.appendChild(bx);document.body.appendChild(ov)}
 function nextQ(){var x=queue.shift();if(x)openSheet(x,"批次上傳 第 "+(qtot-queue.length)+" / "+qtot+" 張")}
 function batch(files){var fs=files.slice(0,30),added=[],i=0;if(!fs.length)return;toast("處理 "+fs.length+" 張照片…");
  function fin(){if(!added.length){toast("無法讀取圖片");return}added.forEach(function(a){items.push(a)});if(!save())return;draw();queue=added.slice();qtot=added.length;nextQ()}
  (function nx(){if(i>=fs.length)return fin();shrink(fs[i++]).then(store).then(function(id){added.push({id:Date.now()+added.length,store:"",qty:1,who:"",link:"",img:id,rcpt:"",note:"",done:false});nx()}).catch(nx)})()}
 /* 畫面 */
+function ico(c,i,t){var e=h(c.tag||"span",c.cls),k=h("i","fa-solid "+i+(t?" mr-1":""));e.appendChild(k);if(t)e.appendChild(document.createTextNode(t));return e}
 function slide(x,idx,arr,sc){
- var c=h("div","flex-none w-full snap-center"),ph=h("div","relative aspect-[4/3] rounded-2xl bg-slate-100 overflow-hidden flex items-center justify-center");
- if(x.img){var im=h("img","w-full h-full object-cover cursor-pointer"+(x.done?" opacity-50":""));setImg(im,x.img);ph.appendChild(im);on(im,"click",function(){var ids=arr.filter(function(y){return y.img}).map(function(y){return y.img});zoom(ids,ids.indexOf(x.img))})}else ph.appendChild(fi("fa-image text-slate-300 text-4xl"));
+ var c=h("div","flex-none w-full snap-center"),ph=h("div","relative aspect-[4/3] rounded-2xl bg-ice-100 overflow-hidden flex items-center justify-center text-5xl cursor-pointer");
+ if(x.img){var im=h("img","w-full h-full object-cover"+(x.done?" opacity-50":""));setImg(im,x.img);ph.appendChild(im);on(ph,"click",function(){var ids=arr.filter(function(y){return y.img}).map(function(y){return y.img});zoom(ids,ids.indexOf(x.img))})}else ph.appendChild(h("i","fa-solid fa-gift text-ice-500"));
  ph.appendChild(h("span","absolute left-2.5 bottom-2.5 bg-slate-800/80 text-white text-xs font-bold rounded-lg px-2 py-0.5","× "+x.qty));
- var k=h("button","absolute top-2.5 right-2.5 w-8 h-8 rounded-lg border-2 text-sm flex items-center justify-center "+(x.done?"bg-ice-600 border-ice-600 text-white":"bg-white/80 border-slate-300 text-transparent"));k.appendChild(fi("fa-check"));k.setAttribute("aria-label","已購買");
+ var k=h("button","absolute top-2.5 right-2.5 w-8 h-8 rounded-lg border-2 flex items-center justify-center "+(x.done?"bg-ice-600 border-ice-600 text-white":"bg-white/80 border-slate-300"));k.setAttribute("aria-label","已購買");if(x.done)k.appendChild(h("i","fa-solid fa-check text-sm"));
  on(k,"click",function(e){e.stopPropagation();x.done=!x.done;save();draw()});ph.appendChild(k);
- [[-1,"fa-chevron-left","left-2"],[1,"fa-chevron-right","right-2"]].forEach(function(d){var j=idx+d[0];if(j<0||j>=arr.length)return;var b=ib("absolute top-1/2 -mt-4 "+d[2]+" w-8 h-8 rounded-full bg-slate-800/60 text-white text-xs",d[1]);on(b,"click",function(e){e.stopPropagation();sc.scrollTo({left:j*sc.clientWidth,behavior:"smooth"})});ph.appendChild(b)});
+ [[-1,"fa-chevron-left","left-2"],[1,"fa-chevron-right","right-2"]].forEach(function(d){var j=idx+d[0];if(j<0||j>=arr.length)return;var b=ib("absolute top-1/2 -mt-4 "+d[2]+" w-8 h-8 rounded-full bg-slate-800/60 text-white text-xs flex items-center justify-center",d[1]);on(b,"click",function(e){e.stopPropagation();sc.scrollTo({left:j*sc.clientWidth,behavior:"smooth"})});ph.appendChild(b)});
  c.appendChild(ph);
- var si=h("div","flex gap-2 items-start pt-2.5"),inf=h("div","flex-1 min-w-0 flex flex-col items-start gap-1.5 text-xs"),bv=grp==="who"?x.store:x.who;
- inf.appendChild(lab("inline-flex items-center gap-1.5 bg-ice-50 text-ice-700 text-xs font-bold rounded-lg px-2.5 py-1",grp==="who"?"fa-store":"fa-user",bv||"未填"));
- if(x.note){var n=h("div","flex items-start text-slate-600");n.appendChild(h("i","fa-regular fa-sticky-note w-4 text-slate-400 mt-0.5"));n.appendChild(h("span",null,x.note));inf.appendChild(n)}
- var rw=h("div","flex flex-wrap gap-x-4 gap-y-1");
- if(x.link){var a=lab("inline-flex items-center gap-1.5 text-ice-600 font-bold cursor-pointer","fa-link",host(x.link));on(a,"click",function(){askLink(x.link)});rw.appendChild(a)}
- if(x.rcpt){var r=lab("inline-flex items-center gap-1.5 text-ice-600 font-bold cursor-pointer","fa-receipt","收據");on(r,"click",function(){var ids=arr.filter(function(y){return y.rcpt}).map(function(y){return y.rcpt});zoom(ids,ids.indexOf(x.rcpt))});rw.appendChild(r)}
- if(rw.children.length)inf.appendChild(rw);
- var col=h("div","flex items-center gap-3 flex-shrink-0 pt-0.5"),eb=ib("text-slate-400 hover:text-ice-600","fa-pen text-xs"),xb=ib("text-red-400 hover:text-red-600","fa-trash text-xs");eb.setAttribute("aria-label","編輯");xb.setAttribute("aria-label","刪除");
+ var si=h("div","flex gap-2 items-start pt-2.5"),inf=h("div","flex-1 min-w-0 flex flex-col items-start gap-1.5 text-xs"),bv=grp==="who"?x.store:x.who,bd=h("span","bg-ice-100 text-ice-700 text-xs font-bold rounded-lg px-2.5 py-1");
+ bd.appendChild(h("i","fa-solid "+(grp==="who"?"fa-store":"fa-user")+" mr-1"));bd.appendChild(document.createTextNode(bv||"未填"));inf.appendChild(bd);
+ if(x.note){var nt=h("div","flex items-start text-slate-600");nt.appendChild(h("i","fa-regular fa-sticky-note w-4 text-slate-400 mt-0.5"));nt.appendChild(document.createTextNode("備註: "+x.note));inf.appendChild(nt)}
+ if(x.link){var a=h("button","text-ice-600 font-bold flex items-center gap-1");a.appendChild(h("i","fa-solid fa-link"));a.appendChild(document.createTextNode(host(x.link)));on(a,"click",function(){askLink(x.link)});inf.appendChild(a)}
+ if(x.rcpt){var r=h("button","text-ice-600 font-bold flex items-center gap-1");r.appendChild(h("i","fa-solid fa-receipt"));r.appendChild(document.createTextNode("查看收據"));on(r,"click",function(){var ids=arr.filter(function(y){return y.rcpt}).map(function(y){return y.rcpt});zoom(ids,ids.indexOf(x.rcpt))});inf.appendChild(r)}
+ var col=h("div","flex items-center gap-3 flex-shrink-0 pt-1"),eb=ib("text-slate-400 hover:text-ice-600","fa-pen text-xs"),xb=ib("text-red-400 hover:text-red-600","fa-trash text-xs");eb.setAttribute("aria-label","編輯");xb.setAttribute("aria-label","刪除");
  on(eb,"click",function(){openSheet(x)});on(xb,"click",function(){ask("確定刪除這筆嗎？",function(){var i=items.indexOf(x);if(i>-1)items.splice(i,1);save();draw();toast("已刪除")})});
  col.appendChild(eb);col.appendChild(xb);si.appendChild(inf);si.appendChild(col);c.appendChild(si);return c}
 function group(s,arr){
- var key=grp+":"+s,dn=arr.filter(function(x){return x.done}).length,card=h("div","bg-white rounded-2xl p-4 shadow-sm border border-slate-100"),hd=h("div","flex justify-between items-center mb-3"),t=h("h3","text-sm font-bold text-slate-800 flex items-center gap-2"),sc=h("div","flex overflow-x-auto snap-x snap-mandatory no-scrollbar");
- t.appendChild(fi((grp==="who"?"fa-user":"fa-store")+" text-ice-600"));t.appendChild(h("span",null,s));hd.appendChild(t);hd.appendChild(h("span","text-[11px] text-slate-500","已買 "+dn+" / "+arr.length+" 款"));card.appendChild(hd);
+ var key=grp+":"+s,dn=arr.filter(function(x){return x.done}).length,card=h("div","bg-white rounded-2xl p-4 shadow-sm border border-slate-100"),hd=h("div","flex justify-between items-center mb-3"),t=h("h2","text-sm font-bold text-slate-800 flex items-center gap-2"),sc=h("div","flex overflow-x-auto snap-x snap-mandatory no-scrollbar");
+ t.appendChild(h("i","fa-solid "+(grp==="who"?"fa-user":"fa-store")+" text-ice-600"));t.appendChild(document.createTextNode(s));hd.appendChild(t);hd.appendChild(h("span","text-[11px] text-slate-400","已買 "+dn+" / "+arr.length+" 款"));card.appendChild(hd);
  arr.forEach(function(x,i){sc.appendChild(slide(x,i,arr,sc))});card.appendChild(sc);root.appendChild(card);
  var p=Math.min(Math.max(0,cpos[key]||0),arr.length-1);cpos[key]=p;sc.scrollLeft=p*sc.clientWidth;
  on(sc,"scroll",function(){if(sc.clientWidth)cpos[key]=Math.round(sc.scrollLeft/sc.clientWidth)})}
@@ -103,19 +102,20 @@ function list(){
  var g={},order=[];items.forEach(function(x){var s=x[grp]||(grp==="who"?"未指定":"未填店家");if(!g[s]){g[s]=[];order.push(s)}g[s].push(x)});
  if(!order.length){root.appendChild(h("div","text-slate-400 text-center py-6 text-sm","尚未新增伴手禮"));return}
  if(fg&&!g[fg])fg="";
- if(order.length>1){var fl=h("div","flex gap-2 overflow-x-auto no-scrollbar");[""].concat(order).forEach(function(n){var p=h("button","flex-none px-3.5 py-1.5 rounded-2xl text-xs border "+(n===fg?"bg-ice-600 text-white border-ice-600 font-bold":"bg-white text-slate-600 border-slate-100"),n||"全部");on(p,"click",function(){fg=n;draw()});fl.appendChild(p)});root.appendChild(fl)}
+ if(order.length>1){var fl=h("div","flex gap-2 overflow-x-auto no-scrollbar py-1");[""].concat(order).forEach(function(n){var p=h("button","flex-none px-3 py-1.5 rounded-xl text-xs font-medium "+(n===fg?"bg-ice-600 text-white font-bold shadow-sm":"bg-white text-slate-600 border border-slate-100 shadow-sm"),n||"全部");on(p,"click",function(){fg=n;draw()});fl.appendChild(p)});root.appendChild(fl)}
  order.forEach(function(s){if(!fg||s===fg)group(s,g[s])})}
 function stats(){[["who","未指定","fa-user","依人統計"],["store","未填店家","fa-store","依店家統計"]].forEach(function(s){
- var m={},o=[],c=h("div","bg-white rounded-2xl p-4 shadow-sm border border-slate-100"),t=h("h3","text-sm font-bold text-slate-800 mb-3 flex items-center gap-2");items.forEach(function(x){var k=x[s[0]]||s[1];if(!(k in m)){m[k]=0;o.push(k)}m[k]++});
- t.appendChild(fi(s[2]+" text-ice-600"));t.appendChild(h("span",null,s[3]));c.appendChild(t);if(!o.length)c.appendChild(h("div","text-slate-400 text-center py-2 text-xs","尚無資料"));
- o.sort(function(a,b){return m[b]-m[a]}).forEach(function(k){var l=h("div","py-2 border-b border-dashed border-slate-100 last:border-0 text-xs"),r=h("div","flex justify-between text-slate-600"),bar=h("div","h-1.5 rounded bg-ice-100 mt-1 overflow-hidden"),i=h("div","h-full bg-ice-600");r.appendChild(h("span",null,k));r.appendChild(h("b","text-slate-800",m[k]+" 款"));i.style.width=(m[k]/items.length*100)+"%";bar.appendChild(i);l.appendChild(r);l.appendChild(bar);c.appendChild(l)});
+ var m={},o=[],c=h("div","bg-white rounded-2xl p-4 shadow-sm border border-slate-100"),t=h("h2","text-sm font-bold text-slate-800 mb-3 flex items-center gap-2");items.forEach(function(x){var k=x[s[0]]||s[1];if(!(k in m)){m[k]=0;o.push(k)}m[k]++});
+ t.appendChild(h("i","fa-solid "+s[2]+" text-ice-600"));t.appendChild(document.createTextNode(s[3]));c.appendChild(t);if(!o.length)c.appendChild(h("div","text-xs text-slate-400 text-center py-2","尚無資料"));
+ o.sort(function(a,b){return m[b]-m[a]}).forEach(function(k){var l=h("div","py-2 border-b border-dashed border-slate-100 last:border-0 text-xs"),r=h("div","flex justify-between"),bar=h("div","h-1.5 rounded bg-ice-100 mt-1 overflow-hidden"),i=h("div","h-full bg-ice-600");r.appendChild(h("span","text-slate-600",k));r.appendChild(h("b","text-slate-800",m[k]+" 款"));i.style.width=(m[k]/items.length*100)+"%";bar.appendChild(i);l.appendChild(r);l.appendChild(bar);c.appendChild(l)});
  root.appendChild(c)})}
 function draw(){
  if(!root)return;root.textContent="";
  var up=h("button","w-full flex items-center justify-center gap-1.5 bg-ice-50 text-ice-700 font-bold py-2.5 rounded-xl text-sm border border-ice-100 hover:bg-ice-100 active:scale-95 transition"),fm=h("input"),sg=h("div","flex gap-1 bg-white border border-slate-100 rounded-2xl p-1 shadow-sm");
- up.appendChild(fi("fa-images"));up.appendChild(h("span",null,"批次上傳照片"));fm.type="file";fm.accept="image/*";fm.multiple=true;fm.hidden=true;
+ up.appendChild(h("i","fa-solid fa-camera"));up.appendChild(document.createTextNode("批次上傳照片"));
+ fm.type="file";fm.accept="image/*";fm.multiple=true;fm.hidden=true;
  on(up,"click",function(){fm.click()});on(fm,"change",function(){var a=[].slice.call(fm.files);fm.value="";batch(a)});
- [["store","fa-store","依店家"],["who","fa-user","依人"],["stats","fa-chart-simple","統計"]].forEach(function(m){var act=m[0]==="stats"?view==="stats":(view==="list"&&grp===m[0]),b=h("button","flex-1 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition "+(act?"bg-ice-600 text-white font-bold shadow":"text-slate-500"));b.appendChild(fi(m[1]));b.appendChild(h("span",null,m[2]));on(b,"click",function(){if(m[0]==="stats")view="stats";else{view="list";grp=m[0];fg=""}draw()});sg.appendChild(b)});
+ [["store","fa-store","依店家"],["who","fa-user","依人"],["stats","fa-chart-bar","統計"]].forEach(function(m){var act=m[0]==="stats"?view==="stats":(view==="list"&&grp===m[0]),b=h("button","flex-1 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 "+(act?"bg-ice-600 text-white font-bold":"text-slate-500 font-medium"));b.appendChild(h("i","fa-solid "+m[1]));b.appendChild(document.createTextNode(m[2]));on(b,"click",function(){if(m[0]==="stats")view="stats";else{view="list";grp=m[0];fg=""}draw()});sg.appendChild(b)});
  root.appendChild(up);root.appendChild(fm);root.appendChild(sg);
  if(view==="stats")stats();else list();
  var f=ib("fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40","fa-plus");f.setAttribute("aria-label","新增伴手禮");on(f,"click",function(){openSheet(null)});root.appendChild(f)}
