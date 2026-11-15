@@ -37,11 +37,15 @@ function zoom(ids,i){
 var IC="w-full bg-slate-50 border p-2.5 rounded-xl outline-none";
 function field(l,n){var d=h("div");d.appendChild(h("label","block font-bold text-slate-600 mb-1",l));d.appendChild(n);return d}
 function dl(id,k){var d=h("datalist"),seen={};d.id=id;items.forEach(function(x){if(x[k]&&!seen[x[k]]){seen[x[k]]=1;var o=h("option");o.value=x[k];d.appendChild(o)}});return d}
-function photo(label,get,set,ui){
- var f=h("input","w-full text-slate-500 text-xs mb-1.5"),box=h("div","flex flex-wrap gap-2 mt-1"),d=field(label,f);f.type="file";f.accept="image/*";
- function paint(){box.textContent="";var id=get();if(!id)return;var t=h("div","relative"),im=h("img","w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer"),x=h("button","absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center");x.type="button";x.appendChild(h("i","fa-solid fa-xmark"));setImg(im,id);on(im,"click",function(){zoom([id],0)});on(x,"click",function(){set("");paint()});t.appendChild(im);t.appendChild(x);box.appendChild(t)}
- on(f,"change",function(){var file=f.files[0];f.value="";if(!file)return;ui.n++;ui.upd();shrink(file).then(store).then(function(id){set(id)}).catch(function(){toast("無法讀取圖片")}).then(function(){ui.n--;ui.upd();paint()})});
- d.appendChild(box);paint();return d}
+function tile(label,icon,get,set,ui){
+ var w=h("div","relative"),b=h("button","w-full aspect-square rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-500 text-xs font-bold bg-cover bg-center flex flex-col items-center justify-center gap-1.5"),f=h("input"),x=h("button","absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-slate-800/75 text-white text-xs flex items-center justify-center");
+ b.type="button";x.type="button";f.type="file";f.accept="image/*";f.hidden=true;x.appendChild(h("i","fa-solid fa-xmark"));
+ function paint(){var id=get();x.style.display=id?"flex":"none";b.style.backgroundImage="";b.textContent="";b.classList.toggle("border-dashed",!id);b.classList.toggle("border-solid",!!id);
+  if(!id){b.appendChild(h("i","fa-solid "+icon+" text-2xl"));b.appendChild(h("span",null,label));return}
+  blob(id).then(function(d){if(d&&get()===id)b.style.backgroundImage="url("+d+")"})}
+ on(b,"click",function(){f.click()});on(x,"click",function(){set("");paint()});
+ on(f,"change",function(){var file=f.files[0];f.value="";if(!file)return;ui.n++;ui.upd();shrink(file).then(store).then(function(id){set(id);paint()}).catch(function(){toast("無法讀取圖片")}).then(function(){ui.n--;ui.upd()})});
+ w.appendChild(b);w.appendChild(x);w.appendChild(f);paint();return w}
 function openSheet(x,sub){
  ed=x||null;img=x?x.img||"":"";rcp=x?x.rcpt||"":"";
  var ov=h("div","fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"),bx=h("div","bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto"),hd=h("div","flex justify-between items-center border-b pb-2"),xb=h("button","text-slate-400"),body=h("div","space-y-3 text-xs");
@@ -58,8 +62,8 @@ function openSheet(x,sub){
  body.appendChild(field("店家",fs));
  var g2=h("div","grid grid-cols-2 gap-2");g2.appendChild(field("數量",fq));g2.appendChild(field("誰要買",fw));body.appendChild(g2);
  body.appendChild(field("連結",fk));
- body.appendChild(photo("圖片上傳（點擊縮圖可放大）",function(){return img},function(v){img=v},ui));
- body.appendChild(photo("收據上傳",function(){return rcp},function(v){rcp=v},ui));body.appendChild(sp);
+ var g3=h("div","grid grid-cols-2 gap-2");g3.appendChild(field("圖片",tile("上傳圖片","fa-image",function(){return img},function(v){img=v},ui)));g3.appendChild(field("收據",tile("上傳收據","fa-receipt",function(){return rcp},function(v){rcp=v},ui)));body.appendChild(g3);body.appendChild(sp);
+ 
  body.appendChild(field("備註",fn));
  if(ed&&!sub){var del=h("button","flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl","刪除");on(del,"click",function(){ask("確定刪除這筆嗎？",function(){var i=items.indexOf(ed);if(i>-1)items.splice(i,1);save();ov.remove();draw();toast("已刪除")})});ft.appendChild(del)}
  on(xb,"click",function(){queue=[];ov.remove()});
