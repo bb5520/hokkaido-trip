@@ -36,7 +36,13 @@ function zoom(ids,i){
 /* 新增 / 編輯視窗（版型與其他分頁的新增視窗一致） */
 var IC="w-full bg-slate-50 border p-2.5 rounded-xl outline-none";
 function field(l,n){var d=h("div");d.appendChild(h("label","block font-bold text-slate-600 mb-1",l));d.appendChild(n);return d}
-function dl(id,k){var d=h("datalist"),seen={};d.id=id;items.forEach(function(x){if(x[k]&&!seen[x[k]]){seen[x[k]]=1;var o=h("option");o.value=x[k];d.appendChild(o)}});return d}
+function combo(label,input,k){
+ var w=h("div","relative"),dd=h("div","absolute left-0 right-0 top-full mt-1 z-[60] max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg p-1 hidden");
+ function vals(){var l=[];items.forEach(function(x){if(x[k]&&l.indexOf(x[k])<0)l.push(x[k])});return l}
+ function show(all){dd.textContent="";var q=all?"":input.value.trim().toLowerCase(),l=vals().filter(function(v){return !q||v.toLowerCase().indexOf(q)>-1});if(!l.length){dd.classList.add("hidden");return}
+  l.forEach(function(v){var r=h("div","px-2.5 py-2 rounded-lg text-sm text-slate-800 cursor-pointer hover:bg-ice-50 active:bg-ice-50",v);on(r,"mousedown",function(e){e.preventDefault()});on(r,"click",function(){input.value=v;dd.classList.add("hidden")});dd.appendChild(r)});dd.classList.remove("hidden")}
+ on(input,"focus",function(){show(true)});on(input,"click",function(){show(true)});on(input,"input",function(){show(false)});on(input,"blur",function(){setTimeout(function(){dd.classList.add("hidden")},150)});
+ w.appendChild(input);w.appendChild(dd);return field(label,w)}
 function tile(label,icon,get,set,ui){
  var w=h("div","relative"),b=h("button","w-full aspect-square rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-500 text-xs font-bold bg-cover bg-center flex flex-col items-center justify-center gap-1.5"),f=h("input"),x=h("button","absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-slate-800/75 text-white text-xs flex items-center justify-center");
  b.type="button";x.type="button";f.type="file";f.accept="image/*";f.hidden=true;x.appendChild(h("i","fa-solid fa-xmark"));
@@ -52,15 +58,14 @@ function openSheet(x,sub){
  hd.appendChild(h("h3","font-bold text-slate-800",sub?"批次新增伴手禮（"+sub+"）":(ed?"編輯伴手禮":"新增伴手禮")));xb.appendChild(h("i","fa-solid fa-xmark text-lg"));hd.appendChild(xb);
  var fs=h("input",IC),fw=h("input",IC),fk=h("input",IC),fq=h("input",IC),fn=h("textarea",IC);
  fs.value=x?x.store:(grp==="store"?fg:"");fw.value=x?x.who:(grp==="who"?fg:"");fk.value=x?x.link:"";fq.value=x?x.qty:1;fn.value=x?x.note:"";
- fs.type="text";fw.type="text";fk.type="url";fq.type="number";fq.min="1";fs.placeholder="例如: 唐吉訶德";fw.placeholder="例如: 媽媽";fk.placeholder="https://";fq.placeholder="1";fn.rows=2;
- fs.maxLength=40;fw.maxLength=20;fk.maxLength=500;fn.maxLength=200;fs.setAttribute("list","sv-stores");fw.setAttribute("list","sv-whos");
+ fs.type="text";fw.type="text";fk.type="url";fq.type="number";fq.min="1";fs.placeholder="例：唐吉訶德";fw.placeholder="例：媽媽";fs.autocomplete="off";fw.autocomplete="off";fk.placeholder="https://";fq.placeholder="1";fn.rows=2;
+ fs.maxLength=40;fw.maxLength=20;fk.maxLength=500;fn.maxLength=200;
  function qv(){var v=parseInt(String(fq.value).replace(/\D/g,""),10);return isFinite(v)&&v>0?Math.min(v,999):1}
  var sp=h("div","text-[11px] text-ice-600 mt-1"),ui={n:0,upd:function(){sp.style.display=ui.n?"block":"none";sv.disabled=ui.n>0;sv.className="flex-1 font-bold py-2.5 rounded-xl "+(ui.n?"bg-slate-300 text-slate-500 cursor-not-allowed":"bg-ice-600 text-white");sv.textContent=ui.n?"讀取中...":lab}};
  sp.appendChild(h("i","fa-solid fa-spinner fa-spin mr-1"));sp.appendChild(document.createTextNode("檔案讀取中，請稍候..."));sp.style.display="none";
  var lab=ed?(queue.length?"儲存並下一張":"儲存"):"儲存",sv=h("button","flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl",lab),ft=h("div","flex gap-2 pt-2");
- body.appendChild(dl("sv-stores","store"));body.appendChild(dl("sv-whos","who"));
- body.appendChild(field("店家",fs));
- var g2=h("div","grid grid-cols-2 gap-2");g2.appendChild(field("數量",fq));g2.appendChild(field("誰要買",fw));body.appendChild(g2);
+  body.appendChild(combo("店家",fs,"store"));
+ var g2=h("div","grid grid-cols-2 gap-2");g2.appendChild(field("數量",fq));g2.appendChild(combo("誰要買",fw,"who"));body.appendChild(g2);
  body.appendChild(field("連結",fk));
  var g3=h("div","grid grid-cols-2 gap-2");g3.appendChild(field("圖片",tile("上傳圖片","fa-image",function(){return img},function(v){img=v},ui)));g3.appendChild(field("收據",tile("上傳收據","fa-receipt",function(){return rcp},function(v){rcp=v},ui)));body.appendChild(g3);body.appendChild(sp);
  
