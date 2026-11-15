@@ -1,5 +1,5 @@
 (function(){"use strict";
-var SB_URL="https://cpisljizfsovmygzhhpy.supabase.co",SB_KEY="sb_publishable_72orf9crARS0-Rfb67sFWA_x0i0GuhT";
+var SB_URL="https://cpisljizfsovmygzhhpy.supabase.co.supabase.co",SB_KEY="sb_publishable_72orf9crARS0-Rfb67sFWA_x0i0GuhT";
 var KEYS=["trip_banner","trip_jpyRate","trip_itinerary","trip_flightExtras","trip_hotelExtras","trip_carRentals","trip_dayTours","trip_otherBookings","trip_shopping","trip_expenses","trip_souvenirs","trip_startDate","trip_days","souv"];
 var BUCKET="trip-files",DB="trip_blob_store",ST="blobs";
 var rawSet=Storage.prototype.setItem,rawGet=Storage.prototype.getItem;
@@ -24,6 +24,8 @@ b1=mk("button",MB,"立即同步"),b2=mk("button",MB+";color:#dc2626","登出");
 em.type="email";em.placeholder="Email";em.autocomplete="username";em.setAttribute("autocapitalize","off");pw.type="password";pw.placeholder="密碼";pw.autocomplete="current-password";
 bx.appendChild(mk("div","text-align:center;font-weight:700;font-size:18px;color:#1e293b","✈️ 北海道冰雪之旅"));[em,pw,msg,lb].forEach(function(e){bx.appendChild(e)});ov.appendChild(bx);[b1,b2].forEach(function(e){mn.appendChild(e)});
 [ov,chip,mn].forEach(function(e){document.documentElement.appendChild(e)});
+var hasTok=false,reloading=false;try{for(var ti=0;ti<localStorage.length;ti++){if(/^sb-.+-auth-token$/.test(localStorage.key(ti))){hasTok=true;break}}}catch(e){}
+if(!hasTok)ov.style.display="flex";
 function setSt(t,bad,upd){chip.textContent=t;chip.style.color=bad?"#dc2626":"#475569";chip.style.background=upd?"#fde68a":"rgba(255,255,255,.88)";mode=upd?"reload":""}
 /* ---------- 本機圖片庫(IndexedDB) ---------- */
 function odb(){return new Promise(function(r,j){var q=indexedDB.open(DB,1);q.onupgradeneeded=function(){q.result.createObjectStore(ST)};q.onsuccess=function(){r(q.result)};q.onerror=function(){j(q.error)}})}
@@ -73,7 +75,7 @@ function pullChanges(){
    ls("sync_meta",meta);return true})})}
 function applyUpdate(){
  var last=+sessionStorage.getItem("sync_rl")||0;
- if(!document.querySelector(".fixed.inset-0")&&Date.now()-last>20000){sessionStorage.setItem("sync_rl",String(Date.now()));location.reload()}
+ if(!document.querySelector(".fixed.inset-0")&&Date.now()-last>20000){sessionStorage.setItem("sync_rl",String(Date.now()));reloading=true;location.reload()}
  else setSt("有新資料，點此更新",true,true)}
 function syncNow(){
  if(!sb||!authed)return Promise.resolve();
@@ -83,15 +85,17 @@ function syncNow(){
   var n=new Date();setSt("已同步 "+n.getHours()+":"+("0"+n.getMinutes()).slice(-2));if(ch)applyUpdate()
  }).catch(function(){setSt("離線或同步失敗，點此選單",true)}).then(function(){busy=false;if(again){again=false;sched()}})}
 /* ---------- 登入 / 登出 ---------- */
-function onAuthed(){authed=true;ov.style.display="none";chip.style.display="block";setSt("同步中…");readyRes();syncNow()}
+function onAuthed(fresh){authed=true;chip.style.display="block";setSt("同步中…");readyRes();
+ if(fresh){lb.disabled=true;msg.style.color="#64748b";msg.textContent="同步資料中…"}else ov.style.display="none";
+ syncNow().then(function(){if(fresh&&!reloading){ov.style.display="none";lb.disabled=false;msg.textContent="";msg.style.color="#dc2626"}})}
 function login(){lb.disabled=true;msg.textContent="";
  sb.auth.signInWithPassword({email:em.value.trim(),password:pw.value}).then(function(r){lb.disabled=false;
   if(r.error){msg.textContent=/fetch|network/i.test(r.error.message)?"網路連線失敗":"帳號或密碼錯誤";return}
-  pw.value="";onAuthed()}).catch(function(){lb.disabled=false;msg.textContent="網路連線失敗"})}
+  pw.value="";onAuthed(true)}).catch(function(){lb.disabled=false;msg.textContent="網路連線失敗"})}
 function wipeLocal(){KEYS.concat(["sync_dirty","sync_meta","sync_blobq","sync_seeded"]).forEach(function(k){localStorage.removeItem(k)});var q=indexedDB.deleteDatabase(DB);q.onsuccess=q.onerror=q.onblocked=function(){location.reload()}}
 function logout(){syncNow().then(function(){var n=Object.keys(dirty).length+bq.length;
  if(!confirm(n?"還有 "+n+" 項資料尚未同步到雲端，登出會遺失它們。確定要登出嗎？":"登出會清除這支手機上的本機資料（雲端資料不受影響）。確定嗎？"))return;
- return sb.auth.signOut().catch(function(){}).then(wipeLocal)})}
+ ov.style.display="flex";mn.style.display="none";chip.style.display="none";em.value="";pw.value="";msg.textContent="";return sb.auth.signOut().catch(function(){}).then(wipeLocal)})}
 chip.addEventListener("click",function(){if(mode==="reload"){location.reload();return}mn.style.display=mn.style.display==="flex"?"none":"flex"});
 b1.addEventListener("click",function(){mn.style.display="none";syncNow()});
 b2.addEventListener("click",function(){mn.style.display="none";logout()});
