@@ -1810,8 +1810,9 @@
       const dateList = computed(() => {
         const list = [];
         const start = new Date(tripStartDate.value + 'T00:00:00');
-        // 天數 N 代表 N 夜，日期籤會顯示 N+1 天 (含最後一天回程日)
+        // 天數 N 代表 N 天
         for (let i = 0; i < tripDays.value; i++) {
+          const d = new Date(start);
           d.setDate(d.getDate() + i);
           list.push({
             week: weekdayNames[d.getDay()],
