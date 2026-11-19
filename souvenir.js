@@ -35,14 +35,35 @@ function dlg(msg,btns){var ov=h("div","fixed inset-0 z-[98] bg-black/45 flex ite
 function ask(msg,fn,label){dlg(msg,[btn("取消","bg-slate-100 text-slate-600"),btn(label||"刪除","bg-red-600 text-white",fn)])}
 function askLink(u){dlg("即將開啟外部連結：\n"+host(u)+"\n要前往嗎？",[btn("取消","bg-slate-100 text-slate-600"),function(close){var a=h("a","flex-1 text-center font-bold py-2.5 rounded-xl text-sm bg-ice-600 text-white","前往");a.href=u;a.target="_blank";a.rel="noopener noreferrer";on(a,"click",function(){setTimeout(close,50)});return a}])}
 function zoom(ids,i){
- var ov=h("div","fixed inset-0 bg-black/85 z-[65] flex flex-col"),tp=h("div","flex justify-between items-center p-4 text-white flex-shrink-0"),ct=h("span","text-sm font-medium"),x=h("button","text-white"),mid=h("div","flex-1 relative overflow-hidden flex items-center justify-center px-2"),im=h("img","max-w-full max-h-full object-contain select-none"),dots=h("div","flex justify-center gap-1.5 p-4 flex-shrink-0"),sx=0;
+ var ov=h("div","fixed inset-0 bg-black/85 z-[65] flex flex-col"),tp=h("div","flex justify-between items-center p-4 text-white flex-shrink-0"),ct=h("span","text-sm font-medium"),x=h("button","text-white"),mid=h("div","flex-1 relative overflow-hidden flex items-center justify-center px-2"),im=h("img","max-w-full max-h-full object-contain select-none"),dots=h("div","flex justify-center gap-1.5 p-4 flex-shrink-0"),
+ z=1,px=0,py=0,pd=0,pz=1,ds=null,lt=0,sx=0,multi=false;
  x.appendChild(h("i","fa-solid fa-xmark text-2xl"));tp.appendChild(ct);tp.appendChild(x);
- function show(){ct.textContent=(i+1)+" / "+ids.length;blob(ids[i]).then(function(d){if(d)im.src=d});dots.textContent="";if(ids.length>1)ids.forEach(function(_,k){var d=h("span","h-1.5 rounded-full cursor-pointer "+(k===i?"bg-white w-3":"bg-white/40 w-1.5"));on(d,"click",function(e){e.stopPropagation();i=k;show()});dots.appendChild(d)})}
- function go(d){if(ids.length<2)return;i=(i+d+ids.length)%ids.length;show()}
- on(mid,"touchstart",function(e){sx=e.changedTouches[0].clientX});
- on(mid,"touchend",function(e){var d=e.changedTouches[0].clientX-sx;if(Math.abs(d)>40)go(d>0?-1:1)});
+ mid.style.touchAction="none";im.draggable=false;im.style.transition="transform .12s ease-out";
+ function ap(){im.style.transform="translate("+px+"px,"+py+"px) scale("+z+")"}
+ function rz(){z=1;px=0;py=0;ap()}
+ function show(){rz();ct.textContent=(i+1)+" / "+ids.length;blob(ids[i]).then(function(d){if(d)im.src=d});dots.textContent="";if(ids.length>1)ids.forEach(function(_,k){var d=h("span","h-1.5 rounded-full cursor-pointer "+(k===i?"bg-white w-3":"bg-white/40 w-1.5"));on(d,"click",function(e){e.stopPropagation();i=k;show()});dots.appendChild(d)})}
+ function go(d){if(ids.length<2||z>1)return;i=(i+d+ids.length)%ids.length;show()}
+ function dist(t){var dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;return Math.sqrt(dx*dx+dy*dy)}
+ /* 雙指縮放、放大後單指拖曳、雙擊放大／還原；只有在未放大且單指時，左右滑動才會切換照片 */
+ on(mid,"touchstart",function(e){
+  if(e.touches.length===2){multi=true;pd=dist(e.touches);pz=z;ds=null;im.style.transition="none"}
+  else if(e.touches.length===1){
+   sx=e.touches[0].clientX;im.style.transition="none";
+   if(!multi){var n=Date.now();if(n-lt<300){im.style.transition="transform .2s ease-out";if(z>1)rz();else{z=2.5;ap()}lt=0}else lt=n}
+   if(z>1)ds={x:e.touches[0].clientX-px,y:e.touches[0].clientY-py}}});
+ mid.addEventListener("touchmove",function(e){
+  if(e.touches.length===2){e.preventDefault();var r=dist(e.touches)/(pd||1);z=Math.min(4,Math.max(1,pz*r));if(z<=1){px=0;py=0}ap()}
+  else if(e.touches.length===1&&z>1){e.preventDefault();if(!ds)ds={x:e.touches[0].clientX-px,y:e.touches[0].clientY-py};px=e.touches[0].clientX-ds.x;py=e.touches[0].clientY-ds.y;ap()}
+ },{passive:false});
+ on(mid,"touchend",function(e){
+  ds=null;
+  if(e.touches.length===0){
+   if(!multi&&z<=1&&e.changedTouches.length){var d=e.changedTouches[0].clientX-sx;if(Math.abs(d)>40)go(d>0?-1:1)}
+   multi=false;if(z<1.02)rz()}
+  else if(e.touches.length===1&&z>1){ds={x:e.touches[0].clientX-px,y:e.touches[0].clientY-py}}});
  on(x,"click",function(){ov.remove()});on(ov,"click",function(e){if(e.target===ov||e.target===mid)ov.remove()});
  mid.appendChild(im);ov.appendChild(tp);ov.appendChild(mid);ov.appendChild(dots);document.body.appendChild(ov);show()}
+
 /* 新增 / 編輯視窗（版型與其他分頁的新增視窗一致） */
 var IC="w-full bg-slate-50 border p-2.5 rounded-xl outline-none";
 function field(l,n){var d=h("div");d.appendChild(h("label","block font-bold text-slate-600 mb-1",l));d.appendChild(n);return d}
