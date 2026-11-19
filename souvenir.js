@@ -1,6 +1,14 @@
 (function(){"use strict";
 /* 所有按鈕按下時縮小（與「登出」按鈕一致），伴手禮頁面與彈出視窗都適用 */
-if(!document.getElementById("sv-press")){var pst=document.createElement("style");pst.id="sv-press";pst.textContent="button{transition:transform .12s ease}button:not(:disabled):active{transform:scale(.95)}";(document.head||document.documentElement).appendChild(pst)}
+if(!document.getElementById("sv-press")){var pst=document.createElement("style");pst.id="sv-press";pst.textContent="button{transition:transform .12s ease}button:not(:disabled):active,button.sv-down:not(:disabled){transform:scale(.95)}";(document.head||document.documentElement).appendChild(pst)}
+/* iPhone 的 :active 常常不會觸發，所以用觸控事件手動加上「按下」狀態 */
+var pb=null;
+function pdown(e){var b=e.target&&e.target.closest?e.target.closest("button"):null;if(b&&!b.disabled){pb=b;b.classList.add("sv-down")}}
+function pup(){if(pb){pb.classList.remove("sv-down");pb=null}}
+document.addEventListener("touchstart",pdown,{passive:true});
+document.addEventListener("touchend",pup,{passive:true});
+document.addEventListener("touchcancel",pup,{passive:true});
+document.addEventListener("touchmove",function(e){if(!pb)return;var t=e.touches[0],el=t&&document.elementFromPoint(t.clientX,t.clientY);if(!el||!pb.contains(el))pup()},{passive:true});
 var KEY="trip_souvenirs",DB="trip_blob_store",ST="blobs";
 var items=[],grp="store",view="list",fg="",cpos={},queue=[],qtot=0,ed=null,img="",rcp="",root=null,cache={};
 function h(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
