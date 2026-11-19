@@ -120,7 +120,7 @@ function stats(){[["who","未指定","fa-user","依人統計"],["store","未填�
  root.appendChild(c)})}
 function draw(){
  if(!root)return;root.textContent="";
- var up=h("button","w-full flex items-center justify-center gap-1.5 bg-ice-50 text-ice-700 font-bold py-2.5 rounded-xl text-sm border border-ice-100 hover:bg-ice-100 active:scale-95 transition"),fm=h("input"),sg=h("div","flex gap-1 bg-white border border-slate-100 rounded-2xl p-1 shadow-sm");
+ var up=h("button","w-full flex items-center justify-center gap-1.5 bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm"),fm=h("input"),sg=h("div","flex gap-1 bg-white border border-slate-100 rounded-2xl p-1 shadow-sm");
  up.appendChild(h("i","fa-solid fa-camera"));up.appendChild(document.createTextNode("批次上傳照片"));
  fm.type="file";fm.accept="image/*";fm.multiple=true;fm.hidden=true;
  on(up,"click",function(){fm.click()});on(fm,"change",function(){var a=[].slice.call(fm.files);fm.value="";batch(a)});
