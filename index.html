@@ -1615,6 +1615,18 @@
         return Math.sqrt(dx * dx + dy * dy);
       };
 
+      const clampGalleryPan = (container) => {
+        const img = container && container.querySelector('img');
+        if (!img) return;
+        const M = 10; // 允許拖出邊界的距離 (px)
+        const mx = Math.max(0, (img.offsetWidth * galleryZoom.value - container.clientWidth) / 2) + M;
+        const my = Math.max(0, (img.offsetHeight * galleryZoom.value - container.clientHeight) / 2) + M;
+        galleryPan.value = {
+          x: Math.min(mx, Math.max(-mx, galleryPan.value.x)),
+          y: Math.min(my, Math.max(-my, galleryPan.value.y))
+        };
+      };
+
       const galleryTouchStart = (e) => {
         if (e.touches.length === 2) {
           galleryPinchStartDist.value = getTouchDist(e.touches);
@@ -1638,7 +1650,7 @@
           const newZoom = Math.min(4, Math.max(1, galleryPinchStartZoom.value * ratio));
           galleryZoom.value = newZoom;
           // 縮到 1 倍時，位移量要一併歸零，避免照片偏移
-          if (newZoom <= 1) galleryPan.value = { x: 0, y: 0 };
+          if (newZoom <= 1) galleryPan.value = { x: 0, y: 0 }; else clampGalleryPan(e.currentTarget);
         } else if (e.touches.length === 1 && galleryZoom.value > 1) {
           e.preventDefault();
           // 從雙指縮放放開一指變成單指拖曳時，重新校正起始基準點，避免跳動
@@ -1646,6 +1658,8 @@
             galleryDragStart.value = { x: e.touches[0].clientX - galleryPan.value.x, y: e.touches[0].clientY - galleryPan.value.y };
           }
           galleryPan.value = { x: e.touches[0].clientX - galleryDragStart.value.x, y: e.touches[0].clientY - galleryDragStart.value.y };
+          clampGalleryPan(e.currentTarget);
+          galleryDragStart.value = { x: e.touches[0].clientX - galleryPan.value.x, y: e.touches[0].clientY - galleryPan.value.y };
         }
       };
       const galleryTouchEnd = (e) => {
