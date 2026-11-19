@@ -1,4 +1,6 @@
 (function(){"use strict";
+/* 所有按鈕按下時縮小（與「登出」按鈕一致），伴手禮頁面與彈出視窗都適用 */
+if(!document.getElementById("sv-press")){var pst=document.createElement("style");pst.id="sv-press";pst.textContent="button{transition:transform .12s ease}button:not(:disabled):active{transform:scale(.95)}";(document.head||document.documentElement).appendChild(pst)}
 var KEY="trip_souvenirs",DB="trip_blob_store",ST="blobs";
 var items=[],grp="store",view="list",fg="",cpos={},queue=[],qtot=0,ed=null,img="",rcp="",root=null,cache={};
 function h(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
@@ -120,7 +122,7 @@ function stats(){[["who","未指定","fa-user","依人統計"],["store","未填�
  root.appendChild(c)})}
 function draw(){
  if(!root)return;root.textContent="";
- var up=h("button","w-full flex items-center justify-center gap-1.5 bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm"),fm=h("input"),sg=h("div","flex gap-1 bg-white border border-slate-100 rounded-2xl p-1 shadow-sm");
+ var up=h("button","w-full flex items-center justify-center gap-1.5 bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm active:scale-95 transition"),fm=h("input"),sg=h("div","flex gap-1 bg-white border border-slate-100 rounded-2xl p-1 shadow-sm");
  up.appendChild(h("i","fa-solid fa-camera"));up.appendChild(document.createTextNode("批次上傳照片"));
  fm.type="file";fm.accept="image/*";fm.multiple=true;fm.hidden=true;
  on(up,"click",function(){fm.click()});on(fm,"change",function(){var a=[].slice.call(fm.files);fm.value="";batch(a)});
