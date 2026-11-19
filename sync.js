@@ -18,8 +18,8 @@ var ov=mk("div","position:fixed;inset:0;z-index:1000;background:#eef4f8;display:
 bx=mk("div","width:100%;max-width:340px;background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:10px"),
 em=mk("input",IN),pw=mk("input",IN),msg=mk("div","font-size:12px;color:#dc2626;min-height:16px"),
 lb=mk("button","height:46px;border:0;border-radius:12px;background:#0284c7;color:#fff;font:inherit;font-weight:700;font-size:15px","登入"),
-chip=mk("button","position:fixed;top:8px;right:8px;z-index:45;border:0;border-radius:999px;padding:4px 10px;font-size:11px;background:rgba(255,255,255,.88);color:#475569;display:none;box-shadow:0 1px 4px rgba(0,0,0,.15)","…"),
-mn=mk("div","position:fixed;top:38px;right:8px;z-index:46;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:6px;display:none;flex-direction:column;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.15)"),
+chip=mk("button","position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:8px;z-index:45;border:0;border-radius:999px;padding:4px 10px;font-size:11px;background:rgba(255,255,255,.88);color:#475569;display:none;box-shadow:0 1px 4px rgba(0,0,0,.15)","…"),
+mn=mk("div","position:fixed;top:calc(env(safe-area-inset-top,0px) + 38px);right:8px;z-index:46;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:6px;display:none;flex-direction:column;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.15)"),
 b1=mk("button",MB,"立即同步"),b2=mk("button",MB+";color:#dc2626","登出");
 em.type="email";em.placeholder="Email";em.autocomplete="username";em.setAttribute("autocapitalize","off");pw.type="password";pw.placeholder="密碼";pw.autocomplete="current-password";
 bx.appendChild(mk("div","text-align:center;font-weight:700;font-size:18px;color:#1e293b","✈️ 北海道冰雪之旅"));[em,pw,msg,lb].forEach(function(e){bx.appendChild(e)});ov.appendChild(bx);[b1,b2].forEach(function(e){mn.appendChild(e)});
