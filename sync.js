@@ -22,7 +22,7 @@ chip=mk("button","position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);ri
 mn=mk("div","position:fixed;top:calc(env(safe-area-inset-top,0px) + 38px);right:8px;z-index:46;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:6px;display:none;flex-direction:column;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.15)"),
 b1=mk("button",MB,"立即同步"),b2=mk("button",MB+";color:#dc2626","登出");
 em.type="email";em.placeholder="Email";em.autocomplete="username";em.setAttribute("autocapitalize","off");pw.type="password";pw.placeholder="密碼";pw.autocomplete="current-password";
-bx.appendChild(mk("div","text-align:center;font-weight:700;font-size:18px;color:#1e293b","✈️ 北海道冰雪之旅"));[em,pw,msg,lb].forEach(function(e){bx.appendChild(e)});ov.appendChild(bx);var b3=mk("button",MB,"診斷");[b1,b2,b3].forEach(function(e){mn.appendChild(e)});
+bx.appendChild(mk("div","text-align:center;font-weight:700;font-size:18px;color:#1e293b","✈️ 北海道冰雪之旅"));[em,pw,msg,lb].forEach(function(e){bx.appendChild(e)});ov.appendChild(bx);[b1,b2].forEach(function(e){mn.appendChild(e)});
 [ov,chip,mn].forEach(function(e){document.documentElement.appendChild(e)});
 var hasTok=false,reloading=false,outFlag=lraw("sync_out")==="1";try{for(var ti=0;ti<localStorage.length;ti++){if(/^sb-.+-auth-token$/.test(localStorage.key(ti))){hasTok=true;break}}}catch(e){}
 var stl=document.createElement("style");stl.textContent="html.sv-lock body{visibility:hidden!important}";document.head.appendChild(stl);
@@ -101,12 +101,6 @@ function logout(){syncNow().then(function(){var n=Object.keys(dirty).length+bq.l
  rawSet.call(localStorage,"sync_out","1");lockOn();mn.style.display="none";chip.style.display="none";em.value="";pw.value="";msg.textContent="";return sb.auth.signOut({scope:"local"}).catch(function(){}).then(wipeLocal)})}
 chip.addEventListener("click",function(){if(mode==="reload"){location.reload();return}mn.style.display=mn.style.display==="flex"?"none":"flex"});
 b1.addEventListener("click",function(){mn.style.display="none";syncNow()});
-function diag(){
- var p=document.createElement("div");p.style.cssText="position:fixed;top:0;left:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden";document.body.appendChild(p);var inset=getComputedStyle(p).paddingTop;p.remove();
- function m(n){var e=document.querySelector('meta[name="'+n+'"]');return e?e.getAttribute("content"):"(沒有)"}
- var bn=document.querySelector('img[alt="北海道之旅"]'),bh=bn&&bn.parentNode?Math.round(bn.parentNode.getBoundingClientRect().height):"?";
- alert("模式："+(navigator.standalone?"主畫面 App":"Safari 網頁")+"\n狀態列設定："+m("apple-mobile-web-app-status-bar-style")+"\n延伸到邊緣："+(/viewport-fit=cover/.test(m("viewport"))?"是":"否")+"\n上邊界高度："+inset+"\n封面圖高度："+bh+"px\n畫面："+innerWidth+"×"+innerHeight)}
-b3.addEventListener("click",function(){mn.style.display="none";diag()});
 b2.addEventListener("click",function(){mn.style.display="none";logout()});
 lb.addEventListener("click",function(){if(sb)login();else msg.textContent="尚未連線，請稍後再試"});
 pw.addEventListener("keydown",function(e){if(e.key==="Enter")lb.click()});
