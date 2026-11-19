@@ -22,7 +22,7 @@ chip=mk("button","position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);ri
 mn=mk("div","position:fixed;top:calc(env(safe-area-inset-top,0px) + 38px);right:8px;z-index:46;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:6px;display:none;flex-direction:column;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.15)"),
 b1=mk("button",MB,"立即同步"),b2=mk("button",MB+";color:#dc2626","登出");
 em.type="email";em.placeholder="Email";em.autocomplete="username";em.setAttribute("autocapitalize","off");pw.type="password";pw.placeholder="密碼";pw.autocomplete="current-password";
-bx.appendChild(mk("div","text-align:center;font-weight:700;font-size:18px;color:#1e293b","✈️ 北海道冰雪之旅"));[em,pw,msg,lb].forEach(function(e){bx.appendChild(e)});ov.appendChild(bx);[b1,b2].forEach(function(e){mn.appendChild(e)});
+bx.appendChild(mk("div","text-align:center;font-weight:700;font-size:18px;color:#1e293b","✈️ 北海道冰雪之旅"));[em,pw,msg,lb].forEach(function(e){bx.appendChild(e)});ov.appendChild(bx);var b3=mk("button",MB,"診斷");[b1,b2,b3].forEach(function(e){mn.appendChild(e)});
 [ov,chip,mn].forEach(function(e){document.documentElement.appendChild(e)});
 var hasTok=false,reloading=false,outFlag=lraw("sync_out")==="1";try{for(var ti=0;ti<localStorage.length;ti++){if(/^sb-.+-auth-token$/.test(localStorage.key(ti))){hasTok=true;break}}}catch(e){}
 var stl=document.createElement("style");stl.textContent="html.sv-lock body{visibility:hidden!important}";document.head.appendChild(stl);
@@ -96,16 +96,23 @@ function login(){lb.disabled=true;msg.textContent="";
   if(r.error){msg.textContent=/fetch|network/i.test(r.error.message)?"網路連線失敗":"帳號或密碼錯誤";return}
   pw.value="";localStorage.removeItem("sync_out");onAuthed(true)}).catch(function(){lb.disabled=false;msg.textContent="網路連線失敗"})}
 function wipeLocal(){KEYS.concat(["sync_dirty","sync_meta","sync_blobq","sync_seeded"]).forEach(function(k){localStorage.removeItem(k)});for(var wi=localStorage.length-1;wi>=0;wi--){var wk=localStorage.key(wi);if(wk&&wk.indexOf("sb-")===0)localStorage.removeItem(wk)}var q=indexedDB.deleteDatabase(DB);q.onsuccess=q.onerror=q.onblocked=function(){location.reload()}}
+function manual(){syncNow().then(function(){if(window.appToast)window.appToast(chip.textContent)})}
 function logout(){syncNow().then(function(){var n=Object.keys(dirty).length+bq.length;
  if(!confirm(n?"還有 "+n+" 項資料尚未同步到雲端，登出會遺失它們。確定要登出嗎？":"登出會清除這支手機上的本機資料（雲端資料不受影響）。確定嗎？"))return;
  rawSet.call(localStorage,"sync_out","1");lockOn();mn.style.display="none";chip.style.display="none";em.value="";pw.value="";msg.textContent="";return sb.auth.signOut({scope:"local"}).catch(function(){}).then(wipeLocal)})}
 chip.addEventListener("click",function(){if(mode==="reload"){location.reload();return}mn.style.display=mn.style.display==="flex"?"none":"flex"});
-b1.addEventListener("click",function(){mn.style.display="none";syncNow()});
+b1.addEventListener("click",function(){mn.style.display="none";manual()});
+function diag(){
+ var p=document.createElement("div");p.style.cssText="position:fixed;top:0;left:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden";document.body.appendChild(p);var inset=getComputedStyle(p).paddingTop;p.remove();
+ function m(n){var e=document.querySelector('meta[name="'+n+'"]');return e?e.getAttribute("content"):"(沒有)"}
+ var bn=document.querySelector('img[alt="北海道之旅"]'),bh=bn&&bn.parentNode?Math.round(bn.parentNode.getBoundingClientRect().height):"?";
+ alert("模式："+(navigator.standalone?"主畫面 App":"Safari 網頁")+"\n狀態列設定："+m("apple-mobile-web-app-status-bar-style")+"\n延伸到邊緣："+(/viewport-fit=cover/.test(m("viewport"))?"是":"否")+"\n上邊界高度："+inset+"\n封面圖高度："+bh+"px\n畫面："+innerWidth+"×"+innerHeight)}
+b3.addEventListener("click",function(){mn.style.display="none";diag()});
 b2.addEventListener("click",function(){mn.style.display="none";logout()});
 lb.addEventListener("click",function(){if(sb)login();else msg.textContent="尚未連線，請稍後再試"});
 pw.addEventListener("keydown",function(e){if(e.key==="Enter")lb.click()});
 document.addEventListener("visibilitychange",function(){if(!document.hidden)syncNow()});
-document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-sync]");if(!t)return;var a=t.getAttribute("data-sync");if(a==="logout")logout();else if(a==="now")syncNow()});
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-sync]");if(!t)return;var a=t.getAttribute("data-sync");if(a==="logout")logout();else if(a==="now")manual()});
 window.addEventListener("online",syncNow);
 window.addEventListener("message",function(e){if(e.origin!==location.origin||!e.data||typeof e.data.souvFs!=="boolean")return;var f=document.querySelector('iframe[src="souvenir.html"]');if(!f)return;if(e.data.souvFs){if(f.dataset.o==null)f.dataset.o=f.style.cssText;f.style.cssText="position:fixed;inset:0;width:100%;height:100dvh;z-index:60;border:0;background:transparent"}else if(f.dataset.o!=null){f.style.cssText=f.dataset.o;delete f.dataset.o}});
 if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
