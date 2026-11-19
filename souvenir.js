@@ -34,14 +34,14 @@ function btn(label,cls,fn){return function(close){var b=h("button","flex-1 font-
 function dlg(msg,btns){var ov=h("div","fixed inset-0 z-[98] bg-black/45 flex items-center justify-center p-5"),bx=h("div","bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl"),row=h("div","flex gap-2 mt-4");bx.appendChild(h("div","text-center font-bold text-slate-800 text-sm whitespace-pre-line break-all",msg));btns.forEach(function(b){row.appendChild(b(function(){ov.remove()}))});bx.appendChild(row);ov.appendChild(bx);document.body.appendChild(ov)}
 function ask(msg,fn,label){dlg(msg,[btn("取消","bg-slate-100 text-slate-600"),btn(label||"刪除","bg-red-600 text-white",fn)])}
 function askLink(u){dlg("即將開啟外部連結：\n"+host(u)+"\n要前往嗎？",[btn("取消","bg-slate-100 text-slate-600"),function(close){var a=h("a","flex-1 text-center font-bold py-2.5 rounded-xl text-sm bg-ice-600 text-white","前往");a.href=u;a.target="_blank";a.rel="noopener noreferrer";on(a,"click",function(){setTimeout(close,50)});return a}])}
-function zoom(ids,i){
+function zoom(ids,i,cb){
  var ov=h("div","fixed inset-0 bg-black/85 z-[65] flex flex-col"),tp=h("div","flex justify-between items-center p-4 text-white flex-shrink-0"),ct=h("span","text-sm font-medium"),x=h("button","text-white"),mid=h("div","flex-1 relative overflow-hidden flex items-center justify-center px-2"),im=h("img","max-w-full max-h-full object-contain select-none"),dots=h("div","flex justify-center gap-1.5 p-4 flex-shrink-0"),
  z=1,px=0,py=0,pd=0,pz=1,ds=null,lt=0,sx=0,multi=false;
  x.appendChild(h("i","fa-solid fa-xmark text-2xl"));tp.appendChild(ct);tp.appendChild(x);
  mid.style.touchAction="none";im.draggable=false;im.style.transition="transform .12s ease-out";
  function ap(){im.style.transform="translate("+px+"px,"+py+"px) scale("+z+")"}
  function rz(){z=1;px=0;py=0;ap()}
- function show(){rz();ct.textContent=(i+1)+" / "+ids.length;blob(ids[i]).then(function(d){if(d)im.src=d});dots.textContent="";if(ids.length>1)ids.forEach(function(_,k){var d=h("span","h-1.5 rounded-full cursor-pointer "+(k===i?"bg-white w-3":"bg-white/40 w-1.5"));on(d,"click",function(e){e.stopPropagation();i=k;show()});dots.appendChild(d)})}
+ function show(){rz();if(cb)cb(i);ct.textContent=(i+1)+" / "+ids.length;blob(ids[i]).then(function(d){if(d)im.src=d});dots.textContent="";if(ids.length>1)ids.forEach(function(_,k){var d=h("span","h-1.5 rounded-full cursor-pointer "+(k===i?"bg-white w-3":"bg-white/40 w-1.5"));on(d,"click",function(e){e.stopPropagation();i=k;show()});dots.appendChild(d)})}
  function go(d){if(ids.length<2||z>1)return;i=(i+d+ids.length)%ids.length;show()}
  function dist(t){var dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;return Math.sqrt(dx*dx+dy*dy)}
  /* 雙指縮放、放大後單指拖曳、雙擊放大／還原；只有在未放大且單指時，左右滑動才會切換照片 */
@@ -116,9 +116,9 @@ function batch(files){var fs=files.slice(0,30),added=[],i=0;if(!fs.length)return
  (function nx(){if(i>=fs.length)return fin();shrink(fs[i++]).then(store).then(function(id){added.push({id:Date.now()+added.length,store:"",qty:1,who:"",link:"",img:id,rcpt:"",note:"",done:false});nx()}).catch(nx)})()}
 /* 畫面 */
 function ico(c,i,t){var e=h(c.tag||"span",c.cls),k=h("i","fa-solid "+i+(t?" mr-1":""));e.appendChild(k);if(t)e.appendChild(document.createTextNode(t));return e}
-function slide(x,idx,arr,sc){
+function slide(x,idx,arr,sc,key){
  var c=h("div","flex-none w-full snap-center"),ph=h("div","relative aspect-[4/3] rounded-2xl bg-ice-100 overflow-hidden flex items-center justify-center text-5xl cursor-pointer");
- if(x.img){var im=h("img","w-full h-full object-cover"+(x.done?" opacity-50":""));setImg(im,x.img);ph.appendChild(im);on(ph,"click",function(){var ids=arr.filter(function(y){return y.img}).map(function(y){return y.img});zoom(ids,ids.indexOf(x.img))})}else ph.appendChild(h("i","fa-solid fa-gift text-ice-500"));
+ if(x.img){var im=h("img","w-full h-full object-cover"+(x.done?" opacity-50":""));setImg(im,x.img);ph.appendChild(im);on(ph,"click",function(){var pl=arr.filter(function(y){return y.img}),ids=pl.map(function(y){return y.img});zoom(ids,ids.indexOf(x.img),function(k){var j=arr.indexOf(pl[k]);cpos[key]=j;sc.scrollLeft=j*sc.clientWidth})})}else ph.appendChild(h("i","fa-solid fa-gift text-ice-500"));
  ph.appendChild(h("span","absolute left-2.5 bottom-2.5 bg-slate-800/80 text-white text-xs font-bold rounded-lg px-2 py-0.5","× "+x.qty));
  var k=h("button","absolute top-2.5 right-2.5 w-8 h-8 rounded-lg border-2 flex items-center justify-center "+(x.done?"bg-ice-600 border-ice-600 text-white":"bg-white/80 border-slate-300"));k.setAttribute("aria-label","已購買");if(x.done)k.appendChild(h("i","fa-solid fa-check text-sm"));
  on(k,"click",function(e){e.stopPropagation();x.done=!x.done;save();draw()});ph.appendChild(k);
@@ -128,14 +128,14 @@ function slide(x,idx,arr,sc){
  bd.appendChild(h("i","fa-solid "+(grp==="who"?"fa-store":"fa-user")+" mr-1"));bd.appendChild(document.createTextNode(bv||"未填"));var rw=h("div","flex flex-wrap items-center gap-x-3 gap-y-1.5");rw.appendChild(bd);inf.appendChild(rw);
  if(x.note){var nt=h("div","flex items-start text-slate-600");nt.appendChild(h("i","fa-regular fa-sticky-note w-4 text-slate-400 mt-0.5"));nt.appendChild(document.createTextNode("備註: "+x.note));inf.appendChild(nt)}
  if(x.link){var a=h("button","text-ice-600 font-bold flex items-center gap-1");a.appendChild(h("i","fa-solid fa-link"));a.appendChild(document.createTextNode(host(x.link)));on(a,"click",function(){askLink(x.link)});inf.appendChild(a)}
- if(x.rcpt){var r=h("button","text-ice-600 font-bold flex items-center gap-1");r.appendChild(h("i","fa-solid fa-receipt"));r.appendChild(document.createTextNode("查看收據"));on(r,"click",function(){var ids=arr.filter(function(y){return y.rcpt}).map(function(y){return y.rcpt});zoom(ids,ids.indexOf(x.rcpt))});rw.appendChild(r)}
+ if(x.rcpt){var r=h("button","text-ice-600 font-bold flex items-center gap-1");r.appendChild(h("i","fa-solid fa-receipt"));r.appendChild(document.createTextNode("查看收據"));on(r,"click",function(){var pl=arr.filter(function(y){return y.rcpt}),ids=pl.map(function(y){return y.rcpt});zoom(ids,ids.indexOf(x.rcpt),function(k){var j=arr.indexOf(pl[k]);cpos[key]=j;sc.scrollLeft=j*sc.clientWidth})});rw.appendChild(r)}
  var col=h("div","flex flex-col items-center gap-3 flex-shrink-0 pt-1"),eb=ib("text-slate-400 hover:text-ice-600","fa-pen text-xs"),xb=ib("text-red-400 hover:text-red-600","fa-trash text-xs");eb.setAttribute("aria-label","編輯");xb.setAttribute("aria-label","刪除");
  on(eb,"click",function(){openSheet(x)});on(xb,"click",function(){ask("確定刪除這筆嗎？",function(){var i=items.indexOf(x);if(i>-1)items.splice(i,1);save();draw();toast("已刪除")})});
  col.appendChild(eb);col.appendChild(xb);si.appendChild(inf);si.appendChild(col);c.appendChild(si);return c}
 function group(s,arr){
  var key=grp+":"+s,dn=arr.filter(function(x){return x.done}).length,card=h("div","bg-white rounded-2xl p-4 shadow-sm border border-slate-100"),hd=h("div","flex justify-between items-center mb-3"),t=h("h2","text-sm font-bold text-slate-800 flex items-center gap-2"),sc=h("div","flex overflow-x-auto snap-x snap-mandatory no-scrollbar");
  t.appendChild(h("i","fa-solid "+(grp==="who"?"fa-user":"fa-store")+" text-ice-600"));t.appendChild(document.createTextNode(s));hd.appendChild(t);hd.appendChild(h("span","text-[11px] text-slate-400","已買 "+dn+" / "+arr.length+" 款"));card.appendChild(hd);
- arr.forEach(function(x,i){sc.appendChild(slide(x,i,arr,sc))});card.appendChild(sc);root.appendChild(card);
+ arr.forEach(function(x,i){sc.appendChild(slide(x,i,arr,sc,key))});card.appendChild(sc);root.appendChild(card);
  var p=Math.min(Math.max(0,cpos[key]||0),arr.length-1);cpos[key]=p;sc.scrollLeft=p*sc.clientWidth;
  on(sc,"scroll",function(){if(sc.clientWidth)cpos[key]=Math.round(sc.scrollLeft/sc.clientWidth)})}
 function list(){
