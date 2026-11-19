@@ -1332,11 +1332,11 @@
 
     <!-- ================= 彈出視窗 Modal: 購物照片圖庫 (左右滑動瀏覽，無下載) ================= -->
     <div v-if="galleryModal.show" class="fixed inset-0 bg-black/85 z-[65] flex flex-col" @click.self="closeGallery">
-      <div class="flex justify-between items-center p-4 text-white flex-shrink-0">
+      <div class="flex justify-between items-center p-4 text-white flex-shrink-0" @click.self="closeGallery">
         <span class="text-sm font-medium">{{ galleryModal.index + 1 }} / {{ galleryModal.images.length }}</span>
         <button @click="closeGallery" class="text-white"><i class="fa-solid fa-xmark text-2xl"></i></button>
       </div>
-      <div class="flex-1 relative overflow-hidden flex items-center justify-center px-2"
+      <div class="flex-1 relative overflow-hidden flex items-center justify-center px-2" @click.self="closeGallery"
            @touchstart="galleryTouchStart"
            @touchmove="galleryTouchMove"
            @touchend="galleryTouchEnd">
@@ -1344,7 +1344,7 @@
              :style="{ transform: `translate(${galleryPan.x}px, ${galleryPan.y}px) scale(${galleryZoom})` }"
              class="max-w-full max-h-full object-contain select-none" draggable="false">
       </div>
-      <div v-if="galleryModal.images.length > 1" class="flex justify-center gap-1.5 p-4 flex-shrink-0">
+      <div v-if="galleryModal.images.length > 1" class="flex justify-center gap-1.5 p-4 flex-shrink-0" @click.self="closeGallery">
         <span v-for="(img, gi) in galleryModal.images" :key="gi" @click.stop="galleryModal.index = gi"
              :class="['w-1.5 h-1.5 rounded-full cursor-pointer transition-all', gi === galleryModal.index ? 'bg-white w-3' : 'bg-white/40']"></span>
       </div>
