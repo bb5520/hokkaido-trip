@@ -9,6 +9,23 @@ document.addEventListener("touchstart",pdown,{passive:true});
 document.addEventListener("touchend",pup,{passive:true});
 document.addEventListener("touchcancel",pup,{passive:true});
 document.addEventListener("touchmove",function(e){if(!pb)return;var t=e.touches[0],el=t&&document.elementFromPoint(t.clientX,t.clientY);if(!el||!pb.contains(el))pup()},{passive:true});
+/* ===== 全域提醒（行程、資訊、花費、設定等所有分頁） ===== */
+window.appToast=function(m){toast(m)};
+var nalert=window.alert.bind(window);
+window.alert=function(m){m=String(m==null?"":m);if(/重新載入/.test(m)){nalert(m);return}toast(m)};
+document.addEventListener("click",function(e){
+ var b=e.target&&e.target.closest?e.target.closest("button"):null;if(!b||b.disabled||b.closest("#souv-host"))return;
+ var md=b.closest(".fixed.inset-0");if(md&&md.className.indexOf("z-[98]")>-1)return;
+ var h3=md&&md.querySelector("h3"),ttl=h3?h3.textContent:"";if(/伴手禮/.test(ttl))return;
+ var t=(b.textContent||"").trim(),msg="";
+ if(md&&/^儲存/.test(t))msg=/^(新增|記錄)/.test(ttl)?"已新增":"已儲存";
+ else if(md&&t==="刪除")msg="已刪除";
+ else if(md&&/^更新.+/.test(t))msg=t.replace(/^更新/,"")+"已更新";
+ else if(!md&&b.querySelector(".fa-trash"))msg="已刪除";
+ if(!msg)return;
+ setTimeout(function(){if(!document.body.contains(b))toast(msg)},350)});
+var oclk=HTMLAnchorElement.prototype.click;
+HTMLAnchorElement.prototype.click=function(){if(this.download&&/^TripBackup_/.test(this.download))toast("已匯出備份");return oclk.apply(this,arguments)};
 var KEY="trip_souvenirs",DB="trip_blob_store",ST="blobs";
 var items=[],grp="store",view="list",fg="",cpos={},queue=[],qtot=0,ed=null,img="",rcp="",root=null,cache={};
 function h(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
@@ -18,7 +35,8 @@ function ib(c,i){var b=h("button",c);b.appendChild(fi(i));return b}
 function lab(c,i,t){var s=h("span",c);s.appendChild(fi(i));s.appendChild(h("span",null,t));return s}
 function load(){try{var v=JSON.parse(localStorage.getItem(KEY));items=Array.isArray(v)?v:[]}catch(e){items=[]}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(items));return true}catch(e){toast("儲存空間不足，請刪除部分資料");return false}}
-function toast(m){var t=h("div","fixed left-1/2 -translate-x-1/2 bottom-28 z-[95] bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-full",m);document.body.appendChild(t);setTimeout(function(){t.remove()},1800)}
+var tt=null,tto=0;
+function toast(m){if(tt)tt.remove();clearTimeout(tto);m=String(m);var t=h("div","fixed left-1/2 -translate-x-1/2 bottom-28 z-[95] bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-full max-w-[90vw] text-center",m);tt=t;document.body.appendChild(t);tto=setTimeout(function(){t.remove();if(tt===t)tt=null},1800+Math.min(2200,m.length*30))}
 function nurl(s){s=(s||"").trim();if(!s)return"";if(!/^https?:\/\//i.test(s))s="https://"+s;try{var u=new URL(s);return /^https?:$/.test(u.protocol)?u.href:""}catch(e){return""}}
 function host(u){try{return new URL(u).hostname.replace(/^www\./,"")}catch(e){return u}}
 /* 圖片：存在與行程資料相同的 IndexedDB，並交給 sync.js 上傳雲端 */
