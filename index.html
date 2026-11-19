@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>北海道冰雪之旅 - Trip App</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
@@ -40,7 +40,7 @@
   <!-- 允許加入主畫面並全螢幕執行 (隱藏網址列) -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <!-- 設定狀態列樣式 (預設、黑色、透明) -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <!-- 設定 iOS 桌面的 App 名稱 -->
   <meta name="apple-mobile-web-app-title" content="北海道之旅" />
   <!-- 設定 iOS 桌面的 App 圖示 (請在 GitHub 根目錄放一張 512x512 的 icon.png) -->
@@ -94,7 +94,7 @@
   <div id="app" v-cloak class="max-w-md mx-auto min-h-screen bg-[#eef4f8] shadow-2xl relative flex flex-col pb-24">
 
     <!-- 頁首 Banner 區塊 (固定高度，用 object-cover 縮放填滿) -->
-    <div class="relative w-full overflow-hidden bg-slate-300" style="height: calc(14rem + env(safe-area-inset-top, 0px));">
+    <div class="relative w-full h-56 overflow-hidden bg-slate-300">
       <!-- 頁首背景圖片 -->
       <img :src="bannerImage" alt="北海道之旅" class="w-full h-full object-cover block" />
       
