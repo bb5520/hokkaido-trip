@@ -849,7 +849,7 @@
               <div>
                 <label class="block font-bold text-slate-600 mb-1">出發航廈</label>
                 <div class="relative">
-                  <input v-model="formItinerary.depTerminal" @focus="depTerminalOpen = true" @input="depTerminalOpen = true" @blur="closeDepTerminalDropdown" type="text" maxlength="20" autocomplete="off" placeholder="輸入或選擇航廈" class="w-full bg-white border p-2 pr-8 rounded-lg outline-none focus:border-ice-500">
+                  <input v-model="formItinerary.depTerminal" @focus="depTerminalOpen = true; moveCaretEnd($event)" @input="depTerminalOpen = true" @blur="closeDepTerminalDropdown" type="text" maxlength="20" autocomplete="off" placeholder="輸入或選擇航廈" class="w-full bg-white border p-2 pr-8 rounded-lg outline-none focus:border-ice-500">
                   <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                   <div v-if="depTerminalOpen && filteredDepTerminals.length" class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 py-1">
                     <button v-for="t in filteredDepTerminals" :key="t" type="button" @mousedown.prevent="selectDepTerminal(t)" class="w-full text-left px-3 py-2 text-sm hover:bg-ice-50 text-slate-700">{{ t }}</button>
@@ -864,7 +864,7 @@
               <div>
                 <label class="block font-bold text-slate-600 mb-1">抵達航廈</label>
                 <div class="relative">
-                  <input v-model="formItinerary.arrTerminal" @focus="arrTerminalOpen = true" @input="arrTerminalOpen = true" @blur="closeArrTerminalDropdown" type="text" maxlength="20" autocomplete="off" placeholder="輸入或選擇航廈" class="w-full bg-white border p-2 pr-8 rounded-lg outline-none focus:border-ice-500">
+                  <input v-model="formItinerary.arrTerminal" @focus="arrTerminalOpen = true; moveCaretEnd($event)" @input="arrTerminalOpen = true" @blur="closeArrTerminalDropdown" type="text" maxlength="20" autocomplete="off" placeholder="輸入或選擇航廈" class="w-full bg-white border p-2 pr-8 rounded-lg outline-none focus:border-ice-500">
                   <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                   <div v-if="arrTerminalOpen && filteredArrTerminals.length" class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 py-1">
                     <button v-for="t in filteredArrTerminals" :key="t" type="button" @mousedown.prevent="selectArrTerminal(t)" class="w-full text-left px-3 py-2 text-sm hover:bg-ice-50 text-slate-700">{{ t }}</button>
@@ -2081,6 +2081,11 @@
       };
 
       // --- 6. 資訊分頁 (Info) 邏輯 ---
+      const moveCaretEnd = (e) => {
+        const el = e.target;
+        // iPhone 會在點擊後才決定游標位置，所以稍微延遲再移到最後
+        setTimeout(() => { try { const n = el.value.length; el.setSelectionRange(n, n); } catch (err) {} }, 30);
+      };
       const depTerminalOpen = ref(false);
       const arrTerminalOpen = ref(false);
       const filterTerminals = (q) => {
@@ -2616,7 +2621,7 @@
         previewDoc, viewDocument, docListModal, openDocList,
         galleryModal, openGallery, closeGallery, nextGalleryImage, prevGalleryImage, galleryTouchStart, galleryTouchEnd,
         resolveBlobUrl, blobUrlCache,
-        terminalOptions, setTerminal, depTerminalOpen, arrTerminalOpen, filteredDepTerminals, filteredArrTerminals, selectDepTerminal, selectArrTerminal, closeDepTerminalDropdown, closeArrTerminalDropdown, flightsInfo, activeFlightInfo, formFlightDoc, showFlightModal, editFlightInfo, saveFlightInfo,
+        terminalOptions, setTerminal, moveCaretEnd, depTerminalOpen, arrTerminalOpen, filteredDepTerminals, filteredArrTerminals, selectDepTerminal, selectArrTerminal, closeDepTerminalDropdown, closeArrTerminalDropdown, flightsInfo, activeFlightInfo, formFlightDoc, showFlightModal, editFlightInfo, saveFlightInfo,
         hotelsInfo, formHotelInfo, showHotelModal, editHotelInfo, saveHotelInfo,
         carRentals, showCarModal: car.showModal, isEditCarMode: car.isEditMode, formCar: car.formObj, openAddCarModal: car.openAdd, editCar: car.edit, saveCar: car.save, deleteCar: car.del,
         dayTours, showDayTourModal: tour.showModal, isEditDayTourMode: tour.isEditMode, formDayTour: tour.formObj, openAddDayTourModal: tour.openAdd, editDayTour: tour.edit, saveDayTour: tour.save, deleteDayTour: tour.del,
