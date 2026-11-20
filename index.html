@@ -157,6 +157,12 @@
             <div v-if="item.category === '航班'" 
                  class="bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-2xl p-4 shadow-md relative overflow-hidden border border-slate-700">
               <div class="absolute -right-4 -bottom-4 opacity-10 text-7xl"><i class="fa-solid fa-plane-departure"></i></div>
+              <div v-if="item.images && item.images.length" class="relative -mx-4 -mt-4 mb-3">
+                <div class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                  <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-full h-44 flex-shrink-0 snap-center object-cover bg-slate-700 cursor-pointer">
+                </div>
+                <span v-if="item.images.length > 1" class="absolute right-3 bottom-3 bg-black/60 text-white text-[10px] font-bold rounded-full px-2 py-0.5"><i class="fa-solid fa-images mr-1"></i>{{ item.images.length }}</span>
+              </div>
               <div class="flex justify-between items-center text-xs text-slate-300 mb-2">
                 <span class="bg-ice-600/40 text-ice-200 px-2 py-0.5 rounded-full font-bold">航班 · {{ item.flightNo || '未填寫' }}</span>
                 <!-- 獨立的導航按鈕 -->
@@ -178,7 +184,7 @@
                   <div class="text-xs text-slate-400">{{ item.arrTime || '--:--' }} 抵達</div>
                 </div>
               </div>
-              <div v-if="item.images && item.images.length" class="flex gap-2 mt-2 overflow-x-auto no-scrollbar relative z-10">
+              <div v-if="false" class="flex gap-2 mt-2 overflow-x-auto no-scrollbar relative z-10">
                 <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-16 h-16 flex-shrink-0 rounded-lg object-cover border border-slate-600 cursor-pointer">
               </div>
               <div class="text-xs text-slate-300 mt-2 pt-2 border-t border-slate-700/60 flex justify-between items-end relative z-10">
@@ -191,8 +197,16 @@
 
             <!-- 一般行程卡片 -->
             <div v-else 
-                 class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative hover:shadow-md transition">
+                 class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative hover:shadow-md transition overflow-hidden">
               
+              <!-- 行程照片 (卡片最上方，與卡片同寬) -->
+              <div v-if="item.images && item.images.length" class="relative -mx-4 -mt-4 mb-3">
+                <div class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                  <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-full h-44 flex-shrink-0 snap-center object-cover bg-slate-100 cursor-pointer">
+                </div>
+                <span v-if="item.images.length > 1" class="absolute right-3 bottom-3 bg-black/60 text-white text-[10px] font-bold rounded-full px-2 py-0.5"><i class="fa-solid fa-images mr-1"></i>{{ item.images.length }}</span>
+              </div>
+
               <!-- 頂部類別標籤與操作 -->
               <div class="flex justify-between items-start mb-2">
                 <div class="flex items-start gap-2 min-w-0 flex-1">
@@ -217,7 +231,7 @@
               </div>
 
               <!-- 獨立的導航按鈕 -->
-              <div v-if="item.images && item.images.length" class="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
+              <div v-if="false" class="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
                 <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-20 h-20 flex-shrink-0 rounded-xl object-cover border border-slate-100 cursor-pointer">
               </div>
               <button @click.stop="openMap(item.location)" class="w-full mt-3 pt-2 border-t border-slate-100 flex justify-end items-center text-[11px] text-ice-600 font-medium hover:text-ice-700 cursor-pointer">
