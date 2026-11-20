@@ -178,6 +178,9 @@
                   <div class="text-xs text-slate-400">{{ item.arrTime || '--:--' }} 抵達</div>
                 </div>
               </div>
+              <div v-if="item.images && item.images.length" class="flex gap-2 mt-2 overflow-x-auto no-scrollbar relative z-10">
+                <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-16 h-16 flex-shrink-0 rounded-lg object-cover border border-slate-600 cursor-pointer">
+              </div>
               <div class="text-xs text-slate-300 mt-2 pt-2 border-t border-slate-700/60 flex justify-between items-end relative z-10">
                 <span class="pr-2">備註: {{ item.note }}</span>
                 <button @click.stop="editItinerary(item)" class="text-slate-400 hover:text-white cursor-pointer p-1">
@@ -214,6 +217,9 @@
               </div>
 
               <!-- 獨立的導航按鈕 -->
+              <div v-if="item.images && item.images.length" class="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
+                <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-20 h-20 flex-shrink-0 rounded-xl object-cover border border-slate-100 cursor-pointer">
+              </div>
               <button @click.stop="openMap(item.location)" class="w-full mt-3 pt-2 border-t border-slate-100 flex justify-end items-center text-[11px] text-ice-600 font-medium hover:text-ice-700 cursor-pointer">
                 <span>Google Maps 導航</span>
                 <i class="fa-solid fa-location-arrow ml-1"></i>
@@ -849,6 +855,19 @@
             </div>
           </template>
 
+          <!-- 行程照片 -->
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">照片上傳 (可多選，點擊縮圖可放大)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formItinerary.images)" accept="image/*" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formItinerary.images && formItinerary.images.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(photo, pi) in formItinerary.images" :key="photo.id" class="relative">
+                <img :src="resolveBlobUrl(photo.id)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" @click="openGallery(formItinerary.images, pi)">
+                <button type="button" @click="removeDocument(formItinerary.images, pi)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+
           <!-- 通用備註 -->
           <div>
             <label class="block font-bold text-slate-600 mb-1">特色 & 備註</label>
@@ -858,7 +877,7 @@
 
         <div class="flex gap-2 pt-2">
           <button v-if="isEditMode" @click="confirmDeleteItinerary" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
-          <button @click="saveItinerary" class="flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl">儲存</button>
+          <button @click="saveItinerary" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
         </div>
       </div>
     </div>
@@ -1750,6 +1769,7 @@
 
           const usedIds = new Set();
           shoppingList.value.forEach(item => (item.images || []).forEach(img => usedIds.add(img.id)));
+          itineraryData.value.forEach(day => (day || []).forEach(it => (it.images || []).forEach(img => usedIds.add(img.id))));
           Object.values(flightExtras.value).forEach(extra => (extra.documents || []).forEach(doc => usedIds.add(doc.id)));
           Object.values(hotelExtras.value).forEach(extra => (extra.documents || []).forEach(doc => usedIds.add(doc.id)));
           carRentals.value.forEach(car => (car.documents || []).forEach(doc => usedIds.add(doc.id)));
@@ -1891,7 +1911,7 @@
 
       const showItineraryModal = ref(false);
       const isEditMode = ref(false);
-      const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', ticket: '', note: '', location: '', flightNo: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '' });
+      const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', ticket: '', note: '', location: '', flightNo: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '', images: [] });
       const formItinerary = ref(initFormItinerary());
 
       const openAddModal = () => {
@@ -1903,7 +1923,7 @@
       };
       const editItinerary = (item) => {
         isEditMode.value = true;
-        formItinerary.value = { ...initFormItinerary(), ...item };
+        formItinerary.value = { ...initFormItinerary(), ...item, images: item.images ? [...item.images] : [] };
         depAirportOpen.value = false;
         arrAirportOpen.value = false;
         showItineraryModal.value = true;
