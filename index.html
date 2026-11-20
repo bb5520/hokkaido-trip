@@ -848,12 +848,19 @@
               </div>
               <div>
                 <label class="block font-bold text-slate-600 mb-1">出發航廈</label>
-                <input v-model="formItinerary.depTerminal" list="terminal-options" type="text" maxlength="20" placeholder="例如: T2" class="w-full bg-white border p-2 rounded-lg outline-none">
+                <select :value="formItinerary.depTerminal" @change="setTerminal($event, 'depTerminal')" class="w-full bg-white border p-2 rounded-lg outline-none">
+                  <option value="">未選擇</option>
+                  <option v-for="t in terminalOptions" :key="t" :value="t">{{ t }}</option>
+                  <option value="__custom__">＋ 自訂航廈…</option>
+                </select>
               </div>
               <div>
                 <label class="block font-bold text-slate-600 mb-1">抵達航廈</label>
-                <input v-model="formItinerary.arrTerminal" list="terminal-options" type="text" maxlength="20" placeholder="例如: 國際航廈" class="w-full bg-white border p-2 rounded-lg outline-none">
-                <datalist id="terminal-options"><option v-for="t in terminalOptions" :key="t" :value="t"></option></datalist>
+                <select :value="formItinerary.arrTerminal" @change="setTerminal($event, 'arrTerminal')" class="w-full bg-white border p-2 rounded-lg outline-none">
+                  <option value="">未選擇</option>
+                  <option v-for="t in terminalOptions" :key="t" :value="t">{{ t }}</option>
+                  <option value="__custom__">＋ 自訂航廈…</option>
+                </select>
               </div>
             </div>
             <div>
@@ -2060,9 +2067,19 @@
       };
 
       // --- 6. 資訊分頁 (Info) 邏輯 ---
+      const setTerminal = (e, field) => {
+        let v = e.target.value;
+        if (v === '__custom__') {
+          const name = prompt('請輸入航廈名稱（例如：第2航廈、國際航廈）');
+          if (name === null) { e.target.value = formItinerary.value[field] || ''; return; }
+          v = name.trim().slice(0, 20);
+        }
+        formItinerary.value[field] = v;
+        nextTick(() => { e.target.value = formItinerary.value[field] || ''; });
+      };
       const terminalOptions = computed(() => {
         const defaults = ['T1', 'T2', 'T3', '國際航廈', '國內航廈'];
-        const used = [];
+        const used = [...new Set([formItinerary.value.depTerminal, formItinerary.value.arrTerminal].filter(Boolean))];
         itineraryData.value.forEach(day => (day || []).forEach(it => {
           [it.depTerminal, it.arrTerminal].forEach(t => { if (t && !used.includes(t)) used.push(t); });
         }));
@@ -2573,7 +2590,7 @@
         previewDoc, viewDocument, docListModal, openDocList,
         galleryModal, openGallery, closeGallery, nextGalleryImage, prevGalleryImage, galleryTouchStart, galleryTouchEnd,
         resolveBlobUrl, blobUrlCache,
-        terminalOptions, flightsInfo, activeFlightInfo, formFlightDoc, showFlightModal, editFlightInfo, saveFlightInfo,
+        terminalOptions, setTerminal, flightsInfo, activeFlightInfo, formFlightDoc, showFlightModal, editFlightInfo, saveFlightInfo,
         hotelsInfo, formHotelInfo, showHotelModal, editHotelInfo, saveHotelInfo,
         carRentals, showCarModal: car.showModal, isEditCarMode: car.isEditMode, formCar: car.formObj, openAddCarModal: car.openAdd, editCar: car.edit, saveCar: car.save, deleteCar: car.del,
         dayTours, showDayTourModal: tour.showModal, isEditDayTourMode: tour.isEditMode, formDayTour: tour.formObj, openAddDayTourModal: tour.openAdd, editDayTour: tour.edit, saveDayTour: tour.save, deleteDayTour: tour.del,
