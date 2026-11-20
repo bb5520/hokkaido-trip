@@ -172,7 +172,9 @@
               </div>
               <div class="flex justify-between items-center my-2">
                 <div class="w-1/3">
-                  <div class="text-xl font-bold truncate">{{ item.depAirport || '出發地' }}</div>
+                  <div class="text-2xl font-bold leading-tight break-words">{{ (item.depAirport || '出發地').split(' ')[0] }}</div>
+                  <div v-if="(item.depAirport || '').split(' ').slice(1).join(' ')" class="text-[11px] text-slate-300 leading-tight break-words">{{ (item.depAirport || '').split(' ').slice(1).join(' ') }}</div>
+                  <div v-if="item.depTerminal" class="inline-block mt-1 bg-ice-600/40 text-ice-200 text-[10px] font-bold px-1.5 py-0.5 rounded">{{ item.depTerminal }}</div>
                   <div class="text-xs text-slate-400">{{ item.depTime || '--:--' }} 起飛</div>
                 </div>
                 <div class="text-center w-1/3">
@@ -180,7 +182,9 @@
                   <div class="text-[10px] text-slate-400 mt-1">{{ item.flightDuration || '飛行時間' }}</div>
                 </div>
                 <div class="text-right w-1/3">
-                  <div class="text-xl font-bold truncate">{{ item.arrAirport || '目的地' }}</div>
+                  <div class="text-2xl font-bold leading-tight break-words">{{ (item.arrAirport || '目的地').split(' ')[0] }}</div>
+                  <div v-if="(item.arrAirport || '').split(' ').slice(1).join(' ')" class="text-[11px] text-slate-300 leading-tight break-words">{{ (item.arrAirport || '').split(' ').slice(1).join(' ') }}</div>
+                  <div v-if="item.arrTerminal" class="inline-block mt-1 bg-ice-600/40 text-ice-200 text-[10px] font-bold px-1.5 py-0.5 rounded">{{ item.arrTerminal }}</div>
                   <div class="text-xs text-slate-400">{{ item.arrTime || '--:--' }} 抵達</div>
                 </div>
               </div>
@@ -841,6 +845,15 @@
               <div>
                 <label class="block font-bold text-slate-600 mb-1">抵達時間</label>
                 <input v-model="formItinerary.arrTime" type="time" class="w-full bg-white border p-2 rounded-lg outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">出發航廈</label>
+                <input v-model="formItinerary.depTerminal" list="terminal-options" type="text" maxlength="20" placeholder="例如: T2" class="w-full bg-white border p-2 rounded-lg outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">抵達航廈</label>
+                <input v-model="formItinerary.arrTerminal" list="terminal-options" type="text" maxlength="20" placeholder="例如: 國際航廈" class="w-full bg-white border p-2 rounded-lg outline-none">
+                <datalist id="terminal-options"><option v-for="t in terminalOptions" :key="t" :value="t"></option></datalist>
               </div>
             </div>
             <div>
@@ -1925,7 +1938,7 @@
 
       const showItineraryModal = ref(false);
       const isEditMode = ref(false);
-      const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', ticket: '', note: '', location: '', flightNo: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '', images: [] });
+      const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', ticket: '', note: '', location: '', flightNo: '', depTerminal: '', arrTerminal: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '', images: [] });
       const formItinerary = ref(initFormItinerary());
 
       const openAddModal = () => {
@@ -2047,6 +2060,14 @@
       };
 
       // --- 6. 資訊分頁 (Info) 邏輯 ---
+      const terminalOptions = computed(() => {
+        const defaults = ['T1', 'T2', 'T3', '國際航廈', '國內航廈'];
+        const used = [];
+        itineraryData.value.forEach(day => (day || []).forEach(it => {
+          [it.depTerminal, it.arrTerminal].forEach(t => { if (t && !used.includes(t)) used.push(t); });
+        }));
+        return [...used, ...defaults.filter(d => !used.includes(d))];
+      });
       const itineraryFlights = computed(() => {
         const list = [];
         itineraryData.value.forEach((dayItems, dayIdx) => (dayItems || []).forEach(item => { if (item.category === '航班') list.push({ ...item, dayIndex: dayIdx }); }));
@@ -2058,7 +2079,7 @@
           id: f.id, dayIndex: f.dayIndex, 
           label: f.name + (f.flightNo ? ` (${f.flightNo})` : ''), 
           duration: f.flightDuration || '未填寫飛行時間', 
-          route: `${f.depAirport || '出發地'} ${f.depTime || '--:--'} ➔ ${f.arrAirport || '目的地'} ${f.arrTime || '--:--'}`, 
+          route: `${f.depAirport || '出發地'}${f.depTerminal ? '（' + f.depTerminal + '）' : ''} ${f.depTime || '--:--'} ➔ ${f.arrAirport || '目的地'}${f.arrTerminal ? '（' + f.arrTerminal + '）' : ''} ${f.arrTime || '--:--'}`, 
           documents: extra.documents || [], 
           price: extra.price || null, 
           currency: extra.currency || 'JPY', 
@@ -2552,7 +2573,7 @@
         previewDoc, viewDocument, docListModal, openDocList,
         galleryModal, openGallery, closeGallery, nextGalleryImage, prevGalleryImage, galleryTouchStart, galleryTouchEnd,
         resolveBlobUrl, blobUrlCache,
-        flightsInfo, activeFlightInfo, formFlightDoc, showFlightModal, editFlightInfo, saveFlightInfo,
+        terminalOptions, flightsInfo, activeFlightInfo, formFlightDoc,, showFlightModal, editFlightInfo, saveFlightInfo,
         hotelsInfo, formHotelInfo, showHotelModal, editHotelInfo, saveHotelInfo,
         carRentals, showCarModal: car.showModal, isEditCarMode: car.isEditMode, formCar: car.formObj, openAddCarModal: car.openAdd, editCar: car.edit, saveCar: car.save, deleteCar: car.del,
         dayTours, showDayTourModal: tour.showModal, isEditDayTourMode: tour.isEditMode, formDayTour: tour.formObj, openAddDayTourModal: tour.openAdd, editDayTour: tour.edit, saveDayTour: tour.save, deleteDayTour: tour.del,
