@@ -55,7 +55,7 @@ function askLink(u){dlg("即將開啟外部連結：\n"+host(u)+"\n要前往嗎�
 function zoom(ids,i,cb){
  var ov=h("div","fixed inset-0 bg-black/85 z-[65] flex flex-col"),tp=h("div","flex justify-between items-center p-4 text-white flex-shrink-0"),ct=h("span","text-sm font-medium"),x=h("button","text-white"),mid=h("div","flex-1 relative overflow-hidden flex items-center justify-center px-2"),im=h("img","max-w-full max-h-full object-contain select-none"),dots=h("div","flex justify-center gap-1.5 p-4 flex-shrink-0"),
  z=1,px=0,py=0,pd=0,pz=1,ds=null,lt=0,sx=0,multi=false;
- x.appendChild(h("i","fa-solid fa-xmark text-2xl"));tp.appendChild(ct);tp.appendChild(x);
+ x.appendChild(h("i","fa-solid fa-xmark text-2xl"));tp.appendChild(ct);tp.appendChild(nm);tp.appendChild(dl);tp.appendChild(x);
  mid.style.touchAction="none";im.draggable=false;im.style.transition="transform .12s ease-out";
  function clamp(){var iw=im.offsetWidth*z,ih=im.offsetHeight*z,mx=Math.max(0,(iw-mid.clientWidth)/2)+10,my=Math.max(0,(ih-mid.clientHeight)/2)+10;px=Math.min(mx,Math.max(-mx,px));py=Math.min(my,Math.max(-my,py))}
  function ap(){clamp();im.style.transform="translate("+px+"px,"+py+"px) scale("+z+")"}
