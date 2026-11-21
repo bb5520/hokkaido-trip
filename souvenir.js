@@ -91,7 +91,7 @@ function openAttachments(title,docs,start){
  ct=h("span","text-sm font-medium flex-shrink-0"),nm=h("span","flex-1 min-w-0 truncate text-xs text-slate-300 text-center"),
  dl=h("a","text-white flex-shrink-0 px-1"),x=h("button","text-white flex-shrink-0"),
  mid=h("div","flex-1 relative overflow-hidden flex items-center justify-center px-2"),
- im=h("img","max-w-full max-h-full object-contain select-none"),fr=h("iframe","w-full h-full border-0 bg-white rounded-lg"),
+ im=h("img","max-w-full max-h-full object-contain select-none"),fr=h("iframe","w-full h-full border-0 bg-white"),
  um=h("div","text-xs text-slate-300 text-center px-6","此檔案類型無法預覽，請按右上角的下載"),
  strip=h("div","flex gap-2 overflow-x-auto no-scrollbar p-3 justify-center flex-shrink-0"),
  z=1,px=0,py=0,pd=0,pz=1,ds=null,lt=0,sx=0,multi=false,curImg=true;
@@ -105,7 +105,7 @@ function openAttachments(title,docs,start){
  function show(){
   rz();var d=docs[i],pdf=d.type==="application/pdf",img=isImg(d);curImg=img;
   ct.textContent=(i+1)+" / "+n;nm.textContent=(title?title+" · ":"")+(d.name||"");
-  im.style.display=img?"":"none";fr.style.display=pdf?"":"none";um.style.display=(!img&&!pdf)?"":"none";mid.style.touchAction=img?"none":"auto";dl.style.display="none";
+  im.style.display=img?"":"none";fr.style.display=pdf?"":"none";um.style.display=(!img&&!pdf)?"":"none";mid.style.touchAction=img?"none":"auto";mid.style.padding=pdf?"0":"";ez1.style.display=ez2.style.display=pdf?"":"none";dl.style.display="none";
   [].forEach.call(strip.children,function(c,k){c.classList.toggle("border-white",k===i);c.classList.toggle("border-transparent",k!==i);c.classList.toggle("opacity-60",k!==i)});
   blob(d.id).then(function(u){if(docs[i]!==d||!u)return;if(img)im.src=u;else if(pdf)fr.src=u;dl.href=u;dl.download=d.name||"file";dl.style.display=""})}
  function go(k){if(n<2)return;i=(i+k+n)%n;show()}
@@ -126,7 +126,9 @@ function openAttachments(title,docs,start){
   if(isImg(d)){var t=h("img","w-full h-full object-cover");setImg(t,d.id);b.appendChild(t)}
   else{b.className+=" bg-white/15";b.appendChild(h("i","fa-solid "+(d.type==="application/pdf"?"fa-file-pdf text-red-300":"fa-file text-slate-200")+" text-xl"))}
   on(b,"click",function(e){e.stopPropagation();i=k;show()});strip.appendChild(b)});
- mid.appendChild(im);mid.appendChild(fr);mid.appendChild(um);
+ var ez1=h("div","absolute top-0 bottom-0 left-0 w-8 z-10"),ez2=h("div","absolute top-0 bottom-0 right-0 w-8 z-10");
+ [ez1,ez2].forEach(function(z0){var s0=0;z0.style.display="none";on(z0,"touchstart",function(e){s0=e.changedTouches[0].clientX});on(z0,"touchend",function(e){var d=e.changedTouches[0].clientX-s0;if(Math.abs(d)>40)go(d>0?-1:1)})});
+ mid.appendChild(im);mid.appendChild(fr);mid.appendChild(um);mid.appendChild(ez1);mid.appendChild(ez2);
  if(n>1)[[-1,"fa-chevron-left","left-2"],[1,"fa-chevron-right","right-2"]].forEach(function(a){var b=ib("absolute top-1/2 -mt-4 "+a[2]+" w-9 h-9 rounded-full bg-white/20 text-white text-xs flex items-center justify-center z-10",a[1]);on(b,"click",function(e){e.stopPropagation();go(a[0])});mid.appendChild(b)});
  on(x,"click",function(){ov.remove()});on(ov,"click",function(e){if(e.target===ov||e.target===mid)ov.remove()});
  ov.appendChild(tp);ov.appendChild(mid);if(n>1)ov.appendChild(strip);document.body.appendChild(ov);show()}
