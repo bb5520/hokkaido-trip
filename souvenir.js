@@ -159,7 +159,7 @@ function group(s,arr){
  on(sc,"scroll",function(){if(sc.clientWidth)cpos[key]=Math.round(sc.scrollLeft/sc.clientWidth)})}
 function list(){
  var g={},order=[];items.forEach(function(x){var s=x[grp]||(grp==="who"?"未指定":"未填店家");if(!g[s]){g[s]=[];order.push(s)}g[s].push(x)});
- if(!order.length){root.appendChild(h("div","text-slate-400 text-center py-6 text-sm","尚未新增伴手禮"));return}
+ if(!order.length){root.appendChild(h("div","bg-white rounded-2xl shadow-sm border border-slate-100 text-slate-400 text-center py-6 text-sm","尚未新增伴手禮"));return}
  if(fg&&!g[fg])fg="";
  if(order.length>1){var fl=h("div","flex gap-2 overflow-x-auto no-scrollbar py-1");[""].concat(order).forEach(function(n){var p=h("button","flex-none px-3 py-1.5 rounded-xl text-xs font-medium "+(n===fg?"bg-ice-600 text-white font-bold shadow-sm":"bg-white text-slate-600 border border-slate-100 shadow-sm"),n||"全部");on(p,"click",function(){fg=n;draw()});fl.appendChild(p)});root.appendChild(fl)}
  order.forEach(function(s){if(!fg||s===fg)group(s,g[s])})}
