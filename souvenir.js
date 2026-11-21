@@ -91,8 +91,8 @@ function combo(label,input,k){
  function vals(){var l=[];items.forEach(function(x){if(x[k]&&l.indexOf(x[k])<0)l.push(x[k])});return l}
  function show(all){dd.textContent="";var q=all?"":input.value.trim().toLowerCase(),l=vals().filter(function(v){return !q||v.toLowerCase().indexOf(q)>-1});if(!l.length){dd.classList.add("hidden");return}
   l.forEach(function(v){var r=h("div","px-2.5 py-2 rounded-lg text-sm text-slate-800 cursor-pointer hover:bg-ice-50 active:bg-ice-50",v);on(r,"mousedown",function(e){e.preventDefault()});on(r,"click",function(){input.value=v;dd.classList.add("hidden")});dd.appendChild(r)});dd.classList.remove("hidden")}
- on(input,"focus",function(){show(true)});on(input,"click",function(){show(true)});on(input,"input",function(){show(false)});on(input,"blur",function(){setTimeout(function(){dd.classList.add("hidden")},150)});
- w.appendChild(input);w.appendChild(dd);return field(label,w)}
+ on(input,"focus",function(){show(true);setTimeout(function(){try{var n=input.value.length;input.setSelectionRange(n,n)}catch(e){}},30)});on(input,"click",function(){show(true)});on(input,"input",function(){show(false)});on(input,"blur",function(){setTimeout(function(){dd.classList.add("hidden");input.value=input.value.trim()},150)});
+ input.className+=" pr-8 focus:border-ice-500";var cv=h("i","fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none");w.appendChild(input);w.appendChild(cv);w.appendChild(dd);return field(label,w)}
 function tile(label,icon,get,set,ui){
  var w=h("div","relative"),b=h("button","w-full aspect-square rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-500 text-xs font-bold bg-cover bg-center flex flex-col items-center justify-center gap-1.5"),f=h("input"),x=h("button","absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-slate-800/75 text-white text-xs flex items-center justify-center");
  b.type="button";x.type="button";f.type="file";f.accept="image/*";f.hidden=true;x.appendChild(h("i","fa-solid fa-xmark"));
