@@ -91,21 +91,35 @@ function openAttachments(title,docs,start){
  ct=h("span","text-sm font-medium flex-shrink-0"),nm=h("span","flex-1 min-w-0 truncate text-xs text-slate-300 text-center"),
  dl=h("a","text-white flex-shrink-0 px-1"),x=h("button","text-white flex-shrink-0"),
  mid=h("div","flex-1 relative overflow-hidden flex items-center justify-center px-2"),
- im=h("img","max-w-full max-h-full object-contain select-none"),fr=h("iframe","w-full h-full border-0 bg-white rounded-lg"),
+ im=h("img","max-w-full max-h-full object-contain select-none"),
+ /* PDF：iframe 放進可捲動容器，用「寬高放大」來縮放（iframe 內的手指事件無法被外層接到，所以改用按鈕） */
+ pw=h("div","bg-white rounded-lg"),fr=h("iframe","border-0 bg-white block"),
+ zb=h("div","absolute bottom-3 left-1/2 -translate-x-1/2 z-10 items-center gap-1 bg-slate-800/90 text-white rounded-full px-2 py-1 text-xs"),
+ zo=ib("w-8 h-8 flex items-center justify-center rounded-full","fa-minus text-xs"),zi=ib("w-8 h-8 flex items-center justify-center rounded-full","fa-plus text-xs"),
+ zl=h("button","min-w-[3rem] text-center font-bold","100%"),
  um=h("div","text-xs text-slate-300 text-center px-6","此檔案類型無法預覽"),
  strip=h("div","flex gap-2 overflow-x-auto no-scrollbar p-3 justify-center flex-shrink-0"),
- z=1,px=0,py=0,pd=0,pz=1,ds=null,lt=0,sx=0,multi=false,curImg=true;
+ z=1,px=0,py=0,pd=0,pz=1,ds=null,lt=0,sx=0,multi=false,curImg=true,fz=1;
  dl.appendChild(h("i","fa-solid fa-download"));dl.setAttribute("aria-label","下載");x.appendChild(h("i","fa-solid fa-xmark text-2xl"));
  tp.appendChild(ct);tp.appendChild(x);
  mid.style.touchAction="none";im.draggable=false;
+ pw.style.cssText="width:100%;height:100%;overflow:auto;-webkit-overflow-scrolling:touch;display:none";
+ fr.style.cssText="width:100%;height:100%;border:0";
+ zb.style.display="none";zo.setAttribute("aria-label","縮小");zi.setAttribute("aria-label","放大");zl.setAttribute("aria-label","還原 100%");
+ zb.appendChild(zo);zb.appendChild(zl);zb.appendChild(zi);pw.appendChild(fr);
+ function pz2(){fr.style.width=(fz*100)+"%";fr.style.height=(fz*100)+"%";zl.textContent=Math.round(fz*100)+"%"}
+ function fzSet(v){fz=Math.min(5,Math.max(1,Math.round(v*2)/2));pz2()}
+ on(zo,"click",function(e){e.stopPropagation();fzSet(fz-.5)});
+ on(zi,"click",function(e){e.stopPropagation();fzSet(fz+.5)});
+ on(zl,"click",function(e){e.stopPropagation();fzSet(1)});
  function clamp(){var iw=im.offsetWidth*z,ih=im.offsetHeight*z,mx=Math.max(0,(iw-mid.clientWidth)/2)+10,my=Math.max(0,(ih-mid.clientHeight)/2)+10;px=Math.min(mx,Math.max(-mx,px));py=Math.min(my,Math.max(-my,py))}
  function ap(){clamp();im.style.transform="translate("+px+"px,"+py+"px) scale("+z+")"}
  function rz(){z=1;px=0;py=0;ap()}
  function isImg(d){return !d.type||d.type.indexOf("image/")===0}
  function show(){
-  rz();var d=docs[i],pdf=d.type==="application/pdf",img=isImg(d);curImg=img;
+  rz();fz=1;pz2();pw.scrollLeft=0;pw.scrollTop=0;var d=docs[i],pdf=d.type==="application/pdf",img=isImg(d);curImg=img;
   ct.textContent=(i+1)+" / "+n;nm.textContent=(title?title+" · ":"")+(d.name||"");
-  im.style.display=img?"":"none";fr.style.display=pdf?"":"none";um.style.display=(!img&&!pdf)?"":"none";mid.style.touchAction=img?"none":"auto";dl.style.display="none";
+  im.style.display=img?"":"none";pw.style.display=pdf?"block":"none";zb.style.display=pdf?"flex":"none";um.style.display=(!img&&!pdf)?"":"none";mid.style.touchAction=img?"none":"auto";dl.style.display="none";
   [].forEach.call(strip.children,function(c,k){c.classList.toggle("border-white",k===i);c.classList.toggle("border-transparent",k!==i);c.classList.toggle("opacity-60",k!==i)});
   blob(d.id).then(function(u){if(docs[i]!==d||!u)return;if(img)im.src=u;else if(pdf)fr.src=u;dl.href=u;dl.download=d.name||"file";dl.style.display=""})}
  function go(k){if(n<2)return;i=(i+k+n)%n;show()}
@@ -126,7 +140,7 @@ function openAttachments(title,docs,start){
   if(isImg(d)){var t=h("img","w-full h-full object-cover");setImg(t,d.id);b.appendChild(t)}
   else{b.className+=" bg-white/15";b.appendChild(h("i","fa-solid "+(d.type==="application/pdf"?"fa-file-pdf text-red-300":"fa-file text-slate-200")+" text-xl"))}
   on(b,"click",function(e){e.stopPropagation();i=k;show()});strip.appendChild(b)});
- mid.appendChild(im);mid.appendChild(fr);mid.appendChild(um);
+ mid.appendChild(im);mid.appendChild(pw);mid.appendChild(um);mid.appendChild(zb);
  if(n>1)[[-1,"fa-chevron-left","left-2"],[1,"fa-chevron-right","right-2"]].forEach(function(a){var b=ib("absolute top-1/2 -mt-4 "+a[2]+" w-9 h-9 rounded-full bg-white/20 text-white text-xs flex items-center justify-center z-10",a[1]);on(b,"click",function(e){e.stopPropagation();go(a[0])});mid.appendChild(b)});
  on(x,"click",function(){ov.remove()});on(ov,"click",function(e){if(e.target===ov||e.target===mid)ov.remove()});
  ov.appendChild(tp);ov.appendChild(mid);if(n>1)ov.appendChild(strip);document.body.appendChild(ov);show()}
