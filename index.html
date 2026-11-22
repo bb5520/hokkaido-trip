@@ -23,9 +23,9 @@
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: https://images.unsplash.com;
     font-src 'self';
-    frame-src 'self' data:;
+    frame-src 'self' data: blob:;
     connect-src 'self' https://*.supabase.co;
-    object-src 'none';
+    object-src 'self' blob:;
     base-uri 'self';
     form-action 'self';
   ">
