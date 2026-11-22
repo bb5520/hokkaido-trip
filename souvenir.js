@@ -55,7 +55,7 @@ function askLink(u){dlg("即將開啟外部連結：\n"+host(u)+"\n要前往嗎�
 function zoom(ids,i,cb){
  var ov=h("div","fixed inset-0 bg-black/85 z-[65] flex flex-col"),tp=h("div","flex justify-between items-center p-4 text-white flex-shrink-0"),ct=h("span","text-sm font-medium"),x=h("button","text-white"),mid=h("div","flex-1 relative overflow-hidden flex items-center justify-center px-2"),im=h("img","max-w-full max-h-full object-contain select-none"),dots=h("div","flex justify-center gap-1.5 p-4 flex-shrink-0"),
  z=1,px=0,py=0,pd=0,pz=1,ds=null,lt=0,sx=0,multi=false;
- x.appendChild(h("i","fa-solid fa-xmark text-2xl"));tp.appendChild(ct);tp.appendChild(nm);tp.appendChild(dl);tp.appendChild(x);
+ x.appendChild(h("i","fa-solid fa-xmark text-2xl"));tp.appendChild(ct);tp.appendChild(x);
  mid.style.touchAction="none";im.draggable=false;im.style.transition="transform .12s ease-out";
  function clamp(){var iw=im.offsetWidth*z,ih=im.offsetHeight*z,mx=Math.max(0,(iw-mid.clientWidth)/2)+10,my=Math.max(0,(ih-mid.clientHeight)/2)+10;px=Math.min(mx,Math.max(-mx,px));py=Math.min(my,Math.max(-my,py))}
  function ap(){clamp();im.style.transform="translate("+px+"px,"+py+"px) scale("+z+")"}
@@ -87,16 +87,16 @@ function zoom(ids,i,cb){
 function openAttachments(title,docs,start){
  docs=(docs||[]).filter(Boolean);if(!docs.length){toast("沒有附件");return}
  var n=docs.length,i=Math.min(Math.max(0,start||0),n-1),
- ov=h("div","fixed inset-0 bg-black/85 z-[65] flex flex-col"),tp=h("div","flex items-center gap-3 p-4 text-white flex-shrink-0"),
+ ov=h("div","fixed inset-0 bg-black/85 z-[65] flex flex-col"),tp=h("div","flex justify-between items-center p-4 text-white flex-shrink-0"),
  ct=h("span","text-sm font-medium flex-shrink-0"),nm=h("span","flex-1 min-w-0 truncate text-xs text-slate-300 text-center"),
  dl=h("a","text-white flex-shrink-0 px-1"),x=h("button","text-white flex-shrink-0"),
  mid=h("div","flex-1 relative overflow-hidden flex items-center justify-center px-2"),
  im=h("img","max-w-full max-h-full object-contain select-none"),fr=h("iframe","w-full h-full border-0 bg-white rounded-lg"),
- um=h("div","text-xs text-slate-300 text-center px-6","此檔案類型無法預覽，請按右上角的下載"),
+ um=h("div","text-xs text-slate-300 text-center px-6","此檔案類型無法預覽"),
  strip=h("div","flex gap-2 overflow-x-auto no-scrollbar p-3 justify-center flex-shrink-0"),
  z=1,px=0,py=0,pd=0,pz=1,ds=null,lt=0,sx=0,multi=false,curImg=true;
  dl.appendChild(h("i","fa-solid fa-download"));dl.setAttribute("aria-label","下載");x.appendChild(h("i","fa-solid fa-xmark text-2xl"));
- tp.appendChild(ct);tp.appendChild(nm);tp.appendChild(dl);tp.appendChild(x);
+ tp.appendChild(ct);tp.appendChild(x);
  mid.style.touchAction="none";im.draggable=false;
  function clamp(){var iw=im.offsetWidth*z,ih=im.offsetHeight*z,mx=Math.max(0,(iw-mid.clientWidth)/2)+10,my=Math.max(0,(ih-mid.clientHeight)/2)+10;px=Math.min(mx,Math.max(-mx,px));py=Math.min(my,Math.max(-my,py))}
  function ap(){clamp();im.style.transform="translate("+px+"px,"+py+"px) scale("+z+")"}
