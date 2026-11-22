@@ -191,7 +191,7 @@
               <div v-if="false" class="flex gap-2 mt-2 overflow-x-auto no-scrollbar relative z-10">
                 <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-16 h-16 flex-shrink-0 rounded-lg object-cover border border-slate-600 cursor-pointer">
               </div>
-              <div class="text-xs text-slate-300 mt-2 pt-2 border-t border-slate-700/60 flex justify-between items-end relative z-10">
+              <div class="text-xs text-slate-300 mt-2 pt-2 border-t border-slate-700/60 flex justify-between items-center relative z-10">
                 <span class="pr-2">備註: {{ item.note }}</span>
                 <button @click.stop="editItinerary(item)" class="text-slate-400 hover:text-white cursor-pointer p-1">
                   <i class="fa-solid fa-pen-to-square text-lg"></i>
