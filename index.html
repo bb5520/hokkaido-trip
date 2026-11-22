@@ -1708,7 +1708,6 @@
 
       const docListModal = ref({ show: false, title: '', documents: [] });
       const openDocList = (title, documents) => { if (window.openAttachments) window.openAttachments(title, documents || [], 0); else docListModal.value = { show: true, title, documents: documents || [] }; };
-
       const galleryModal = ref({ show: false, images: [], index: 0 });
       const galleryZoom = ref(1);
       const galleryPan = ref({ x: 0, y: 0 });
