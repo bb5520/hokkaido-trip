@@ -1080,7 +1080,17 @@
           <div>
             <label class="block font-bold text-slate-600 mb-1">相關文件 (機票/訂位截圖、PDF等，可多選)</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formFlightDoc.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formFlightDoc.documents && formFlightDoc.documents.length" class="space-y-1.5">
+            <div v-if="formFlightDoc.documents && formFlightDoc.documents.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(doc, di) in formFlightDoc.documents" :key="doc.id" class="relative">
+                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
+                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
+                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
+                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
+                </div>
+                <button type="button" @click="removeDocument(formFlightDoc.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="false" class="space-y-1.5">
               <div v-for="(doc, di) in formFlightDoc.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
                 <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
                 <button type="button" @click="removeDocument(formFlightDoc.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
@@ -1143,7 +1153,17 @@
           <div>
             <label class="block font-bold text-slate-600 mb-1">相關文件 (訂房確認單等，可多選)</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formHotelInfo.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formHotelInfo.documents && formHotelInfo.documents.length" class="space-y-1.5">
+            <div v-if="formHotelInfo.documents && formHotelInfo.documents.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(doc, di) in formHotelInfo.documents" :key="doc.id" class="relative">
+                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
+                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
+                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
+                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
+                </div>
+                <button type="button" @click="removeDocument(formHotelInfo.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="false" class="space-y-1.5">
               <div v-for="(doc, di) in formHotelInfo.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
                 <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
                 <button type="button" @click="removeDocument(formHotelInfo.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
@@ -1205,7 +1225,17 @@
           <div>
             <label class="block font-bold text-slate-600 mb-1">相關文件 (租車確認單等，可多選)</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formCar.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formCar.documents && formCar.documents.length" class="space-y-1.5">
+            <div v-if="formCar.documents && formCar.documents.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(doc, di) in formCar.documents" :key="doc.id" class="relative">
+                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
+                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
+                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
+                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
+                </div>
+                <button type="button" @click="removeDocument(formCar.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="false" class="space-y-1.5">
               <div v-for="(doc, di) in formCar.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
                 <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
                 <button type="button" @click="removeDocument(formCar.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
@@ -1274,7 +1304,17 @@
           <div>
             <label class="block font-bold text-slate-600 mb-1">相關文件 (預約確認單、票券等，可多選)</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formDayTour.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formDayTour.documents && formDayTour.documents.length" class="space-y-1.5">
+            <div v-if="formDayTour.documents && formDayTour.documents.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(doc, di) in formDayTour.documents" :key="doc.id" class="relative">
+                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
+                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
+                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
+                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
+                </div>
+                <button type="button" @click="removeDocument(formDayTour.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="false" class="space-y-1.5">
               <div v-for="(doc, di) in formDayTour.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
                 <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
                 <button type="button" @click="removeDocument(formDayTour.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
@@ -1343,7 +1383,17 @@
           <div>
             <label class="block font-bold text-slate-600 mb-1">相關文件 (預約確認單、票券等，可多選)</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formOtherBooking.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formOtherBooking.documents && formOtherBooking.documents.length" class="space-y-1.5">
+            <div v-if="formOtherBooking.documents && formOtherBooking.documents.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(doc, di) in formOtherBooking.documents" :key="doc.id" class="relative">
+                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
+                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
+                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
+                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
+                </div>
+                <button type="button" @click="removeDocument(formOtherBooking.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="false" class="space-y-1.5">
               <div v-for="(doc, di) in formOtherBooking.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
                 <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
                 <button type="button" @click="removeDocument(formOtherBooking.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
@@ -1398,38 +1448,24 @@
     </div>
 
     <!-- ================= 彈出視窗 Modal: 購物照片圖庫 (左右滑動瀏覽，無下載) ================= -->
-    <!-- 檔案檢視器：圖片 / PDF 皆可左右切換 -->
-<div v-if="galleryModal.show" class="fixed inset-0 bg-black/85 z-[65] flex flex-col" @click.self="closeGallery">
-  <div class="flex justify-between items-center p-4 text-white flex-shrink-0" @click.self="closeGallery">
-    <div class="min-w-0 pr-3">
-      <div class="text-sm font-medium">{{ galleryModal.index + 1 }} / {{ galleryModal.images.length }}</div>
-      <div v-if="galleryCurrent && galleryCurrent.name" class="text-[11px] text-white/70 truncate">{{ galleryCurrent.name }}</div>
+    <div v-if="galleryModal.show" class="fixed inset-0 bg-black/85 z-[65] flex flex-col" @click.self="closeGallery">
+      <div class="flex justify-between items-center p-4 text-white flex-shrink-0" @click.self="closeGallery">
+        <span class="text-sm font-medium">{{ galleryModal.index + 1 }} / {{ galleryModal.images.length }}</span>
+        <button @click="closeGallery" class="text-white"><i class="fa-solid fa-xmark text-2xl"></i></button>
+      </div>
+      <div class="flex-1 relative overflow-hidden flex items-center justify-center px-2" @click.self="closeGallery"
+           @touchstart="galleryTouchStart"
+           @touchmove="galleryTouchMove"
+           @touchend="galleryTouchEnd">
+        <img v-if="galleryModal.images[galleryModal.index]" :src="resolveBlobUrl(galleryModal.images[galleryModal.index].id)"
+             :style="{ transform: `translate(${galleryPan.x}px, ${galleryPan.y}px) scale(${galleryZoom})` }"
+             class="max-w-full max-h-full object-contain select-none" draggable="false">
+      </div>
+      <div v-if="galleryModal.images.length > 1" class="flex justify-center gap-1.5 p-4 flex-shrink-0" @click.self="closeGallery">
+        <span v-for="(img, gi) in galleryModal.images" :key="gi" @click.stop="galleryModal.index = gi"
+             :class="['w-1.5 h-1.5 rounded-full cursor-pointer transition-all', gi === galleryModal.index ? 'bg-white w-3' : 'bg-white/40']"></span>
+      </div>
     </div>
-    <div class="flex items-center gap-5 flex-shrink-0">
-      <a v-if="galleryIsPdf" :href="resolveBlobUrl(galleryCurrent.id)" :download="galleryCurrent.name" class="text-white"><i class="fa-solid fa-download text-lg"></i></a>
-      <button @click="closeGallery" class="text-white"><i class="fa-solid fa-xmark text-2xl"></i></button>
-    </div>
-  </div>
-
-  <div class="flex-1 relative overflow-hidden flex items-center justify-center px-2" @click.self="closeGallery"
-       @touchstart="galleryTouchStart" @touchmove="galleryTouchMove" @touchend="galleryTouchEnd">
-    <iframe v-if="galleryIsPdf" :key="galleryCurrent.id" :src="resolveBlobUrl(galleryCurrent.id)"
-            class="w-full h-full bg-white rounded-lg border-0"></iframe>
-    <img v-else-if="galleryCurrent" :src="resolveBlobUrl(galleryCurrent.id)"
-         :style="{ transform: `translate(${galleryPan.x}px, ${galleryPan.y}px) scale(${galleryZoom})` }"
-         class="max-w-full max-h-full object-contain select-none" draggable="false">
-  </div>
-
-  <!-- 底部：上一個 / 圓點 / 下一個（PDF 內無法滑動切換，所以用按鈕） -->
-  <div v-if="galleryModal.images.length > 1" class="flex items-center justify-center gap-4 p-4 flex-shrink-0">
-    <button @click="prevGalleryImage" class="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center"><i class="fa-solid fa-chevron-left text-sm"></i></button>
-    <div class="flex gap-1.5">
-      <span v-for="(img, gi) in galleryModal.images" :key="gi" @click.stop="galleryModal.index = gi"
-            :class="['h-1.5 rounded-full cursor-pointer transition-all', gi === galleryModal.index ? 'bg-white w-3' : 'bg-white/40 w-1.5']"></span>
-    </div>
-    <button @click="nextGalleryImage" class="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center"><i class="fa-solid fa-chevron-right text-sm"></i></button>
-  </div>
-</div>
   </div>
 
   <script>
@@ -1631,26 +1667,47 @@
       const previewDoc = ref(null);
       
       // 升級版的預覽功能：若是圖片，開啟與購物清單相同的全螢幕畫廊模式
-      const viewDocument = (doc) => {
+      const viewDocument = (doc) => { 
         if (!doc) return;
-        let sourceArray = [];
-        if (docListModal.value.show) sourceArray = docListModal.value.documents;
-        else if (showFlightModal.value) sourceArray = formFlightDoc.value.documents;
-        else if (showHotelModal.value) sourceArray = formHotelInfo.value.documents;
-        else if (car.showModal.value) sourceArray = car.formObj.value.documents;
-        else if (tour.showModal.value) sourceArray = tour.formObj.value.documents;
-        else if (other.showModal.value) sourceArray = other.formObj.value.documents;
-        else sourceArray = [doc];
+        if (window.openAttachments) {
+          let src = [doc];
+          if (docListModal.value.show) src = docListModal.value.documents;
+          else if (showFlightModal.value) src = formFlightDoc.value.documents;
+          else if (showHotelModal.value) src = formHotelInfo.value.documents;
+          else if (car.showModal.value) src = car.formObj.value.documents;
+          else if (tour.showModal.value) src = tour.formObj.value.documents;
+          else if (other.showModal.value) src = other.formObj.value.documents;
+          const k = src.findIndex(d => d.id === doc.id);
+          window.openAttachments('', src, k === -1 ? 0 : k);
+          return;
+        }
+        
+        if (doc.type && doc.type.startsWith('image/')) {
+          // 自動尋找目前開啟的視窗，抓取對應的附件陣列 (這樣才能支援左右滑動切換多張照片)
+          let sourceArray = [];
+          if (docListModal.value.show) sourceArray = docListModal.value.documents;
+          else if (showFlightModal.value) sourceArray = formFlightDoc.value.documents;
+          else if (showHotelModal.value) sourceArray = formHotelInfo.value.documents;
+          else if (car.showModal.value) sourceArray = car.formObj.value.documents;
+          else if (tour.showModal.value) sourceArray = tour.formObj.value.documents;
+          else if (other.showModal.value) sourceArray = other.formObj.value.documents;
+          else sourceArray = [doc]; // 預防萬一找不到來源，就只顯示當前這一張
 
-        const idx = sourceArray.findIndex(d => d.id === doc.id);
-        openGallery(sourceArray, idx !== -1 ? idx : 0);
+          // 幫畫廊過濾出「只含圖片」的陣列
+          const imageDocs = sourceArray.filter(d => d.type && d.type.startsWith('image/'));
+          if (imageDocs.length === 0) imageDocs.push(doc);
+
+          // 找出目前點擊的是清單中的第幾張，並開啟畫廊
+          const idx = imageDocs.findIndex(d => d.id === doc.id);
+          openGallery(imageDocs, idx !== -1 ? idx : 0);
+        } else {
+          // 非圖片檔案 (如 PDF)，維持原本有「下載檔案」按鈕的單一預覽模式
+          previewDoc.value = doc; 
+        }
       };
 
       const docListModal = ref({ show: false, title: '', documents: [] });
-      const openDocList = (title, documents) => {
-        if (documents && documents.length) openGallery(documents, 0); // 直接開第一個檔案
-      };
-
+      const openDocList = (title, documents) => { if (window.openAttachments) window.openAttachments(title, documents || [], 0); else docListModal.value = { show: true, title, documents: documents || [] }; };
       const galleryModal = ref({ show: false, images: [], index: 0 });
       const galleryZoom = ref(1);
       const galleryPan = ref({ x: 0, y: 0 });
@@ -1669,8 +1726,6 @@
         }
       };
       const closeGallery = () => { galleryModal.value.show = false; };
-      const galleryCurrent = computed(() => galleryModal.value.images[galleryModal.value.index] || null);
-      const galleryIsPdf = computed(() => !!galleryCurrent.value && galleryCurrent.value.type === 'application/pdf');
       const nextGalleryImage = () => {
         if (galleryZoom.value > 1) return; // 放大時不切換
         const len = galleryModal.value.images.length;
@@ -1890,17 +1945,6 @@
         }
         return blobUrlCache.value[id];
       };
-
-      const pdfUrlCache = {};
-const resolvePdfUrl = (id) => {
-  if (pdfUrlCache[id]) return pdfUrlCache[id];
-  const d = resolveBlobUrl(id);          // 還沒載入完會回傳 ''，載入後會自動重繪
-  if (!d) return '';
-  const bin = atob(d.slice(d.indexOf(',') + 1));
-  const u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  return (pdfUrlCache[id] = URL.createObjectURL(new Blob([u8], { type: 'application/pdf' })));
-};
       
 
       // --- 4. 行程分頁 (Itinerary) ---
@@ -2651,7 +2695,7 @@ const resolvePdfUrl = (id) => {
         depAirportOpen, arrAirportOpen,
         filteredDepAirports, filteredArrAirports,
         openDepAirportDropdown, openArrAirportDropdown,
-        selectDepAirport, selectArrAirport, closeDepAirportDropdown, closeArrAirportDropdown,galleryCurrent, galleryIsPdf
+        selectDepAirport, selectArrAirport, closeDepAirportDropdown, closeArrAirportDropdown
       };
     }
   }).mount('#app');
