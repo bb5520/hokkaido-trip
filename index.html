@@ -23,9 +23,9 @@
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: https://images.unsplash.com;
     font-src 'self';
-    frame-src 'self' data: blob:;
+    frame-src 'self' data:;
     connect-src 'self' https://*.supabase.co;
-    object-src 'self' blob:;
+    object-src 'none';
     base-uri 'self';
     form-action 'self';
   ">
@@ -1398,24 +1398,38 @@
     </div>
 
     <!-- ================= 彈出視窗 Modal: 購物照片圖庫 (左右滑動瀏覽，無下載) ================= -->
-    <div v-if="galleryModal.show" class="fixed inset-0 bg-black/85 z-[65] flex flex-col" @click.self="closeGallery">
-      <div class="flex justify-between items-center p-4 text-white flex-shrink-0" @click.self="closeGallery">
-        <span class="text-sm font-medium">{{ galleryModal.index + 1 }} / {{ galleryModal.images.length }}</span>
-        <button @click="closeGallery" class="text-white"><i class="fa-solid fa-xmark text-2xl"></i></button>
-      </div>
-      <div class="flex-1 relative overflow-hidden flex items-center justify-center px-2" @click.self="closeGallery"
-           @touchstart="galleryTouchStart"
-           @touchmove="galleryTouchMove"
-           @touchend="galleryTouchEnd">
-        <img v-if="galleryModal.images[galleryModal.index]" :src="resolveBlobUrl(galleryModal.images[galleryModal.index].id)"
-             :style="{ transform: `translate(${galleryPan.x}px, ${galleryPan.y}px) scale(${galleryZoom})` }"
-             class="max-w-full max-h-full object-contain select-none" draggable="false">
-      </div>
-      <div v-if="galleryModal.images.length > 1" class="flex justify-center gap-1.5 p-4 flex-shrink-0" @click.self="closeGallery">
-        <span v-for="(img, gi) in galleryModal.images" :key="gi" @click.stop="galleryModal.index = gi"
-             :class="['w-1.5 h-1.5 rounded-full cursor-pointer transition-all', gi === galleryModal.index ? 'bg-white w-3' : 'bg-white/40']"></span>
-      </div>
+    <!-- 檔案檢視器：圖片 / PDF 皆可左右切換 -->
+<div v-if="galleryModal.show" class="fixed inset-0 bg-black/85 z-[65] flex flex-col" @click.self="closeGallery">
+  <div class="flex justify-between items-center p-4 text-white flex-shrink-0" @click.self="closeGallery">
+    <div class="min-w-0 pr-3">
+      <div class="text-sm font-medium">{{ galleryModal.index + 1 }} / {{ galleryModal.images.length }}</div>
+      <div v-if="galleryCurrent && galleryCurrent.name" class="text-[11px] text-white/70 truncate">{{ galleryCurrent.name }}</div>
     </div>
+    <div class="flex items-center gap-5 flex-shrink-0">
+      <a v-if="galleryIsPdf" :href="resolveBlobUrl(galleryCurrent.id)" :download="galleryCurrent.name" class="text-white"><i class="fa-solid fa-download text-lg"></i></a>
+      <button @click="closeGallery" class="text-white"><i class="fa-solid fa-xmark text-2xl"></i></button>
+    </div>
+  </div>
+
+  <div class="flex-1 relative overflow-hidden flex items-center justify-center px-2" @click.self="closeGallery"
+       @touchstart="galleryTouchStart" @touchmove="galleryTouchMove" @touchend="galleryTouchEnd">
+    <iframe v-if="galleryIsPdf" :key="galleryCurrent.id" :src="resolveBlobUrl(galleryCurrent.id)"
+            class="w-full h-full bg-white rounded-lg border-0"></iframe>
+    <img v-else-if="galleryCurrent" :src="resolveBlobUrl(galleryCurrent.id)"
+         :style="{ transform: `translate(${galleryPan.x}px, ${galleryPan.y}px) scale(${galleryZoom})` }"
+         class="max-w-full max-h-full object-contain select-none" draggable="false">
+  </div>
+
+  <!-- 底部：上一個 / 圓點 / 下一個（PDF 內無法滑動切換，所以用按鈕） -->
+  <div v-if="galleryModal.images.length > 1" class="flex items-center justify-center gap-4 p-4 flex-shrink-0">
+    <button @click="prevGalleryImage" class="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center"><i class="fa-solid fa-chevron-left text-sm"></i></button>
+    <div class="flex gap-1.5">
+      <span v-for="(img, gi) in galleryModal.images" :key="gi" @click.stop="galleryModal.index = gi"
+            :class="['h-1.5 rounded-full cursor-pointer transition-all', gi === galleryModal.index ? 'bg-white w-3' : 'bg-white/40 w-1.5']"></span>
+    </div>
+    <button @click="nextGalleryImage" class="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center"><i class="fa-solid fa-chevron-right text-sm"></i></button>
+  </div>
+</div>
   </div>
 
   <script>
@@ -1617,35 +1631,25 @@
       const previewDoc = ref(null);
       
       // 升級版的預覽功能：若是圖片，開啟與購物清單相同的全螢幕畫廊模式
-      const viewDocument = (doc) => { 
-        if (!doc) return; 
-        
-        if (doc.type && doc.type.startsWith('image/')) {
-          // 自動尋找目前開啟的視窗，抓取對應的附件陣列 (這樣才能支援左右滑動切換多張照片)
-          let sourceArray = [];
-          if (docListModal.value.show) sourceArray = docListModal.value.documents;
-          else if (showFlightModal.value) sourceArray = formFlightDoc.value.documents;
-          else if (showHotelModal.value) sourceArray = formHotelInfo.value.documents;
-          else if (car.showModal.value) sourceArray = car.formObj.value.documents;
-          else if (tour.showModal.value) sourceArray = tour.formObj.value.documents;
-          else if (other.showModal.value) sourceArray = other.formObj.value.documents;
-          else sourceArray = [doc]; // 預防萬一找不到來源，就只顯示當前這一張
+      const viewDocument = (doc) => {
+        if (!doc) return;
+        let sourceArray = [];
+        if (docListModal.value.show) sourceArray = docListModal.value.documents;
+        else if (showFlightModal.value) sourceArray = formFlightDoc.value.documents;
+        else if (showHotelModal.value) sourceArray = formHotelInfo.value.documents;
+        else if (car.showModal.value) sourceArray = car.formObj.value.documents;
+        else if (tour.showModal.value) sourceArray = tour.formObj.value.documents;
+        else if (other.showModal.value) sourceArray = other.formObj.value.documents;
+        else sourceArray = [doc];
 
-          // 幫畫廊過濾出「只含圖片」的陣列
-          const imageDocs = sourceArray.filter(d => d.type && d.type.startsWith('image/'));
-          if (imageDocs.length === 0) imageDocs.push(doc);
-
-          // 找出目前點擊的是清單中的第幾張，並開啟畫廊
-          const idx = imageDocs.findIndex(d => d.id === doc.id);
-          openGallery(imageDocs, idx !== -1 ? idx : 0);
-        } else {
-          // 非圖片檔案 (如 PDF)，維持原本有「下載檔案」按鈕的單一預覽模式
-          previewDoc.value = doc; 
-        }
+        const idx = sourceArray.findIndex(d => d.id === doc.id);
+        openGallery(sourceArray, idx !== -1 ? idx : 0);
       };
 
       const docListModal = ref({ show: false, title: '', documents: [] });
-      const openDocList = (title, documents) => { docListModal.value = { show: true, title, documents: documents || [] }; };
+      const openDocList = (title, documents) => {
+        if (documents && documents.length) openGallery(documents, 0); // 直接開第一個檔案
+      };
 
       const galleryModal = ref({ show: false, images: [], index: 0 });
       const galleryZoom = ref(1);
@@ -1665,6 +1669,8 @@
         }
       };
       const closeGallery = () => { galleryModal.value.show = false; };
+      const galleryCurrent = computed(() => galleryModal.value.images[galleryModal.value.index] || null);
+      const galleryIsPdf = computed(() => !!galleryCurrent.value && galleryCurrent.value.type === 'application/pdf');
       const nextGalleryImage = () => {
         if (galleryZoom.value > 1) return; // 放大時不切換
         const len = galleryModal.value.images.length;
