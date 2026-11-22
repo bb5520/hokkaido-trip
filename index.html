@@ -1890,6 +1890,17 @@
         }
         return blobUrlCache.value[id];
       };
+
+      const pdfUrlCache = {};
+const resolvePdfUrl = (id) => {
+  if (pdfUrlCache[id]) return pdfUrlCache[id];
+  const d = resolveBlobUrl(id);          // 還沒載入完會回傳 ''，載入後會自動重繪
+  if (!d) return '';
+  const bin = atob(d.slice(d.indexOf(',') + 1));
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return (pdfUrlCache[id] = URL.createObjectURL(new Blob([u8], { type: 'application/pdf' })));
+};
       
 
       // --- 4. 行程分頁 (Itinerary) ---
@@ -2640,7 +2651,7 @@
         depAirportOpen, arrAirportOpen,
         filteredDepAirports, filteredArrAirports,
         openDepAirportDropdown, openArrAirportDropdown,
-        selectDepAirport, selectArrAirport, closeDepAirportDropdown, closeArrAirportDropdown
+        selectDepAirport, selectArrAirport, closeDepAirportDropdown, closeArrAirportDropdown,galleryCurrent, galleryIsPdf
       };
     }
   }).mount('#app');
