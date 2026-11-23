@@ -76,7 +76,7 @@
     button { transition: transform .12s ease; }
     button:not(:disabled):active { transform: scale(0.95); }
     /* 機票卡片 v2 */
-    .tk2 { position: relative; overflow: hidden; background: #fff; border-radius: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06); }
+    .tk2 { position: relative; overflow: hidden; background: #fff; border-radius: 2rem; box-shadow: none; }
     .tk2-top { background-image: radial-gradient(rgba(56,189,248,.2) 1px, transparent 1px), linear-gradient(to bottom, #eaf6ff, #ffffff); background-size: 12px 12px, 100% 100%; }
     .tk2-perf { position: relative; border-top: 2px dashed #7cc6f6; }
     .tk2-notch { position: absolute; top: -17px; width: 32px; height: 32px; border-radius: 50%; background: #eef4f8; }
@@ -260,7 +260,7 @@
               </div>
               <div class="tk2-perf"><span class="tk2-notch l"></span><span class="tk2-notch r"></span></div>
               <template v-for="fx in [flightsInfo.find(f => f.id === item.id) || {}]" :key="item.id">
-                <div class="px-4 pt-4 pb-2">
+                <div class="px-4 py-3">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
                       <template v-if="flightPrice(item.id)">
@@ -275,7 +275,7 @@
                     <span v-if="fx.baggageCarryon" class="inline-flex items-center gap-1 bg-sky-50 text-[#0a3fbf] text-xs font-bold rounded-full px-2.5 py-1"><i class="fa-solid fa-bag-shopping"></i>隨身 {{ fx.baggageCarryon }}kg</span>
                     <button v-if="fx.documents && fx.documents.length" @click.stop="openDocList(fx.label, fx.documents)" class="inline-flex items-center gap-1 bg-sky-50 text-[#0a3fbf] text-xs font-bold rounded-full px-2.5 py-1"><i class="fa-solid fa-paperclip"></i>附件 {{ fx.documents.length }}</button>
                   </div>
-                  <div class="mt-1">
+                  <div>
                     <div class="flex items-center gap-3">
                       <div class="tk2-bar rounded" style="width: calc((100% - 56px) * 0.6667)"></div>
                       <button @click.stop="editItinerary(item)" aria-label="編輯" class="w-9 h-9 rounded-full text-sky-600 flex items-center justify-center flex-shrink-0 ml-auto"><i class="fa-solid fa-pen-to-square ext-base"></i></button>
