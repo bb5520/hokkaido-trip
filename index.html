@@ -174,7 +174,7 @@
 
             <!-- 航班專屬顯示卡片 -->
             <div v-if="item.category === '航班'" class="tk2">
-              <div class="absolute top-0 left-0 right-0 h-1.5 z-20" :style="airlineAssets(item.flightNo) ? 'background:linear-gradient(90deg,#7a4b2e,#c8923f,#ecd6a4)' : 'background:linear-gradient(90deg,#38bdf8,#0284c7)'"></div>
+              <div class="absolute top-0 left-0 right-0 h-1.5 z-20" :style="airlineAssets(item.flightNo) ? airlineAssets(item.flightNo).bar : 'background:linear-gradient(90deg,#38bdf8,#0284c7)'"></div>
               <div class="tk2-top relative px-4 pt-5 pb-4">
                 <i class="fa-solid fa-plane absolute right-6 top-24 text-7xl text-sky-100 -rotate-12 pointer-events-none"></i>
                 <div class="relative flex items-start justify-between">
@@ -996,7 +996,7 @@
           <!-- ================= 航班專屬欄位 ================= -->
           <div v-if="formItinerary.category === '航班'" class="space-y-3 p-3 bg-slate-50 border rounded-xl">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">航班編號</label>
+              <label class="block font-bold text-slate-600 mb-1">航班編號 <span class="text-red-500">*</span></label>
               <input v-model="formItinerary.flightNo" type="text" placeholder="例如: BR116" class="w-full bg-white border p-2 rounded-lg outline-none">
             </div>
             <div class="grid grid-cols-2 gap-2">
@@ -2288,6 +2288,9 @@
       const saveItinerary = () => {
         if (!formItinerary.value.name) return alert('請填寫「行程名稱」後再儲存');
         if (!formItinerary.value.category) return alert('請選擇「分類」後再儲存');
+        if (formItinerary.value.category === '航班' && !(formItinerary.value.flightNo || '').trim()) {
+          return alert('請填寫「航班編號」後再儲存');
+        }
         if (!itineraryData.value[selectedDateIndex.value]) itineraryData.value[selectedDateIndex.value] = [];
         const currentList = itineraryData.value[selectedDateIndex.value];
         if (!formItinerary.value.location) {
@@ -2432,7 +2435,13 @@
       });
       const airlineAssets = (flightNo) => {
         const code = String(flightNo || '').trim().slice(0, 2).toUpperCase();
-        return code === 'JX' ? { logo: 'starlux-logo.png', plane: 'starlux-plane.png' } : null;
+        const china = { logo: 'china-logo.png', plane: 'china-plane.png', bar: 'background:linear-gradient(90deg,#9aa6d4,#c8a2c8,#e8b4c8)' };
+        const map = {
+          BR: { logo: 'eva-logo.png', plane: 'eva-plane.png', bar: 'background:linear-gradient(90deg,#0f6b3a,#16a34a,#f97316)' },
+          CI: china,
+          JX: { logo: 'starlux-logo.png', plane: 'starlux-plane.png', bar: 'background:linear-gradient(90deg,#7a4b2e,#c8923f,#ecd6a4)' }
+        };
+        return map[code] || null;
       };
       const flightPrice = (id) => {
         const e = flightExtras.value[id] || {};
