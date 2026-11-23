@@ -479,16 +479,16 @@
               <div class="text-xs space-y-1.5 text-slate-600">
                 <!-- 每日不同：預設顯示今日，點擊展開整週 -->
                 <div v-if="item.useWeekly && item.weeklyHours && item.weeklyHours.length === 7">
-                  <button type="button" @click.stop="toggleHoursExpand(item.id)" class="flex items-center w-full text-left">
-                    <i class="fa-regular fa-clock w-4 text-ice-600"></i>
-                    <span>今日營業: <span :class="['font-bold', todayHoursText(item) === '公休' ? 'text-red-500' : 'text-slate-700']">{{ todayHoursText(item) }}</span></span>
-                    <i :class="['fa-solid fa-chevron-down ml-auto text-[10px] text-slate-400 transition-transform', expandedHours[item.id] ? 'rotate-180' : '']"></i>
+                  <button type="button" @click.stop="toggleHoursExpand(item.id)" class="flex items-start w-full text-left">
+                    <i class="fa-regular fa-clock w-4 text-ice-600 mt-0.5 flex-shrink-0"></i>
+                    <span class="min-w-0 flex-1">今日營業: <span :class="['font-bold', todayHoursText(item) === '公休' ? 'text-red-500' : 'text-slate-700']">{{ todayHoursText(item) }}</span></span>
+                    <i :class="['fa-solid fa-chevron-down ml-2 mt-1 flex-shrink-0 text-[10px] text-slate-400 transition-transform', expandedHours[item.id] ? 'rotate-180' : '']"></i>
                   </button>
                   <div v-if="expandedHours[item.id]" class="mt-1.5 ml-4 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
                     <div v-for="(d, di) in item.weeklyHours" :key="di"
-                         :class="['flex justify-between py-0.5', di === weekIdxOfSelectedDay ? 'font-bold text-ice-700' : '']">
-                      <span>{{ weekDayLabels[di] }}</span>
-                      <span :class="d.closed ? 'text-red-500' : ''">{{ formatDayHours(d) }}</span>
+                         :class="['flex justify-between gap-2 py-0.5', di === weekIdxOfSelectedDay ? 'font-bold text-ice-700' : '']">
+                      <span class="flex-shrink-0">{{ weekDayLabels[di] }}</span>
+                      <span :class="['text-right', d.closed ? 'text-red-500' : '']">{{ formatDayHours(d) }}</span>
                     </div>
                   </div>
                 </div>
@@ -1174,15 +1174,28 @@
                   <button type="button" @click="copyWeeklyHours(0, [1,2,3,4])" class="px-2.5 py-1 rounded-full bg-white border border-ice-200 text-ice-700 text-[11px] font-bold">週一套用平日</button>
                   <button type="button" @click="copyWeeklyHours(5, [6])" class="px-2.5 py-1 rounded-full bg-white border border-ice-200 text-ice-700 text-[11px] font-bold">週六套用週日</button>
                 </div>
-                <div v-for="(d, di) in formItinerary.weeklyHours" :key="di" class="flex items-center gap-1.5">
-                  <span class="w-8 font-bold text-slate-600 flex-shrink-0">{{ weekDayLabels[di] }}</span>
-                  <input v-model="d.open" type="time" :disabled="d.closed" class="flex-1 min-w-0 bg-white border p-1.5 rounded-lg outline-none disabled:opacity-40">
-                  <span class="text-slate-400">–</span>
-                  <input v-model="d.close" type="time" :disabled="d.closed" class="flex-1 min-w-0 bg-white border p-1.5 rounded-lg outline-none disabled:opacity-40">
-                  <label class="flex items-center gap-1 flex-shrink-0 cursor-pointer">
-                    <input type="checkbox" v-model="d.closed" class="rounded text-ice-600 focus:ring-0">
-                    <span class="text-[11px] text-slate-500">公休</span>
-                  </label>
+                <div v-for="(d, di) in formItinerary.weeklyHours" :key="di" class="space-y-1">
+                  <!-- 第一段 -->
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-8 font-bold text-slate-600 flex-shrink-0">{{ weekDayLabels[di] }}</span>
+                    <input v-model="d.open" type="time" :disabled="d.closed" class="flex-1 min-w-0 bg-white border p-1.5 rounded-lg outline-none disabled:opacity-40">
+                    <span class="text-slate-400">–</span>
+                    <input v-model="d.close" type="time" :disabled="d.closed" class="flex-1 min-w-0 bg-white border p-1.5 rounded-lg outline-none disabled:opacity-40">
+                    <label class="flex items-center gap-1 flex-shrink-0 cursor-pointer">
+                      <input type="checkbox" v-model="d.closed" class="rounded text-ice-600 focus:ring-0">
+                      <span class="text-[11px] text-slate-500">公休</span>
+                    </label>
+                  </div>
+                  <!-- 第二段 (午休後再營業) -->
+                  <div v-if="d.split && !d.closed" class="flex items-center gap-1.5 pl-[38px]">
+                    <input v-model="d.open2" type="time" class="flex-1 min-w-0 bg-white border p-1.5 rounded-lg outline-none">
+                    <span class="text-slate-400">–</span>
+                    <input v-model="d.close2" type="time" class="flex-1 min-w-0 bg-white border p-1.5 rounded-lg outline-none">
+                    <button type="button" @click="d.split = false" class="flex-shrink-0 text-[11px] text-red-400 px-1">移除</button>
+                  </div>
+                  <div v-else-if="!d.closed" class="pl-[38px]">
+                    <button type="button" @click="d.split = true" class="text-[11px] font-bold text-ice-600">＋ 加第二段</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2314,7 +2327,7 @@
 
       // ===== 每週營業時間 =====
       const weekDayLabels = ['週一', '週二', '週三', '週四', '週五', '週六', '週日'];
-      const emptyWeek = () => Array.from({ length: 7 }, () => ({ closed: false, open: '', close: '' }));
+      const emptyWeek = () => Array.from({ length: 7 }, () => ({ closed: false, open: '', close: '', split: false, open2: '', close2: '' }));
       const expandedHours = ref({}); // 記錄哪些卡片展開完整一週 (不存檔)
 
       const setUseWeekly = (on) => {
@@ -2341,8 +2354,10 @@
       const formatDayHours = (d) => {
         if (!d) return '未填寫';
         if (d.closed) return '公休';
-        if (d.open || d.close) return `${d.open || '--:--'} - ${d.close || '--:--'}`;
-        return '未填寫';
+        const segs = [];
+        if (d.open || d.close) segs.push(`${d.open || '--:--'} - ${d.close || '--:--'}`);
+        if (d.split && (d.open2 || d.close2)) segs.push(`${d.open2 || '--:--'} - ${d.close2 || '--:--'}`);
+        return segs.length ? segs.join(' / ') : '未填寫';
       };
       const todayHoursText = (item) => formatDayHours((item.weeklyHours || [])[weekIdxOfSelectedDay.value]);
       const toggleHoursExpand = (id) => { expandedHours.value = { ...expandedHours.value, [id]: !expandedHours.value[id] }; };
