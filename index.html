@@ -477,7 +477,23 @@
 
               <!-- 資訊欄位 -->
               <div class="text-xs space-y-1.5 text-slate-600">
-                <div v-if="item.openHours" class="flex items-center"><i class="fa-regular fa-clock w-4 text-ice-600"></i>營業時間: {{ item.openHours }}</div>
+                <!-- 每日不同：預設顯示今日，點擊展開整週 -->
+                <div v-if="item.useWeekly && item.weeklyHours && item.weeklyHours.length === 7">
+                  <button type="button" @click.stop="toggleHoursExpand(item.id)" class="flex items-center w-full text-left">
+                    <i class="fa-regular fa-clock w-4 text-ice-600"></i>
+                    <span>今日營業: <span :class="['font-bold', todayHoursText(item) === '公休' ? 'text-red-500' : 'text-slate-700']">{{ todayHoursText(item) }}</span></span>
+                    <i :class="['fa-solid fa-chevron-down ml-auto text-[10px] text-slate-400 transition-transform', expandedHours[item.id] ? 'rotate-180' : '']"></i>
+                  </button>
+                  <div v-if="expandedHours[item.id]" class="mt-1.5 ml-4 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+                    <div v-for="(d, di) in item.weeklyHours" :key="di"
+                         :class="['flex justify-between py-0.5', di === weekIdxOfSelectedDay ? 'font-bold text-ice-700' : '']">
+                      <span>{{ weekDayLabels[di] }}</span>
+                      <span :class="d.closed ? 'text-red-500' : ''">{{ formatDayHours(d) }}</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- 舊資料：維持原本單一文字 -->
+                <div v-else-if="item.openHours" class="flex items-center"><i class="fa-regular fa-clock w-4 text-ice-600"></i>營業時間: {{ item.openHours }}</div>
                 <div v-if="item.ticket && item.category === '景點'" class="flex items-center"><i class="fa-solid fa-ticket w-4 text-amber-500"></i>門票: {{ item.ticket }}</div>
                 <div v-if="item.note" class="flex items-start"><i class="fa-regular fa-sticky-note w-4 text-slate-400 mt-0.5"></i>特色/備註: {{ item.note }}</div>
               </div>
@@ -1138,8 +1154,37 @@
           <!-- ================= 一般行程專屬欄位 ================= -->
           <template v-else>
             <div v-if="['景點','住宿','美食','購物'].includes(formItinerary.category)">
-              <label class="block font-bold text-slate-600 mb-1">營業時間</label>
-              <input v-model="formItinerary.openHours" type="text" placeholder="例如: 09:00 - 18:00" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <div class="flex items-center justify-between mb-1">
+                <label class="font-bold text-slate-600">營業時間</label>
+                <button type="button" @click="setUseWeekly(!formItinerary.useWeekly)" class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                  <span>每日不同</span>
+                  <span :class="['w-8 h-5 rounded-full relative transition-colors', formItinerary.useWeekly ? 'bg-ice-600' : 'bg-slate-300']">
+                    <span :class="['absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all', formItinerary.useWeekly ? 'left-3.5' : 'left-0.5']"></span>
+                  </span>
+                </button>
+              </div>
+
+              <!-- 單一營業時間 (原本的文字輸入) -->
+              <input v-if="!formItinerary.useWeekly" v-model="formItinerary.openHours" type="text" placeholder="例如: 09:00 - 18:00" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+
+              <!-- 每週營業時間表 -->
+              <div v-else class="bg-slate-50 border rounded-xl p-2.5 space-y-2">
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" @click="copyWeeklyHours(0, [1,2,3,4,5,6])" class="px-2.5 py-1 rounded-full bg-white border border-ice-200 text-ice-700 text-[11px] font-bold">週一套用全部</button>
+                  <button type="button" @click="copyWeeklyHours(0, [1,2,3,4])" class="px-2.5 py-1 rounded-full bg-white border border-ice-200 text-ice-700 text-[11px] font-bold">週一套用平日</button>
+                  <button type="button" @click="copyWeeklyHours(5, [6])" class="px-2.5 py-1 rounded-full bg-white border border-ice-200 text-ice-700 text-[11px] font-bold">週六套用週日</button>
+                </div>
+                <div v-for="(d, di) in formItinerary.weeklyHours" :key="di" class="flex items-center gap-1.5">
+                  <span class="w-8 font-bold text-slate-600 flex-shrink-0">{{ weekDayLabels[di] }}</span>
+                  <input v-model="d.open" type="time" :disabled="d.closed" class="flex-1 min-w-0 bg-white border p-1.5 rounded-lg outline-none disabled:opacity-40">
+                  <span class="text-slate-400">–</span>
+                  <input v-model="d.close" type="time" :disabled="d.closed" class="flex-1 min-w-0 bg-white border p-1.5 rounded-lg outline-none disabled:opacity-40">
+                  <label class="flex items-center gap-1 flex-shrink-0 cursor-pointer">
+                    <input type="checkbox" v-model="d.closed" class="rounded text-ice-600 focus:ring-0">
+                    <span class="text-[11px] text-slate-500">公休</span>
+                  </label>
+                </div>
+              </div>
             </div>
             <div v-if="formItinerary.category === '景點'">
               <label class="block font-bold text-slate-600 mb-1">門票金額</label>
@@ -2267,9 +2312,44 @@
         currentList[newIndex] = temp;
       };
 
+      // ===== 每週營業時間 =====
+      const weekDayLabels = ['週一', '週二', '週三', '週四', '週五', '週六', '週日'];
+      const emptyWeek = () => Array.from({ length: 7 }, () => ({ closed: false, open: '', close: '' }));
+      const expandedHours = ref({}); // 記錄哪些卡片展開完整一週 (不存檔)
+
+      const setUseWeekly = (on) => {
+        formItinerary.value.useWeekly = on;
+        if (on && (!formItinerary.value.weeklyHours || formItinerary.value.weeklyHours.length !== 7)) {
+          formItinerary.value.weeklyHours = emptyWeek();
+        }
+      };
+
+      // 把 srcIdx 那天的設定複製到 targets 指定的天 (0=週一 ... 6=週日)
+      const copyWeeklyHours = (srcIdx, targets) => {
+        const src = formItinerary.value.weeklyHours[srcIdx];
+        if (!src) return;
+        targets.forEach(i => { if (i !== srcIdx) formItinerary.value.weeklyHours[i] = { ...src }; });
+      };
+
+      // 目前選取的日期是週幾 (0=週一 ... 6=週日)，不依賴 dateList.full 以避免時區誤差
+      const weekIdxOfSelectedDay = computed(() => {
+        const d = new Date(tripStartDate.value + 'T00:00:00');
+        d.setDate(d.getDate() + selectedDateIndex.value);
+        return (d.getDay() + 6) % 7;
+      });
+
+      const formatDayHours = (d) => {
+        if (!d) return '未填寫';
+        if (d.closed) return '公休';
+        if (d.open || d.close) return `${d.open || '--:--'} - ${d.close || '--:--'}`;
+        return '未填寫';
+      };
+      const todayHoursText = (item) => formatDayHours((item.weeklyHours || [])[weekIdxOfSelectedDay.value]);
+      const toggleHoursExpand = (id) => { expandedHours.value = { ...expandedHours.value, [id]: !expandedHours.value[id] }; };
+
       const showItineraryModal = ref(false);
       const isEditMode = ref(false);
-      const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', ticket: '', note: '', location: '', flightNo: '', depTerminal: '', arrTerminal: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '', images: [] });
+      const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', useWeekly: false, weeklyHours: [], ticket: '', note: '', location: '', flightNo: '', depTerminal: '', arrTerminal: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '', images: [] });
       const formItinerary = ref(initFormItinerary());
 
       const openAddModal = () => {
@@ -2281,7 +2361,7 @@
       };
       const editItinerary = (item) => {
         isEditMode.value = true;
-        formItinerary.value = { ...initFormItinerary(), ...item, images: item.images ? [...item.images] : [] };
+        formItinerary.value = { ...initFormItinerary(), ...item, images: item.images ? [...item.images] : [], weeklyHours: item.weeklyHours ? item.weeklyHours.map(d => ({ ...d })) : [] };
         depAirportOpen.value = false;
         arrAirportOpen.value = false;
         showItineraryModal.value = true;
@@ -2945,7 +3025,7 @@
 
       return {
         currentTab, tabs, dateList, selectedDateIndex, categories, selectedCategory,
-        filteredItinerary, openMap, openDirections, moveItem, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
+        filteredItinerary, openMap, openDirections, moveItem, weekDayLabels, expandedHours, setUseWeekly, copyWeeklyHours, weekIdxOfSelectedDay, formatDayHours, todayHoursText, toggleHoursExpand, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
         isEditShoppingMode, openAddShoppingModal, editShoppingItem, saveShoppingItem, confirmDeleteShoppingItem,
         setShoppingCardRef, draggingShopping, onGripPointerDown,
         expenses, showExpenseModal, formExpense, isEditExpenseMode, selectedExpenseCategory,
