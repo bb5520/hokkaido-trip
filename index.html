@@ -479,7 +479,7 @@
               <div class="text-xs space-y-1.5 text-slate-600">
                 <div v-if="item.openHours" class="flex items-center"><i class="fa-regular fa-clock w-4 text-ice-600"></i>營業時間: {{ item.openHours }}</div>
                 <div v-if="item.ticket && item.category === '景點'" class="flex items-center"><i class="fa-solid fa-ticket w-4 text-amber-500"></i>門票: {{ item.ticket }}</div>
-                <div v-if="item.note" class="flex items-start"><i class="fa-regular fa-sticky-note w-4 text-slate-400 mt-0.5"></i>特色/備註: {{ item.note }}</div>
+                <div v-if="item.note" class="flex items-start gap-2.5 bg-amber-50 border border-amber-200/70 rounded-xl px-3 py-2.5 mt-2.5 text-[13px] leading-relaxed text-slate-700 whitespace-pre-line break-words"><i class="fa-regular fa-lightbulb text-amber-500 text-base mt-0.5 flex-shrink-0"></i><span class="min-w-0">{{ item.note }}</span></div>
               </div>
 
               <!-- 獨立的導航按鈕 -->
