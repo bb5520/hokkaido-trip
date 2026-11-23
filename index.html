@@ -190,7 +190,7 @@
                   <div>
                     <div class="text-xl font-bold text-[#0a3fbf] leading-none tabular-nums">{{ item.depTime || '--:--' }}</div>
                     <div class="text-sm font-bold text-[#0a3fbf] mt-1">{{ (item.depAirport || '出發地').split(' ')[0] }}</div>
-                    <div class="relative h-4 text-xs text-[#0a3fbf] whitespace-nowrap"><span class="absolute left-0 top-0">{{ (item.depAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.depTerminal">{{ '　' + item.depTerminal }}</span></span></div>
+                    <div class="relative h-4 text-xs text-[#0a3fbf] whitespace-nowrap"><span class="absolute left-0 top-0">{{ (item.depAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.depTerminal">{{ ' ' + item.depTerminal }}</span></span></div>
                   </div>
                   <div class="self-center min-w-0 text-center">
                     <div class="h-5 flex items-center justify-center"><span class="border border-sky-200 bg-white text-[#0a3fbf] text-xs font-bold px-2 rounded-full leading-5 whitespace-nowrap">{{ item.flightNo || '未填寫' }}</span></div>
@@ -204,7 +204,7 @@
                   <div class="text-right">
                     <div class="text-xl font-bold text-[#0a3fbf] leading-none tabular-nums">{{ item.arrTime || '--:--' }}</div>
                     <div class="text-sm font-bold text-[#0a3fbf] mt-1">{{ (item.arrAirport || '目的地').split(' ')[0] }}</div>
-                    <div class="relative h-4 text-xs text-[#0a3fbf] whitespace-nowrap"><span class="absolute right-0 top-0">{{ (item.arrAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.arrTerminal">{{ '　' + item.arrTerminal }}</span></span></div>
+                    <div class="relative h-4 text-xs text-[#0a3fbf] whitespace-nowrap"><span class="absolute right-0 top-0">{{ (item.arrAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.arrTerminal">{{ ' ' + item.arrTerminal }}</span></span></div>
                   </div>
                 </div>
                 <div v-if="false" class="relative mt-4">
@@ -230,7 +230,7 @@
                     <span>{{ (item.arrAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.arrTerminal">{{ '　' + item.arrTerminal }}</span></span>
                   </div>
                 </div>
-                <div v-if="false" class="relative grid grid-cols-[minmax(0,1fr)_7.5rem_minmax(0,1fr)] gap-2 items-start mt-4">
+                <div v-if="false" class="relative grid grid-cols-[minmax(0,1fr)_6.5rem_minmax(0,1fr)] gap-2 items-start mt-4">
                   <div class="min-w-0">
                     <div class="text-[10px] font-bold text-sky-400 tracking-widest">出發</div>
                     <div class="text-xl font-bold text-[#0a3fbf] leading-none mt-0.5">{{ item.depTime || '--:--' }}</div>
