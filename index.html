@@ -495,7 +495,7 @@
                 <!-- 舊資料：維持原本單一文字 -->
                 <div v-else-if="item.openHours" class="flex items-center"><i class="fa-regular fa-clock w-4 text-ice-600"></i>營業時間: {{ item.openHours }}</div>
                 <div v-if="item.ticket && item.category === '景點'" class="flex items-center"><i class="fa-solid fa-ticket w-4 text-amber-500"></i>門票: {{ item.ticket }}</div>
-                <div v-if="item.note" class="flex items-start"><i class="fa-regular fa-sticky-note w-4 text-slate-400 mt-0.5"></i>特色/備註: {{ item.note }}</div>
+                <div v-if="item.note" class="flex items-start gap-2.5 bg-amber-50 border border-amber-200/70 rounded-xl px-3 py-2.5 mt-2.5 text-[13px] leading-relaxed text-slate-700 whitespace-pre-line break-words"><i class="fa-regular fa-lightbulb text-amber-500 text-base mt-0.5 flex-shrink-0"></i><span class="min-w-0">{{ item.note }}</span></div>
               </div>
 
               <!-- 獨立的導航按鈕 -->
@@ -2358,50 +2358,50 @@
       const expandedHours = ref({}); // 記錄哪些卡片展開完整一週 (不存檔)
 
       // 營業時間批次編輯器
-const weeklyEditor = ref({ days: [], open: '', close: '', split: false, open2: '', close2: '' });
-const resetWeeklyEditor = () => { weeklyEditor.value = { days: [0,1,2,3,4,5,6], open: '', close: '', split: false, open2: '', close2: '' }; };
+      const weeklyEditor = ref({ days: [], open: '', close: '', split: false, open2: '', close2: '' });
+      const resetWeeklyEditor = () => { weeklyEditor.value = { days: [0,1,2,3,4,5,6], open: '', close: '', split: false, open2: '', close2: '' }; };
 
-const toggleEditorDay = (i) => {
-  const s = weeklyEditor.value.days;
-  weeklyEditor.value.days = s.includes(i) ? s.filter(x => x !== i) : [...s, i].sort();
-};
+      const toggleEditorDay = (i) => {
+        const s = weeklyEditor.value.days;
+        weeklyEditor.value.days = s.includes(i) ? s.filter(x => x !== i) : [...s, i].sort();
+      };
 
-const applyEditor = () => {
-  const e = weeklyEditor.value;
-  if (!e.days.length) return alert('請先選擇要套用的星期');
-  if (!e.open || !e.close) return alert('請填寫營業的開始與結束時間');
-  if (e.split && (!e.open2 || !e.close2)) return alert('請填寫第二段的時間，或移除第二段');
-  e.days.forEach(i => {
-    formItinerary.value.weeklyHours[i] = {
-      closed: false, open: e.open, close: e.close,
-      split: e.split, open2: e.split ? e.open2 : '', close2: e.split ? e.close2 : ''
-    };
-  });
-};
+      const applyEditor = () => {
+        const e = weeklyEditor.value;
+        if (!e.days.length) return alert('請先選擇要套用的星期');
+        if (!e.open || !e.close) return alert('請填寫營業的開始與結束時間');
+        if (e.split && (!e.open2 || !e.close2)) return alert('請填寫第二段的時間，或移除第二段');
+        e.days.forEach(i => {
+          formItinerary.value.weeklyHours[i] = {
+            closed: false, open: e.open, close: e.close,
+            split: e.split, open2: e.split ? e.open2 : '', close2: e.split ? e.close2 : ''
+          };
+        });
+      };
 
-const setEditorClosed = () => {
-  const e = weeklyEditor.value;
-  if (!e.days.length) return alert('請先選擇要設為公休的星期');
-  e.days.forEach(i => {
-    formItinerary.value.weeklyHours[i] = { closed: true, open: '', close: '', split: false, open2: '', close2: '' };
-  });
-};
+      const setEditorClosed = () => {
+        const e = weeklyEditor.value;
+        if (!e.days.length) return alert('請先選擇要設為公休的星期');
+        e.days.forEach(i => {
+          formItinerary.value.weeklyHours[i] = { closed: true, open: '', close: '', split: false, open2: '', close2: '' };
+        });
+      };
 
-const loadDayToEditor = (i) => {
-  const d = formItinerary.value.weeklyHours[i] || {};
-  weeklyEditor.value = {
-    days: [i],
-    open: d.closed ? '' : (d.open || ''), close: d.closed ? '' : (d.close || ''),
-    split: !!d.split && !d.closed, open2: d.open2 || '', close2: d.close2 || ''
-  };
-};
+      const loadDayToEditor = (i) => {
+        const d = formItinerary.value.weeklyHours[i] || {};
+        weeklyEditor.value = {
+          days: [i],
+          open: d.closed ? '' : (d.open || ''), close: d.closed ? '' : (d.close || ''),
+          split: !!d.split && !d.closed, open2: d.open2 || '', close2: d.close2 || ''
+        };
+      };
 
       const setUseWeekly = (on) => {
         formItinerary.value.useWeekly = on;
         if (on && (!formItinerary.value.weeklyHours || formItinerary.value.weeklyHours.length !== 7)) {
           formItinerary.value.weeklyHours = emptyWeek();
-  }
-  if (on) resetWeeklyEditor();   // ← 新增
+        }
+        if (on) resetWeeklyEditor();   // ← 新增
       };
 
       // 把 srcIdx 那天的設定複製到 targets 指定的天 (0=週一 ... 6=週日)
