@@ -278,7 +278,7 @@
                   <div>
                     <div class="flex items-center gap-3">
                       <div class="tk2-bar rounded" style="width: calc((100% - 56px) * 0.6667)"></div>
-                      <button @click.stop="editItinerary(item)" aria-label="編輯" class="w-9 h-9 rounded-full text-sky-600 flex items-center justify-center flex-shrink-0 ml-auto"><i class="fa-solid fa-pen-to-square ext-base"></i></button>
+                      <button @click.stop="editItinerary(item)" aria-label="編輯" class="w-9 h-9 rounded-full text-sky-600 flex items-center justify-center flex-shrink-0 ml-auto"><i class="fa-solid fa-pen-to-square text-base"></i></button>
                     </div>
                   </div>
                 </div>
@@ -287,9 +287,9 @@
             <div v-else-if="false" class="tk-card">
               <div class="px-4 pt-4">
                 <div class="flex items-start justify-between">
-                  <img v-if="airlineAssets(item.flightNo)" :src="airlineAssets(item.flightNo).logo" alt="" class="h-6 w-auto object-contain mt-1">
+                  <img v-if="airlineAssets(item.flightNo)" :src="resolveBlobUrl(airlineAssets(item.flightNo).logo)" alt="" class="h-6 w-auto object-contain mt-1">
                   <div v-else class="text-xl font-bold text-[#0a3fbf] tracking-wide mt-1">{{ (item.flightNo || '').slice(0, 2).toUpperCase() || '航班' }}</div>
-                  <img v-if="airlineAssets(item.flightNo)" :src="airlineAssets(item.flightNo).plane" alt="" class="w-36 -mt-1 -mr-1 pointer-events-none select-none">
+                  <img v-if="airlineAssets(item.flightNo)" :src="resolveBlobUrl(airlineAssets(item.flightNo).plane)" alt="" class="w-36 -mt-1 -mr-1 pointer-events-none select-none">
                   <i v-else class="fa-solid fa-plane-departure text-sky-200 text-4xl mt-1"></i>
                 </div>
                 <div class="inline-flex items-center gap-1.5 bg-sky-100 text-[#0a3fbf] font-bold rounded-full px-3 py-1 text-xs mt-2">
@@ -2132,6 +2132,7 @@
           carRentals.value.forEach(car => (car.documents || []).forEach(doc => usedIds.add(doc.id)));
           dayTours.value.forEach(tour => (tour.documents || []).forEach(doc => usedIds.add(doc.id)));
           otherBookings.value.forEach(booking => (booking.documents || []).forEach(doc => usedIds.add(doc.id)));
+          ['china', 'eva', 'starlux'].forEach(a => ['logo', 'plane'].forEach(t => usedIds.add('airline/' + a + '-' + t + '.png')));
           try { JSON.parse(localStorage.getItem('trip_souvenirs') || '[]').forEach(x => { if (x.img) usedIds.add(x.img); if (x.rcpt) usedIds.add(x.rcpt); }); } catch (e) {}
 
           for (const key of keys) {
@@ -2435,11 +2436,11 @@
       });
       const airlineAssets = (flightNo) => {
         const code = String(flightNo || '').trim().slice(0, 2).toUpperCase();
-        const china = { logo: 'china-logo.png', plane: 'china-plane.png', bar: 'background:linear-gradient(90deg,#9aa6d4,#c8a2c8,#e8b4c8)' };
+        const china = { logo: 'airline/china-logo.png', plane: 'airline/china-plane.png', bar: 'background:linear-gradient(90deg,#9aa6d4,#c8a2c8,#e8b4c8)' };
         const map = {
-          BR: { logo: 'eva-logo.png', plane: 'eva-plane.png', bar: 'background:linear-gradient(90deg,#0f6b3a,#16a34a,#f97316)' },
+          BR: { logo: 'airline/eva-logo.png', plane: 'airline/eva-plane.png', bar: 'background:linear-gradient(90deg,#0f6b3a,#16a34a,#f97316)' },
           CI: china,
-          JX: { logo: 'starlux-logo.png', plane: 'starlux-plane.png', bar: 'background:linear-gradient(90deg,#7a4b2e,#c8923f,#ecd6a4)' }
+          JX: { logo: 'airline/starlux-logo.png', plane: 'airline/starlux-plane.png', bar: 'background:linear-gradient(90deg,#7a4b2e,#c8923f,#ecd6a4)' }
         };
         return map[code] || null;
       };
