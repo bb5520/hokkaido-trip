@@ -477,22 +477,23 @@
 
               <!-- 資訊欄位 -->
               <div class="text-xs space-y-1.5 text-slate-600">
-                <!-- 每日不同：連續且相同的天數合併顯示 -->
-                <div v-if="item.useWeekly && item.weeklyHours && item.weeklyHours.length === 7" class="flex items-start">
-                  <i class="fa-regular fa-clock w-4 text-ice-600 mt-0.5 flex-shrink-0"></i>
-                  <div class="min-w-0 flex-1">
-                    <div class="text-slate-500 mb-1">營業時間:</div>
-                    <div class="bg-slate-50 border border-slate-100 rounded-lg divide-y divide-slate-100 overflow-hidden">
-                      <div v-for="g in groupedHours(item)" :key="g.label"
-                           :class="['flex items-start justify-between gap-3 px-2.5 py-1.5', g.today ? 'bg-ice-50' : '']">
-                        <span :class="['flex-shrink-0 whitespace-nowrap', g.today ? 'font-bold text-ice-700' : 'text-slate-600']">
-                          {{ g.label }}
-                          <span v-if="g.today" class="ml-1 text-[9px] bg-ice-600 text-white rounded px-1 py-px align-middle">當日</span>
-                        </span>
-                        <span :class="['text-right font-medium', g.closed ? 'text-red-500 font-bold' : (g.today ? 'text-ice-700 font-bold' : 'text-slate-700')]">
-                          {{ g.text }}
-                        </span>
-                      </div>
+                <!-- 每日不同：收合顯示當天，展開顯示整週 -->
+                <div v-if="item.useWeekly && item.weeklyHours && item.weeklyHours.length === 7">
+                  <button type="button" @click.stop="toggleHoursExpand(item.id)" class="flex items-start w-full text-left">
+                    <i class="fa-regular fa-clock w-4 text-ice-600 mt-0.5 flex-shrink-0"></i>
+                    <span class="min-w-0 flex-1">
+                      營業時間<span class="text-slate-400">（{{ weekDayFull[weekIdxOfSelectedDay] }}）</span>:
+                      <span :class="['font-bold', todayHoursText(item) === '公休' ? 'text-red-500' : 'text-slate-700']">{{ todayHoursText(item) }}</span>
+                    </span>
+                    <i :class="['fa-solid fa-chevron-down ml-2 mt-1 flex-shrink-0 text-[10px] text-slate-400 transition-transform', expandedHours[item.id] ? 'rotate-180' : '']"></i>
+                  </button>
+
+                  <div v-if="expandedHours[item.id]" class="mt-1.5 ml-4 bg-slate-50 border border-slate-100 rounded-lg p-1 space-y-0.5">
+                    <div v-for="(d, di) in item.weeklyHours" :key="di"
+                         :class="['flex items-start gap-3 px-2 py-1 rounded-md',
+                                  di === weekIdxOfSelectedDay ? 'bg-ice-100 text-ice-700 font-bold' : 'text-slate-600']">
+                      <span class="w-12 flex-shrink-0">{{ weekDayFull[di] }}</span>
+                      <span :class="['flex-1 min-w-0 break-words', d.closed ? 'text-red-500' : '']">{{ formatDayHours(d) }}</span>
                     </div>
                   </div>
                 </div>
@@ -2358,6 +2359,7 @@
 
       // ===== 每週營業時間 =====
       const weekDayLabels = ['週一', '週二', '週三', '週四', '週五', '週六', '週日'];
+      const weekDayFull = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
       const emptyWeek = () => Array.from({ length: 7 }, () => ({ closed: false, open: '', close: '', split: false, open2: '', close2: '' }));
       const expandedHours = ref({}); // 記錄哪些卡片展開完整一週 (不存檔)
 
@@ -2422,37 +2424,16 @@
         return (d.getDay() + 6) % 7;
       });
 
+      const fmtT = (t) => (t ? t.replace(/^0/, '') : '--:--');
       const formatDayHours = (d) => {
         if (!d) return '未填寫';
         if (d.closed) return '公休';
         const segs = [];
-        if (d.open || d.close) segs.push(`${d.open || '--:--'} ~ ${d.close || '--:--'}`);
-        if (d.split && (d.open2 || d.close2)) segs.push(`${d.open2 || '--:--'} ~ ${d.close2 || '--:--'}`);
-        return segs.length ? segs.join(' / ') : '未填寫';
+        if (d.open || d.close) segs.push(`${fmtT(d.open)} ~ ${fmtT(d.close)}`);
+        if (d.split && (d.open2 || d.close2)) segs.push(`${fmtT(d.open2)} ~ ${fmtT(d.close2)}`);
+        return segs.length ? segs.join('/') : '未填寫';
       };
       const todayHoursText = (item) => formatDayHours((item.weeklyHours || [])[weekIdxOfSelectedDay.value]);
-      const weekDayFull = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
-
-      // 把連續且時間相同的天數合併成一組
-      const groupedHours = (item) => {
-        const groups = [];
-        (item.weeklyHours || []).forEach((d, i) => {
-          const text = formatDayHours(d);
-          const last = groups[groups.length - 1];
-          if (last && last.text === text) {
-            last.end = i;
-          } else {
-            groups.push({ start: i, end: i, text, closed: !!d.closed });
-          }
-        });
-        const t = weekIdxOfSelectedDay.value;
-        return groups.map(g => ({
-          label: g.start === g.end ? weekDayFull[g.start] : `${weekDayFull[g.start]} ~ ${weekDayFull[g.end]}`,
-          text: g.text,
-          closed: g.closed,
-          today: t >= g.start && t <= g.end
-        }));
-      };
       const toggleHoursExpand = (id) => { expandedHours.value = { ...expandedHours.value, [id]: !expandedHours.value[id] }; };
 
       const showItineraryModal = ref(false);
@@ -3133,7 +3114,7 @@
 
       return {
         currentTab, tabs, dateList, selectedDateIndex, categories, selectedCategory,
-        filteredItinerary, openMap, openDirections, moveItem, weekDayLabels, groupedHours, setUseWeekly, copyWeeklyHours, weekIdxOfSelectedDay, formatDayHours, todayHoursText, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
+        filteredItinerary, openMap, openDirections, moveItem, weekDayLabels, expandedHours, setUseWeekly, copyWeeklyHours, weekIdxOfSelectedDay, formatDayHours, todayHoursText, toggleHoursExpand, weekDayFull, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
         isEditShoppingMode, openAddShoppingModal, editShoppingItem, saveShoppingItem, confirmDeleteShoppingItem,
         setShoppingCardRef, draggingShopping, onGripPointerDown,
         expenses, showExpenseModal, formExpense, isEditExpenseMode, selectedExpenseCategory,
