@@ -481,11 +481,7 @@
                 <div v-if="item.useWeekly && item.weeklyHours && item.weeklyHours.length === 7">
                   <button type="button" @click.stop="toggleHoursExpand(item.id)" class="flex items-start w-full text-left">
                     <i class="fa-regular fa-clock w-4 text-ice-600 mt-0.5 flex-shrink-0"></i>
-                    <span class="min-w-0 flex-1">
-                      營業時間:
-                      <span class="text-slate-500">{{ weekDayFull[weekIdxOfSelectedDay] }}</span>
-                      <span :class="['font-bold ml-1', todayHoursText(item) === '公休' ? 'text-red-500' : 'text-slate-700']">{{ todayHoursText(item) }}</span>
-                    </span>
+                    <span class="min-w-0 flex-1">營業時間：span class="text-slate-500">{{ weekDayFull[weekIdxOfSelectedDay] }}</span><span :class="['font-bold ml-1', todayHoursText(item) === '公休' ? 'text-red-500' : 'text-slate-700']">{{ todayHoursText(item) }}</span></span>
                     <i :class="['fa-solid fa-chevron-down ml-2 mt-1 flex-shrink-0 text-[10px] text-slate-400 transition-transform', expandedHours[item.id] ? 'rotate-180' : '']"></i>
                   </button>
 
@@ -499,8 +495,8 @@
                   </div>
                 </div>
                 <!-- 舊資料：維持原本單一文字 -->
-                <div v-else-if="item.openHours" class="flex items-center"><i class="fa-regular fa-clock w-4 text-ice-600"></i>營業時間: {{ item.openHours }}</div>
-                <div v-if="item.ticket && item.category === '景點'" class="flex items-center"><i class="fa-solid fa-ticket w-4 text-amber-500"></i>門票: {{ item.ticket }}</div>
+                <div v-else-if="item.openHours" class="flex items-center"><i class="fa-regular fa-clock w-4 text-ice-600"></i>營業時間：{{ item.openHours }}</div>
+                <div v-if="item.ticket && item.category === '景點'" class="flex items-center"><i class="fa-solid fa-ticket w-4 text-amber-500"></i>門票：{{ item.ticket }}</div>
                 <div v-if="item.note" class="flex items-start gap-2.5 bg-amber-50 border border-amber-200/70 rounded-xl px-3 py-2.5 mt-2.5 text-[13px] leading-relaxed text-slate-700 whitespace-pre-line break-words"><i class="fa-regular fa-lightbulb text-amber-500 text-base mt-0.5 flex-shrink-0"></i><span class="min-w-0">{{ item.note }}</span></div>
               </div>
 
