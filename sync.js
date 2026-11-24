@@ -1,6 +1,6 @@
 (function(){"use strict";
 var SB_URL="https://cpisljizfsovmygzhhpy.supabase.co",SB_KEY="sb_publishable_72orf9crARS0-Rfb67sFWA_x0i0GuhT";
-var KEYS=["trip_banner","trip_jpyRate","trip_itinerary","trip_flightExtras","trip_hotelExtras","trip_carRentals","trip_dayTours","trip_otherBookings","trip_shopping","trip_expenses","trip_souvenirs","trip_startDate","trip_days","souv"];
+var KEYS=["trip_banner","trip_jpyRate","trip_itinerary","trip_flightExtras","trip_hotelExtras","trip_carRentals","trip_dayTours","trip_otherBookings","trip_shopping","trip_expenses","trip_souvenirs","trip_startDate","trip_days","souv","trip_todos","trip_taxRefunds","trip_taxThreshold"];
 var BUCKET="trip-files",DB="trip_blob_store",ST="blobs";
 var rawSet=Storage.prototype.setItem,rawGet=Storage.prototype.getItem;
 function lraw(k){return rawGet.call(localStorage,k)}
