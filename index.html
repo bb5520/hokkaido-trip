@@ -839,75 +839,39 @@
       <!-- ================= 待辦 Tab ================= -->
       <section v-if="currentTab === 'todo'" class="space-y-3">
 
-        <!-- 分段切換 -->
-        <div class="flex gap-1 bg-white border border-slate-100 rounded-2xl p-1 shadow-sm">
-          <button v-for="m in [['cat','fa-folder','依分類'],['who','fa-user','依人'],['stats','fa-chart-bar','統計']]" :key="m[0]"
-            @click="setTodoMode(m[0])"
-            :class="['flex-1 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5',
-                     (m[0] === 'stats' ? todoView === 'stats' : (todoView === 'list' && todoGrp === m[0])) ? 'bg-ice-600 text-white font-bold' : 'text-slate-500 font-medium']">
-            <i :class="['fa-solid', m[1]]"></i>{{ m[2] }}
+        <!-- 篩選膠囊（顯示數量） -->
+        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+          <button v-for="f in todoFilters" :key="f.name" @click="todoFilter = f.name"
+            :class="['flex-none px-3 py-1.5 rounded-xl text-xs font-medium', todoFilter === f.name ? 'bg-ice-600 text-white font-bold shadow-sm' : 'bg-white text-slate-600 border border-slate-100 shadow-sm']">
+            {{ f.name }} {{ f.count }}
           </button>
         </div>
 
-        <!-- 清單檢視 -->
-        <template v-if="todoView === 'list'">
-          <div v-if="todos.length === 0" class="bg-white rounded-2xl shadow-sm border border-slate-100 text-slate-400 text-center py-6 text-sm">尚未新增待辦事項</div>
+        <!-- 待辦卡片 -->
+        <div v-for="t in filteredTodos" :key="t.id" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-start gap-3">
+            <button @click="t.done = !t.done" aria-label="已完成"
+              :class="['w-8 h-8 rounded-lg border-2 flex-shrink-0 flex items-center justify-center', t.done ? 'bg-ice-600 border-ice-600 text-white' : 'bg-white border-slate-300']">
+              <i v-if="t.done" class="fa-solid fa-check text-sm"></i>
+            </button>
 
-          <!-- 篩選膠囊 -->
-          <div v-if="todoGroups.length > 1" class="flex gap-2 overflow-x-auto no-scrollbar py-1">
-            <button v-for="n in ['', ...todoGroups.map(g => g.name)]" :key="n" @click="todoFg = n"
-              :class="['flex-none px-3 py-1.5 rounded-xl text-xs font-medium', n === todoFg ? 'bg-ice-600 text-white font-bold shadow-sm' : 'bg-white text-slate-600 border border-slate-100 shadow-sm']">{{ n || '全部' }}</button>
-          </div>
+            <h3 :class="['flex-1 min-w-0 font-bold text-base break-words pt-0.5', t.done ? 'line-through text-slate-400' : 'text-slate-800']">{{ t.text }}</h3>
 
-          <!-- 分組卡片 -->
-          <div v-for="g in visibleTodoGroups" :key="g.name" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-            <div class="flex justify-between items-center mb-3">
-              <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <i :class="['fa-solid text-ice-600', todoGrp === 'who' ? 'fa-user' : 'fa-folder']"></i>{{ g.name }}
-              </h2>
-              <span class="text-[11px] text-slate-400">已完成 {{ g.items.filter(x => x.done).length }} / {{ g.items.length }} 項</span>
-            </div>
-
-            <div class="divide-y divide-dashed divide-slate-100">
-              <div v-for="t in g.items" :key="t.id" class="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
-                <button @click="t.done = !t.done" aria-label="已完成"
-                  :class="['w-8 h-8 rounded-lg border-2 flex-shrink-0 flex items-center justify-center', t.done ? 'bg-ice-600 border-ice-600 text-white' : 'bg-white border-slate-300']">
-                  <i v-if="t.done" class="fa-solid fa-check text-sm"></i>
-                </button>
-
-                <div class="flex-1 min-w-0 flex flex-col items-start gap-1.5 text-xs">
-                  <div :class="['text-sm font-bold break-words', t.done ? 'line-through text-slate-400' : 'text-slate-800']">{{ t.text }}</div>
-                  <span v-if="todoGrp === 'who' ? t.cat : t.who" class="bg-ice-100 text-ice-700 text-xs font-bold rounded-lg px-2.5 py-1">
-                    <i :class="['fa-solid mr-1', todoGrp === 'who' ? 'fa-folder' : 'fa-user']"></i>{{ todoGrp === 'who' ? t.cat : t.who }}
-                  </span>
-                  <div v-if="t.note" class="flex items-start text-slate-600 whitespace-pre-line break-words">
-                    <i class="fa-regular fa-sticky-note w-4 text-slate-400 mt-0.5 flex-shrink-0"></i><span class="min-w-0">備註: {{ t.note }}</span>
-                  </div>
-                </div>
-
-                <div class="flex flex-col items-center gap-3 flex-shrink-0 pt-1">
-                  <button @click="editTodo(t)" aria-label="編輯" class="text-slate-400 hover:text-ice-600"><i class="fa-solid fa-pen text-xs"></i></button>
-                  <button @click="deleteTodo(t.id)" aria-label="刪除" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash text-xs"></i></button>
-                </div>
-              </div>
+            <div class="flex items-center space-x-1 flex-shrink-0 pt-1">
+              <button @click="editTodo(t)" aria-label="編輯" class="p-1 text-slate-400 hover:text-ice-600"><i class="fa-solid fa-pen text-xs"></i></button>
+              <button @click="deleteTodo(t.id)" aria-label="刪除" class="p-1 text-red-400 hover:text-red-600"><i class="fa-solid fa-trash text-xs"></i></button>
             </div>
           </div>
-        </template>
 
-        <!-- 統計檢視 -->
-        <template v-else>
-          <div v-for="s in todoStats" :key="s.title" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-            <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2"><i :class="['fa-solid text-ice-600', s.icon]"></i>{{ s.title }}</h2>
-            <div v-if="!s.rows.length" class="text-xs text-slate-400 text-center py-2">尚無資料</div>
-            <div v-for="r in s.rows" :key="r.name" class="py-2 border-b border-dashed border-slate-100 last:border-0 text-xs">
-              <div class="flex justify-between">
-                <span class="text-slate-600">{{ r.name }}</span>
-                <b class="text-slate-800">{{ r.done }} / {{ r.total }} 項</b>
-              </div>
-              <div class="h-1.5 rounded bg-ice-100 mt-1 overflow-hidden"><div class="h-full bg-ice-600" :style="{ width: (r.done / r.total * 100) + '%' }"></div></div>
-            </div>
+          <!-- 備註（與行程卡片相同樣式） -->
+          <div v-if="t.note" class="flex items-start gap-2.5 bg-amber-50 border border-amber-200/70 rounded-xl px-3 py-2.5 mt-2.5 text-[13px] leading-relaxed text-slate-700 whitespace-pre-line break-words">
+            <i class="fa-regular fa-lightbulb text-amber-500 text-base mt-0.5 flex-shrink-0"></i><span class="min-w-0">{{ t.note }}</span>
           </div>
-        </template>
+        </div>
+
+        <div v-if="filteredTodos.length === 0" class="bg-white rounded-2xl shadow-sm border border-slate-100 text-slate-400 text-center py-6 text-sm">
+          {{ todos.length ? '此分類沒有項目' : '尚未新增待辦事項' }}
+        </div>
 
         <!-- 新增浮動按鈕 -->
         <button @click="openAddTodo" aria-label="新增待辦" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
@@ -1516,24 +1480,8 @@
             <input v-model="formTodo.text" type="text" maxlength="60" placeholder="例如: 兌換日幣" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
           </div>
           <div>
-            <label class="block font-bold text-slate-600 mb-1">分類</label>
-            <input v-model="formTodo.cat" type="text" maxlength="20" placeholder="例如: 行李" autocomplete="off" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
-            <div class="flex flex-wrap gap-1.5 mt-1.5">
-              <button v-for="o in todoCatOptions" :key="o" type="button" @click="formTodo.cat = o"
-                  :class="['px-2.5 py-1 rounded-lg text-[11px] font-bold', formTodo.cat === o ? 'bg-ice-600 text-white' : 'bg-ice-100 text-ice-700']">{{ o }}</button>
-            </div>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">負責人</label>
-            <input v-model="formTodo.who" type="text" maxlength="20" placeholder="例如: 媽媽" autocomplete="off" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
-            <div v-if="todoWhoOptions.length" class="flex flex-wrap gap-1.5 mt-1.5">
-              <button v-for="o in todoWhoOptions" :key="o" type="button" @click="formTodo.who = o"
-                  :class="['px-2.5 py-1 rounded-lg text-[11px] font-bold', formTodo.who === o ? 'bg-ice-600 text-white' : 'bg-ice-100 text-ice-700']">{{ o }}</button>
-            </div>
-          </div>
-          <div>
             <label class="block font-bold text-slate-600 mb-1">備註</label>
-            <textarea v-model="formTodo.note" rows="2" maxlength="200" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none"></textarea>
+            <textarea v-model="formTodo.note" rows="3" maxlength="200" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none"></textarea>
           </div>
         </div>
         <div class="flex gap-2 pt-2">
@@ -3046,68 +2994,32 @@
       // --- 待辦 (Todo) ---
       const todos = ref(initData('trip_todos', []));
       setupWatcher(todos, 'trip_todos');
-      const todoView = ref('list');   // 'list' | 'stats'
-      const todoGrp = ref('cat');     // 'cat' | 'who'
-      const todoFg = ref('');         // 目前篩選的群組名稱 ('' = 全部)
+      const todoFilter = ref('全部');   // '全部' | '未完成' | '已完成'
       const showTodoModal = ref(false);
       const isEditTodo = ref(false);
-      const initFormTodo = () => ({ id: null, text: '', cat: '', who: '', note: '', done: false });
+      const initFormTodo = () => ({ id: null, text: '', note: '', done: false });
       const formTodo = ref(initFormTodo());
 
-      const setTodoMode = (m) => {
-        if (m === 'stats') todoView.value = 'stats';
-        else { todoView.value = 'list'; todoGrp.value = m; todoFg.value = ''; }
-      };
-
-      const todoGroups = computed(() => {
-        const empty = todoGrp.value === 'who' ? '未指定' : '未分類';
-        const map = {}, order = [];
-        todos.value.forEach(t => {
-          const k = t[todoGrp.value] || empty;
-          if (!map[k]) { map[k] = []; order.push(k); }
-          map[k].push(t);
-        });
-        return order.map(name => ({ name, items: map[name] }));
+      const todoFilters = computed(() => {
+        const done = todos.value.filter(t => t.done).length;
+        return [
+          { name: '全部', count: todos.value.length },
+          { name: '未完成', count: todos.value.length - done },
+          { name: '已完成', count: done }
+        ];
       });
-      const visibleTodoGroups = computed(() =>
-        todoFg.value && todoGroups.value.some(g => g.name === todoFg.value)
-          ? todoGroups.value.filter(g => g.name === todoFg.value)
-          : todoGroups.value
-      );
-
-      const todoStats = computed(() => [['cat', '未分類', 'fa-folder', '依分類統計'], ['who', '未指定', 'fa-user', '依人統計']].map(([key, empty, icon, title]) => {
-        const m = {}, order = [];
-        todos.value.forEach(t => {
-          const k = t[key] || empty;
-          if (!m[k]) { m[k] = { name: k, total: 0, done: 0 }; order.push(k); }
-          m[k].total++; if (t.done) m[k].done++;
-        });
-        return { title, icon, rows: order.map(k => m[k]).sort((a, b) => b.total - a.total) };
-      }));
-
-      const todoCatOptions = computed(() => {
-        const used = [];
-        todos.value.forEach(t => { if (t.cat && !used.includes(t.cat)) used.push(t.cat); });
-        return [...used, ...['行李', '證件', '預訂', '購買', '其他'].filter(d => !used.includes(d))];
-      });
-      const todoWhoOptions = computed(() => {
-        const used = [];
-        todos.value.forEach(t => { if (t.who && !used.includes(t.who)) used.push(t.who); });
-        return used;
+      const filteredTodos = computed(() => {
+        if (todoFilter.value === '未完成') return todos.value.filter(t => !t.done);
+        if (todoFilter.value === '已完成') return todos.value.filter(t => t.done);
+        return todos.value;
       });
 
-      const openAddTodo = () => {
-        isEditTodo.value = false;
-        formTodo.value = initFormTodo();
-        // 在特定群組篩選下新增時，自動帶入該分類／人 (與購物一致)
-        if (todoFg.value && todoFg.value !== '未分類' && todoFg.value !== '未指定') formTodo.value[todoGrp.value] = todoFg.value;
-        showTodoModal.value = true;
-      };
-      const editTodo = (t) => { isEditTodo.value = true; formTodo.value = { ...initFormTodo(), ...t }; showTodoModal.value = true; };
+      const openAddTodo = () => { isEditTodo.value = false; formTodo.value = initFormTodo(); showTodoModal.value = true; };
+      const editTodo = (t) => { isEditTodo.value = true; formTodo.value = { id: t.id, text: t.text, note: t.note || '', done: !!t.done }; showTodoModal.value = true; };
       const saveTodo = () => {
         const f = formTodo.value;
         if (!f.text.trim()) return alert('請填寫「待辦事項」');
-        const rec = { ...f, text: f.text.trim(), cat: (f.cat || '').trim(), who: (f.who || '').trim(), note: (f.note || '').trim() };
+        const rec = { id: f.id, text: f.text.trim(), note: (f.note || '').trim(), done: !!f.done };
         if (isEditTodo.value) {
           const idx = todos.value.findIndex(t => t.id === rec.id);
           if (idx !== -1) todos.value[idx] = rec;
@@ -3496,7 +3408,7 @@
         filteredDepAirports, filteredArrAirports,
         openDepAirportDropdown, openArrAirportDropdown,
         selectDepAirport, selectArrAirport, closeDepAirportDropdown, closeArrAirportDropdown,weeklyEditor, toggleEditorDay, applyEditor, setEditorClosed, loadDayToEditor,
-                todos, todoView, todoGrp, todoFg, setTodoMode, todoGroups, visibleTodoGroups, todoStats, todoCatOptions, todoWhoOptions, showTodoModal, isEditTodo, formTodo, openAddTodo, editTodo, saveTodo, deleteTodo,
+        todos, todoFilter, todoFilters, filteredTodos, showTodoModal, isEditTodo, formTodo, openAddTodo, editTodo, saveTodo, deleteTodo,
         taxRefunds, taxThreshold, showTaxModal, isEditTax, formTax, taxCalc, taxGroupExcl, taxEligible, sortedTaxRefunds, taxSummary, openAddTax, editTax, saveTax, deleteTax
       };
     }
