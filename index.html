@@ -482,8 +482,7 @@
                   <button type="button" @click.stop="toggleHoursExpand(item.id)" class="flex items-start w-full text-left">
                     <i class="fa-regular fa-clock w-4 text-ice-600 mt-0.5 flex-shrink-0"></i>
                     <span class="min-w-0 flex-1">
-                      營業時間：
-                      <span class="text-slate-500">{{ weekDayFull[weekIdxOfSelectedDay] }}</span>
+                      營業時間：<span class="text-slate-500">{{ weekDayFull[weekIdxOfSelectedDay] }}</span>
                       <span :class="['font-bold ml-1', todayHoursText(item) === '公休' ? 'text-red-500' : 'text-slate-700']">{{ todayHoursText(item) }}</span>
                     </span>
                     <i :class="['fa-solid fa-chevron-down ml-2 mt-1 flex-shrink-0 text-[10px] text-slate-400 transition-transform', expandedHours[item.id] ? 'rotate-180' : '']"></i>
