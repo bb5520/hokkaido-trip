@@ -3163,6 +3163,7 @@
 
       // 數字欄位自動加上 % 或 ¥（只改資料，由 v-model 負責顯示）
       const txOnPct = (e) => {
+        if (e.isComposing) return;
         let c = e.target.value.replace(/[^\d.]/g, '');
         const i = c.indexOf('.');
         if (i > -1) c = c.slice(0, i + 1) + c.slice(i + 1).replace(/\./g, '');
@@ -3177,12 +3178,14 @@
         });
       };
       const txOnFix = (e) => {
+        if (e.isComposing) return;
         const v = e.target.value.replace(/[^\d]/g, '').slice(0, 6);
         const out = v ? '¥ ' + parseInt(v, 10).toLocaleString('en-US') : '';
         txForm.value.fixS = out;
         nextTick(() => { if (e.target.value !== out) e.target.value = out; });
       };
       const txOnAmt = (e) => {
+        if (e.isComposing) return;
         const v = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
         const out = v ? '¥ ' + parseInt(v, 10).toLocaleString('en-US') : '';
         txForm.value.amtS = out;
