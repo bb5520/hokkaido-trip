@@ -880,57 +880,187 @@
       </section>
 
       <!-- ================= 退稅 Tab ================= -->
-      <section v-if="currentTab === 'tax'" class="space-y-4">
-        <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-md">
-          <div class="text-xs text-slate-400">預估可退稅額（已達門檻、未辦理）</div>
-          <div class="text-3xl font-bold mt-1 text-amber-300">¥ {{ taxSummary.pending.toLocaleString() }}</div>
-          <div class="text-xs text-slate-400 mt-1">約合 NT$ {{ Math.round(taxSummary.pending * jpyRate).toLocaleString() }}</div>
-          <div class="grid grid-cols-2 gap-2 mt-3 text-[11px] text-slate-300">
-            <div>消費總額 ¥ {{ taxSummary.total.toLocaleString() }}</div>
-            <div class="text-right">已辦理退稅 ¥ {{ taxSummary.done.toLocaleString() }}</div>
-          </div>
+      <section v-if="currentTab === 'tax'" class="space-y-3">
+
+        <!-- 分段切換 -->
+        <div class="flex gap-1 bg-white border border-slate-100 rounded-2xl p-1 shadow-sm">
+          <button v-for="m in [['calc','fa-calculator','試算'],['platform','fa-building-columns','平台資料'],['rules','fa-book','須知']]" :key="m[0]"
+            @click="txView = m[0]"
+            :class="['flex-1 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5', txView === m[0] ? 'bg-ice-600 text-white font-bold' : 'text-slate-500 font-medium']">
+            <i :class="['fa-solid', m[1]]"></i>{{ m[2] }}
+          </button>
         </div>
 
-        <div class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex items-center gap-2">
-          <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fa-solid fa-sliders mr-1"></i>單店單日未稅門檻 ¥</span>
-          <input v-model.number="taxThreshold" type="number" min="0" class="flex-1 min-w-0 bg-slate-50 border border-slate-200 p-1.5 rounded-lg outline-none text-sm font-bold">
-        </div>
-        <div class="text-[10px] text-slate-400 -mt-2 px-1 leading-relaxed">門檻與規則請以店家與日本官方最新公告為準，此處金額僅供估算（未扣手續費）。</div>
-
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
-          <div v-for="r in sortedTaxRefunds" :key="r.id" class="p-3.5">
-            <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0">
-                <div class="font-bold text-slate-800 text-sm break-words">{{ r.store }}</div>
-                <div class="text-[11px] text-slate-400">{{ r.date }} · 稅率 {{ r.rate }}%</div>
+        <!-- ===== 試算 ===== -->
+        <template v-if="txView === 'calc'">
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3 text-xs">
+            <!-- 店家 -->
+            <div>
+              <div class="flex justify-between items-baseline gap-2 mb-1">
+                <label class="font-bold text-slate-600">店家名稱</label>
+                <span v-if="txPre" class="text-[11px] text-emerald-600 font-bold text-right">已套用「{{ txPre.p }}」費率，可再修改</span>
+                <span v-else-if="txForm.name.trim()" class="text-[11px] text-amber-600 font-bold text-right">自訂店家：請輸入手續費</span>
               </div>
-              <div class="text-right flex-shrink-0">
-                <div class="font-bold text-slate-800 text-sm">¥ {{ Number(r.amount).toLocaleString() }}</div>
-                <div class="text-[10px] text-slate-400">未稅 ¥ {{ taxCalc(r).excl.toLocaleString() }}</div>
+              <div class="relative">
+                <input v-model="txForm.name" @focus="txDd = true" @input="txDd = true" @blur="txCloseDd" type="text" maxlength="40" autocomplete="off" placeholder="輸入搜尋，或點選清單"
+                   class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500" style="font-size:16px">
+                <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                <div v-if="txDd" class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto z-50 p-1">
+                  <div v-for="s in txDdList" :key="s.n" @mousedown.prevent="txPick(s)" class="flex justify-between items-center gap-2 px-2.5 py-2 rounded-lg text-sm text-slate-800 hover:bg-ice-50 cursor-pointer">
+                    <span class="truncate">{{ s.n }}</span>
+                    <span class="flex items-center gap-1.5 flex-shrink-0">
+                      <span :class="['text-[11px] font-bold rounded-md px-1.5', (!s.pct && !s.fix) ? 'bg-emerald-100 text-emerald-700' : 'bg-ice-100 text-ice-700']">{{ (!s.pct && !s.fix) ? '免手續費' : (s.fix ? '¥' + s.fix : s.pct + '%') }}</span>
+                      <button v-if="s.mine" @mousedown.prevent.stop="txDelMine(s.n)" class="text-red-400 p-1"><i class="fa-solid fa-trash text-[11px]"></i></button>
+                    </span>
+                  </div>
+                  <div v-if="!txDdList.length" class="px-2.5 py-2 text-xs text-slate-400">找不到，將視為自訂店家</div>
+                </div>
+              </div>
+              <button v-if="txForm.name.trim() && !txPre" @click="txSaveMine" class="mt-2 bg-ice-100 text-ice-700 font-bold text-xs rounded-lg px-3 py-1.5">＋ 儲存為我的店家</button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">手續費 %</label>
+                <input v-model.number="txForm.pct" type="number" inputmode="decimal" min="0" max="100" step="0.1" placeholder="0" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" style="font-size:16px">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">定額費 ¥</label>
+                <input v-model.number="txForm.fix" type="number" inputmode="numeric" min="0" placeholder="0" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" style="font-size:16px">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">含稅金額 ¥</label>
+                <input v-model.number="txForm.amt" type="number" inputmode="numeric" min="0" placeholder="0" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" style="font-size:16px">
               </div>
             </div>
-            <div class="flex items-center justify-between mt-2">
-              <div class="flex items-center flex-wrap gap-1.5">
-                <span :class="['text-[10px] font-bold px-2 py-0.5 rounded-full', taxEligible(r) ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500']">
-                  {{ taxEligible(r) ? '達門檻' : '未達門檻' }}
-                </span>
-                <span v-if="taxEligible(r)" class="text-[11px] text-ice-700 font-bold">可退 ¥ {{ taxCalc(r).tax.toLocaleString() }}</span>
-                <span v-if="!taxEligible(r)" class="text-[10px] text-slate-400">同店同日合計未稅 ¥ {{ taxGroupExcl(r).toLocaleString() }}</span>
+
+            <div class="flex gap-2">
+              <button v-for="r in [[10,'10% 一般'],[8,'8% 食品']]" :key="r[0]" @click="txForm.rate = r[0]"
+                :class="['flex-1 py-2 rounded-xl text-xs font-medium', txForm.rate === r[0] ? 'bg-ice-600 text-white font-bold shadow-sm' : 'bg-white text-slate-600 border border-slate-100 shadow-sm']">{{ r[1] }}</button>
+            </div>
+            <div class="text-[10px] text-slate-400">匯率使用「設定」分頁的匯率（1 JPY ≈ {{ jpyRate.toFixed(3) }} TWD）</div>
+          </div>
+
+          <!-- 結果 -->
+          <div v-if="!txR" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-xs text-slate-400">輸入結帳含稅金額，四種領取方式的實拿一次算好。</div>
+          <template v-else>
+            <div v-if="!txR.card.ok" class="rounded-xl px-3 py-2 text-xs bg-red-50 text-red-600">未稅金額 ¥{{ txR.card.excl.toLocaleString() }} 未達 ¥5,000 門檻（需同店同日未稅合計），可能無法退稅。</div>
+            <div v-else-if="txR.card.excl < 5500" class="rounded-xl px-3 py-2 text-xs bg-amber-50 text-amber-700">接近門檻，請確認同日同店合計未稅是否 ≥ ¥5,000。</div>
+
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+              <h2 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-yen-sign text-ice-600"></i>四種領取方式明細</h2>
+              <div class="text-[11px] text-slate-500 space-y-0.5 mb-2">
+                <div class="flex justify-between"><span>含稅結帳價</span><b class="text-slate-800">¥{{ txR.card.incl.toLocaleString() }}</b></div>
+                <div class="flex justify-between"><span>未稅價（估）</span><b class="text-slate-800">¥{{ txR.card.excl.toLocaleString() }}</b></div>
+                <div class="flex justify-between"><span>消費稅 {{ txForm.rate }}%</span><b class="text-slate-800">¥{{ txR.card.tax.toLocaleString() }}</b></div>
               </div>
-              <div class="flex items-center gap-2">
-                <label class="flex items-center gap-1 text-[11px] text-slate-500"><input type="checkbox" v-model="r.done" class="rounded text-ice-600 focus:ring-0">已辦理</label>
-                <button @click="editTax(r)" class="text-slate-400 hover:text-ice-600 p-1"><i class="fa-solid fa-pen text-xs"></i></button>
-                <button @click="deleteTax(r.id)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-trash text-xs"></i></button>
+              <div class="overflow-x-auto no-scrollbar">
+                <table class="w-full text-[11px] table-fixed min-w-[300px]">
+                  <thead>
+                    <tr>
+                      <th class="w-[21%]"></th>
+                      <th v-for="m in txMethods" :key="m[0]" :class="['pb-1 align-bottom font-bold', txR[m[0]].net === txBest ? 'bg-ice-50 text-ice-600' : 'text-slate-500']">
+                        <div v-if="txR[m[0]].net === txBest" class="mx-auto w-fit bg-ice-600 text-white text-[9px] rounded px-1 mb-0.5">最高</div>{{ m[1] }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="row in txRows" :key="row.label" class="border-t border-dashed border-slate-100">
+                      <td class="py-2 text-left text-slate-500">{{ row.label }}</td>
+                      <td v-for="(c, i) in row.cells" :key="i" :class="['py-2 text-center tabular-nums break-all', txR[txMethods[i][0]].net === txBest ? 'bg-ice-50' : '', c.cls, row.bold ? 'font-bold' : '']">{{ c.t }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-            <div v-if="r.note" class="text-[11px] text-slate-500 mt-1.5 whitespace-pre-line break-words"><i class="fa-regular fa-sticky-note mr-1 text-slate-400"></i>{{ r.note }}</div>
-          </div>
-          <div v-if="taxRefunds.length === 0" class="text-slate-400 text-center py-6 text-sm">尚未新增退稅紀錄</div>
-        </div>
 
-        <button @click="openAddTax" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
-          <i class="fa-solid fa-plus"></i>
-        </button>
+            <button @click="txAdd" class="w-full bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">＋ 加入明細</button>
+          </template>
+
+          <!-- 明細 -->
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+            <div class="flex justify-between items-center mb-1">
+              <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-receipt text-ice-600"></i>明細</h2>
+              <span class="text-[11px] text-slate-400">點卡片可帶回上方修改</span>
+            </div>
+            <div v-if="!txEnts.length" class="text-xs text-slate-400 py-2">尚未加入明細。</div>
+
+            <div v-if="txEnts.length" class="mt-2 rounded-xl p-3 bg-ice-50 border border-slate-100">
+              <div class="text-sm font-bold text-slate-800">合計（{{ txEnts.length }} 家）</div>
+              <div class="grid grid-cols-4 gap-1.5 mt-2">
+                <div v-for="m in txMethods" :key="m[0]" :class="['rounded-lg border p-1.5 text-center', txTotals[m[0]] === txTotalBest && txTotalBest > 0 ? 'bg-ice-100 border-ice-200' : 'bg-white border-slate-100']">
+                  <div class="text-[10px] text-slate-400">{{ m[1].replace('／銀行','') }}</div>
+                  <div :class="['text-[13px] font-bold', txTotals[m[0]] === txTotalBest && txTotalBest > 0 ? 'text-ice-700' : 'text-slate-800']">{{ txY(txTotals[m[0]]) }}</div>
+                  <div class="text-[9px] text-slate-400">{{ txT(txTotals[m[0]]) }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div v-for="(e, i) in txEnts" :key="i" @click="txLoad(e)" class="mt-2.5 rounded-xl border border-slate-100 p-3 cursor-pointer active:bg-ice-50">
+              <div class="flex justify-between items-start gap-2">
+                <div class="min-w-0">
+                  <div class="font-bold text-slate-800 text-sm break-all">{{ e.name || '未命名店家' }}</div>
+                  <div class="text-[11px] text-slate-400">{{ txY(e.incl) }}（{{ e.rate }}%）· 手續費 {{ txFeeText(e) }}</div>
+                </div>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                  <span v-if="!txEntRes(e).ok" class="text-[11px] font-bold rounded-md px-1.5 bg-red-100 text-red-600">未達 ¥5,000</span>
+                  <button @click.stop="txDel(e)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+              </div>
+              <div class="grid grid-cols-4 gap-1.5 mt-2">
+                <div v-for="m in txMethods" :key="m[0]" :class="['rounded-lg border p-1.5 text-center', txEntRes(e)[m[0]] === txEntRes(e).best && txEntRes(e).best > 0 ? 'bg-ice-100 border-ice-200' : 'bg-slate-50 border-slate-100']">
+                  <div class="text-[10px] text-slate-400">{{ m[1].replace('／銀行','') }}</div>
+                  <div class="text-[13px] font-bold text-slate-800">{{ txY(txEntRes(e)[m[0]]) }}</div>
+                  <div class="text-[9px] text-slate-400">{{ txT(txEntRes(e)[m[0]]) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- ===== 平台資料 ===== -->
+        <template v-if="txView === 'platform'">
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-xs text-slate-500">退稅平台通常由店家指定，無法自選。費率可能調整，結帳前請向店家確認。</div>
+          <template v-for="g in [['退稅平台（申請／退款）',0],['機場／市區現金領取',1]]" :key="g[1]">
+            <div class="text-xs font-bold text-slate-500 px-1 pt-1">{{ g[0] }}</div>
+            <div v-for="p in txPlatforms.filter(x => x[4] === g[1])" :key="p[0]" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+              <div class="flex justify-between items-start gap-2">
+                <div>
+                  <div class="font-bold text-slate-800 text-sm">{{ p[0] }}</div>
+                  <div class="text-[11px] text-slate-400">{{ p[1] }}</div>
+                </div>
+                <span class="text-[11px] font-bold rounded-md px-2 py-0.5 bg-ice-100 text-ice-700 whitespace-nowrap">{{ p[2] }}</span>
+              </div>
+              <div class="text-xs text-slate-500 mt-2">{{ p[3] }}</div>
+            </div>
+          </template>
+        </template>
+
+        <!-- ===== 須知 ===== -->
+        <template v-if="txView === 'rules'">
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+            <h2 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-circle-info text-ice-600"></i>新制重點（2026/11/1 起「先付後退」）</h2>
+            <ul class="list-disc pl-5 space-y-1.5 text-[13px] text-slate-600">
+              <li>11/1 起購買：先付含稅價，離境完成海關確認後才退款；10/31 前買的仍走舊制。</li>
+              <li>門檻：同一天、同一家店，未稅合計 ≥ ¥5,000；一般品與消耗品可合併，已取消消耗品上限與密封袋規定。</li>
+              <li>購買日起 90 天內攜出日本；有託運行李務必在託運與安檢前完成海關確認。</li>
+              <li>商品須本人攜帶出境，不能在日本使用，也不能郵寄寄回。</li>
+              <li>退稅平台通常由店家指定，無法自選。海關確認機與現金退款機是兩種設備。</li>
+            </ul>
+          </div>
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+            <h2 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-hand-holding-dollar text-ice-600"></i>領取方式說明</h2>
+            <ul class="list-disc pl-5 space-y-1.5 text-[13px] text-slate-600">
+              <li><b>信用卡／銀行</b>：只扣平台手續費，通常最划算，入帳需等待。</li>
+              <li><b>機場現金A（Self Tax Refund）</b>：另收未稅金額 1.1%，實退尾數未滿 ¥100 捨去。</li>
+              <li><b>機場現金B（Cash Japan）</b>：另收退款額 10%，以 ¥50 為單位調整；部分交易另有最低／最高費，本程式未計入。</li>
+              <li><b>市區現金（Global Blue × 友都八喜）</b>：另收退款額 5%（¥150–500），僅限當日購買，需帶商品與收據並有信用卡擔保。</li>
+            </ul>
+          </div>
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-[11px] text-slate-500 leading-relaxed">
+            結果為估算值，以店家與退稅平台實際為準。費率來源為媒體整理與平台公告。明細與「我的店家」只存在你的手機與你的雲端帳號。
+          </div>
+        </template>
       </section>
 
       <!-- ================= 5. 設定 Tab ================= -->
@@ -1487,51 +1617,6 @@
         <div class="flex gap-2 pt-2">
           <button v-if="isEditTodo" @click="deleteTodo(formTodo.id)" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
           <button @click="saveTodo" class="flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl">儲存</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal: 退稅 新增/編輯 -->
-    <div v-if="showTaxModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
-        <div class="flex justify-between items-center border-b pb-2">
-          <h3 class="font-bold text-slate-800">{{ isEditTax ? '編輯退稅紀錄' : '新增退稅紀錄' }}</h3>
-          <button @click="showTaxModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
-        </div>
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">店家 <span class="text-red-500">*</span></label>
-            <input v-model="formTax.store" type="text" maxlength="40" placeholder="例如: 唐吉訶德 狸小路店" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div class="overflow-hidden">
-            <label class="block font-bold text-slate-600 mb-1">購買日期 <span class="text-red-500">*</span></label>
-            <input v-model="formTax.date" type="date" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">含稅金額 (JPY) <span class="text-red-500">*</span></label>
-              <input v-model.number="formTax.amount" type="number" min="0" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">稅率</label>
-              <select v-model.number="formTax.rate" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-                <option :value="10">10%（一般商品）</option>
-                <option :value="8">8%（食品）</option>
-              </select>
-            </div>
-          </div>
-          <div v-if="formTax.amount" class="text-[11px] text-ice-600 -mt-1">
-            未稅 ¥ {{ taxCalc(formTax).excl.toLocaleString() }}　稅額 ¥ {{ taxCalc(formTax).tax.toLocaleString() }}
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">備註</label>
-            <textarea v-model="formTax.note" rows="2" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none"></textarea>
-          </div>
-          <label class="flex items-center gap-2 text-slate-600 font-bold"><input type="checkbox" v-model="formTax.done" class="rounded text-ice-600 focus:ring-0">已辦理退稅</label>
-        </div>
-        <div class="flex gap-2 pt-2">
-          <button v-if="isEditTax" @click="deleteTax(formTax.id)" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
-          <button @click="saveTax" class="flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl">儲存</button>
         </div>
       </div>
     </div>
@@ -2979,6 +3064,156 @@
       const onGripPointerUp = () => { draggingShopping.value = { active: false, index: -1, offsetY: 0, startY: 0 }; document.removeEventListener('pointermove', onGripPointerMove); document.removeEventListener('pointerup', onGripPointerUp); };
       const onGripPointerDown = (index, e) => { e.preventDefault(); draggingShopping.value = { active: true, index, offsetY: 0, startY: e.clientY }; document.addEventListener('pointermove', onGripPointerMove); document.addEventListener('pointerup', onGripPointerUp); };
 
+      // --- 退稅 (Tax refund) ---
+      const TX_STORES = [
+        { n: '唐吉訶德 Don Quijote', p: 'PPIH 集團', pct: 0, note: '官方宣布吸收申請手續費；機場領現金仍須付現金服務費。' },
+        { n: 'Bic Camera', p: 'J-TaxRefund', pct: 0 },
+        { n: '山田電機 LABI', p: '—', pct: 0 },
+        { n: '多慶屋 Takeya', p: '—', pct: 0 },
+        { n: '鶴羽藥妝 Tsuruha', p: '—', pct: 0 },
+        { n: '友都八喜 Yodobashi', p: 'Global Blue', pct: 2.3 },
+        { n: '高島屋', p: '百貨自營', pct: 1.55 },
+        { n: '京急百貨店', p: '百貨自營', pct: 1.5, tax: 1 },
+        { n: 'AEON 永旺夢樂城', p: '—', pct: 1.5 },
+        { n: 'Animate 安利美特', p: '—', pct: 2.1 },
+        { n: '3COINS', p: '—', fix: 320 },
+        { n: '三越伊勢丹', p: '—', pct: 2.3 },
+        { n: '阪急阪神百貨', p: 'Global Blue', pct: 2.3 },
+        { n: 'Global Blue 加盟店', p: 'Global Blue', pct: 2.3 },
+        { n: 'PIE VAT 加盟店', p: 'PIE VAT', pct: 1.5 }
+      ];
+      const txPlatforms = [
+        ['J-TaxRefund', '網頁（J&J Tax Free）', '未公布統一費率', '掃店家 QR 登記護照與退款方式，支援繁中；可退信用卡、銀行轉帳與部分行動支付；部分費用由店家吸收。', 0],
+        ['Global Blue', '國際退稅服務平台', '約 2.3%（依店家）', '日本無統一公告費率，百貨常見約 2.3%；實際服務費與匯兌費依條件而定。', 0],
+        ['PIE VAT', 'App', '未稅 1.5% 起', '日本官方公告 1.5% 起，部分提領方式另收費。', 0],
+        ['JPrefund', '網頁', '依匯款費率', '依匯款方式、金額與幣別計算，未公告統一百分比。', 0],
+        ['Ocean Tax Refund', '網頁／App', '未公布', '退款服務與第三方收款管道可能另收費。', 0],
+        ['Self Tax Refund', '機場自助現金機', '未稅 1.1%', '羽田、成田、那霸等；實退尾數未滿 ¥100 捨去。', 1],
+        ['Cash Japan', '機場現金機／櫃台', '退款額 10%', '以 ¥50 為單位調整；部分交易另有最低／最高費，且與原平台手續費分開計算。', 1],
+        ['Global Blue 市區現金', '友都八喜 11 店', '退款額 5%', '最低 ¥150、最高 ¥500；僅限當日購買，需帶商品與收據並有信用卡擔保。', 1]
+      ];
+      const txMethods = [['card', '信用卡／銀行'], ['self', '機場現金A'], ['cj', '機場現金B'], ['city', '市區現金']];
+
+      const txView = ref('calc');
+      const txMine = ref(initData('trip_taxMine', []));
+      const txEnts = ref(initData('trip_taxEnts', []));
+      setupWatcher(txMine, 'trip_taxMine');
+      setupWatcher(txEnts, 'trip_taxEnts');
+      const txForm = ref({ name: '', amt: null, pct: null, fix: null, tax: 0, rate: 10 });
+      const txDd = ref(false);
+
+      const txY = (n) => '¥' + Math.round(n || 0).toLocaleString('en-US');
+      const txT = (n) => 'NT$' + Math.round((n || 0) * jpyRate.value).toLocaleString('en-US');
+
+      const txAll = computed(() => [
+        ...txMine.value.map(m => ({ n: m.n, p: '我的店家', pct: m.pct || 0, fix: m.fix || 0, tax: 0, mine: true })),
+        ...TX_STORES
+      ]);
+      const txFind = (n) => {
+        n = (n || '').trim().toLowerCase();
+        return n ? (txAll.value.find(s => s.n.toLowerCase() === n) || null) : null;
+      };
+      const txPre = computed(() => txFind(txForm.value.name));
+      const txDdList = computed(() => {
+        const q = txPre.value ? '' : (txForm.value.name || '').trim().toLowerCase();
+        return txAll.value.filter(s => !q || (s.n + ' ' + s.p).toLowerCase().includes(q));
+      });
+      const txCloseDd = () => setTimeout(() => { txDd.value = false; }, 150);
+      const txApply = (s) => {
+        txForm.value.pct = s.pct || null;
+        txForm.value.fix = s.fix || null;
+        txForm.value.tax = s.tax ? 1 : 0;
+      };
+      const txPick = (s) => { txForm.value.name = s.n; txApply(s); txDd.value = false; };
+      watch(() => txForm.value.name, (n) => { const p = txFind(n); if (p) txApply(p); });
+
+      const txSaveMine = () => {
+        const n = txForm.value.name.trim();
+        if (!n) return;
+        txMine.value = [{ n, pct: Number(txForm.value.pct) || 0, fix: Number(txForm.value.fix) || 0 }, ...txMine.value.filter(m => m.n.toLowerCase() !== n.toLowerCase())].slice(0, 50);
+        window.appToast && window.appToast('已儲存為我的店家');
+      };
+      const txDelMine = (n) => {
+        if (!confirm('確定刪除我的店家「' + n + '」嗎？')) return;
+        txMine.value = txMine.value.filter(m => m.n !== n);
+      };
+
+      const txCalc = (e, m) => {
+        const excl = Math.round(e.incl / (1 + e.rate / 100));
+        const tx = e.incl - excl;
+        let pf = Math.ceil((excl * e.pct / 100 + e.fix) * (e.tax ? 1.1 : 1));
+        pf = Math.min(pf, tx);
+        const af = tx - pf;
+        let net = af;
+        if (m === 'self') net = Math.floor(Math.max(0, af - Math.ceil(excl * 0.011)) / 100) * 100;
+        else if (m === 'cj') net = Math.round(af * 0.9 / 50) * 50;
+        else if (m === 'city') net = af - Math.min(500, Math.max(150, Math.ceil(af * 0.05)));
+        net = Math.max(0, net);
+        return { incl: e.incl, excl, tax: tx, pf, cf: af - net, net, ok: excl >= 5000 };
+      };
+      const txCur = computed(() => {
+        const f = txForm.value;
+        return { name: f.name, incl: Number(f.amt) || 0, rate: f.rate, pct: Number(f.pct) || 0, fix: Number(f.fix) || 0, tax: f.tax ? 1 : 0 };
+      });
+      const txR = computed(() => {
+        if (txCur.value.incl <= 0) return null;
+        const r = {};
+        txMethods.forEach(m => { r[m[0]] = txCalc(txCur.value, m[0]); });
+        return r;
+      });
+      const txBest = computed(() => txR.value ? Math.max(...txMethods.map(m => txR.value[m[0]].net)) : 0);
+      const txRows = computed(() => {
+        const r = txR.value;
+        if (!r) return [];
+        const mk = (label, fn, bold) => ({ label, bold, cells: txMethods.map(m => fn(r[m[0]])) });
+        return [
+          mk('平台手續費', x => ({ t: x.pf ? '− ' + txY(x.pf) : '—', cls: x.pf ? 'text-red-500' : '' })),
+          mk('現金服務費', x => ({ t: x.cf ? '− ' + txY(x.cf) : '—', cls: x.cf ? 'text-red-500' : '' })),
+          mk('實際拿到', x => ({ t: txY(x.net), cls: 'text-emerald-600' }), true),
+          mk('約合台幣', x => ({ t: txT(x.net), cls: 'text-slate-700' })),
+          mk('佔含稅價', x => ({ t: (x.net / x.incl * 100).toFixed(2) + '%', cls: 'text-slate-700' }))
+        ];
+      });
+
+      const txAdd = () => {
+        if (txCur.value.incl <= 0) return;
+        if (txEnts.value.length >= 30) return alert('明細最多 30 筆');
+        txEnts.value.push({ ...txCur.value });
+        window.appToast && window.appToast('已加入明細（共 ' + txEnts.value.length + ' 筆）');
+      };
+      const txDel = (e) => {
+        if (!confirm('確定刪除「' + (e.name || '未命名店家') + '」這筆明細嗎？')) return;
+        txEnts.value = txEnts.value.filter(x => x !== e);
+      };
+      const txLoad = (e) => {
+        const form = { name: e.name, amt: e.incl, pct: e.pct || null, fix: e.fix || null, tax: e.tax ? 1 : 0, rate: e.rate };
+        txForm.value = { ...form };
+        nextTick(() => { txForm.value = { ...form }; }); // 避免店家預設費率覆蓋掉這筆明細的費率
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+      const txFeeText = (e) => {
+        const a = [];
+        if (e.pct) a.push(e.pct + '%');
+        if (e.fix) a.push('¥' + e.fix);
+        return a.length ? a.join(' + ') : '0%';
+      };
+      const txEntRes = (e) => {
+        const o = { ok: true, best: 0 };
+        txMethods.forEach(m => {
+          const r = txCalc(e, m[0]);
+          o.ok = r.ok;
+          o[m[0]] = r.ok ? r.net : 0;
+          if (o[m[0]] > o.best) o.best = o[m[0]];
+        });
+        return o;
+      };
+      const txTotals = computed(() => {
+        const s = { card: 0, self: 0, cj: 0, city: 0 };
+        txEnts.value.forEach(e => { const r = txEntRes(e); txMethods.forEach(m => { s[m[0]] += r[m[0]]; }); });
+        return s;
+      });
+      const txTotalBest = computed(() => Math.max(...txMethods.map(m => txTotals.value[m[0]])));
+      
       // --- 8. 花費分頁 (Expenses) ---
       const showExpenseModal = ref(false);
       const isEditExpenseMode = ref(false);
@@ -3033,61 +3268,6 @@
         if (!confirm('確定要刪除這個待辦嗎？')) return;
         todos.value = todos.value.filter(t => t.id !== id);
         showTodoModal.value = false;
-      };
-
-      // --- 退稅 (Tax refund) ---
-      const taxRefunds = ref(initData('trip_taxRefunds', []));
-      const taxThreshold = ref(initData('trip_taxThreshold', 5000));
-      setupWatcher(taxRefunds, 'trip_taxRefunds');
-      setupWatcher(taxThreshold, 'trip_taxThreshold');
-      const showTaxModal = ref(false);
-      const isEditTax = ref(false);
-      const initFormTax = () => ({ id: null, store: '', date: new Date().toISOString().split('T')[0], amount: null, rate: 10, note: '', done: false });
-      const formTax = ref(initFormTax());
-
-      const taxCalc = (r) => {
-        const amt = Number(r.amount) || 0;
-        const rate = Number(r.rate) || 10;
-        const excl = amt / (1 + rate / 100);
-        return { excl: Math.round(excl), tax: Math.round(amt - excl) };
-      };
-      const taxGroupKey = (r) => (r.store || '').trim() + '|' + r.date;
-      const taxGroupExcl = (r) => {
-        const key = taxGroupKey(r);
-        return taxRefunds.value.filter(x => taxGroupKey(x) === key).reduce((s, x) => s + taxCalc(x).excl, 0);
-      };
-      const taxEligible = (r) => taxGroupExcl(r) >= (Number(taxThreshold.value) || 0);
-      const sortedTaxRefunds = computed(() => [...taxRefunds.value].sort((a, b) => (b.date || '').localeCompare(a.date || '')));
-      const taxSummary = computed(() => {
-        let total = 0, pending = 0, done = 0;
-        taxRefunds.value.forEach(r => {
-          total += Number(r.amount) || 0;
-          if (taxEligible(r)) {
-            if (r.done) done += taxCalc(r).tax; else pending += taxCalc(r).tax;
-          }
-        });
-        return { total, pending, done };
-      });
-      const openAddTax = () => { isEditTax.value = false; formTax.value = initFormTax(); showTaxModal.value = true; };
-      const editTax = (r) => { isEditTax.value = true; formTax.value = { ...initFormTax(), ...r }; showTaxModal.value = true; };
-      const saveTax = () => {
-        if (!formTax.value.store.trim()) return alert('請填寫「店家」');
-        if (!formTax.value.date) return alert('請選擇購買日期');
-        if (!formTax.value.amount || formTax.value.amount <= 0) return alert('請填寫含稅金額');
-        const rec = { ...formTax.value, store: formTax.value.store.trim() };
-        if (isEditTax.value) {
-          const idx = taxRefunds.value.findIndex(r => r.id === rec.id);
-          if (idx !== -1) taxRefunds.value[idx] = rec;
-        } else {
-          rec.id = Date.now();
-          taxRefunds.value.push(rec);
-        }
-        showTaxModal.value = false;
-      };
-      const deleteTax = (id) => {
-        if (!confirm('確定要刪除這筆退稅紀錄嗎？')) return;
-        taxRefunds.value = taxRefunds.value.filter(r => r.id !== id);
-        showTaxModal.value = false;
       };
 
       const autoExpenses = computed(() => {
@@ -3241,7 +3421,7 @@
         'trip_flightExtras', 'trip_hotelExtras', 'trip_carRentals',
         'trip_dayTours', 'trip_otherBookings', 'trip_shopping', 'trip_expenses', 'trip_souvenirs',
         'trip_startDate', 'trip_days',
-        'trip_todos', 'trip_taxRefunds', 'trip_taxThreshold'
+        'trip_todos', 'trip_taxMine', 'trip_taxEnts'
       ];
 
       // 匯出功能
@@ -3409,7 +3589,8 @@
         openDepAirportDropdown, openArrAirportDropdown,
         selectDepAirport, selectArrAirport, closeDepAirportDropdown, closeArrAirportDropdown,weeklyEditor, toggleEditorDay, applyEditor, setEditorClosed, loadDayToEditor,
         todos, todoFilter, todoFilters, filteredTodos, showTodoModal, isEditTodo, formTodo, openAddTodo, editTodo, saveTodo, deleteTodo,
-        taxRefunds, taxThreshold, showTaxModal, isEditTax, formTax, taxCalc, taxGroupExcl, taxEligible, sortedTaxRefunds, taxSummary, openAddTax, editTax, saveTax, deleteTax
+        txView, txMine, txEnts, txForm, txDd, txMethods, txPlatforms, txPre, txDdList, txCloseDd, txPick, txSaveMine, txDelMine,
+        txR, txBest, txRows, txAdd, txDel, txLoad, txFeeText, txEntRes, txTotals, txTotalBest, txY, txT
       };
     }
   }).mount('#app');
