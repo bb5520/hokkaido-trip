@@ -1556,16 +1556,13 @@
               <span v-else-if="txForm.name.trim()" class="text-[11px] text-amber-600 font-bold text-right">自訂店家：請輸入手續費</span>
             </div>
             <div class="relative">
-              <input v-model="txForm.name" @focus="txDd = true" @input="txDd = true; txOnName()" @blur="txCloseDd" type="text" maxlength="40" autocomplete="off" placeholder="輸入搜尋，或點選清單"
-                   class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500">
+              <input v-model="txForm.name" @focus="txFocusName($event)" @click="txFocusName($event)" @input="txDd = true; txShowAll = false; txOnName()" @blur="txCloseDd" type="text" maxlength="40" autocomplete="off" placeholder="輸入搜尋，或點選清單"
+                 class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500">
               <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
               <div v-if="txDd && txDdList.length" class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 p-1">
                 <div v-for="s in txDdList" :key="s.n" @mousedown.prevent="txPick(s)" class="flex justify-between items-center gap-2 px-2.5 py-2 rounded-lg text-sm text-slate-800 hover:bg-ice-50 cursor-pointer">
                   <span class="truncate">{{ s.n }}</span>
-                  <span class="flex items-center gap-1.5 flex-shrink-0">
-                    <span :class="['text-[11px] font-bold rounded-md px-1.5', (!s.pct && !s.fix) ? 'bg-emerald-100 text-emerald-700' : 'bg-ice-100 text-ice-700']">{{ (!s.pct && !s.fix) ? '免手續費' : (s.fix ? '¥' + s.fix : s.pct + '%') }}</span>
-                    <button v-if="s.mine" @mousedown.prevent.stop="txDelMine(s.n)" class="text-red-400 p-1"><i class="fa-solid fa-trash text-[11px]"></i></button>
-                  </span>
+                  <span :class="['text-[11px] font-bold rounded-md px-1.5 flex-shrink-0', (!s.pct && !s.fix) ? 'bg-emerald-100 text-emerald-700' : 'bg-ice-100 text-ice-700']">{{ (!s.pct && !s.fix) ? '免手續費' : (s.fix ? '¥' + s.fix : s.pct + '%') }}</span>
                 </div>
               </div>
             </div>
@@ -1575,15 +1572,15 @@
           <div class="grid grid-cols-3 gap-2">
             <div>
               <label class="block font-bold text-slate-600 mb-1">手續費 %</label>
-              <input v-model.number="txForm.pct" type="number" inputmode="decimal" min="0" max="100" step="0.1" placeholder="0" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <input :value="txForm.pctS" @input="txOnPct" type="text" inputmode="decimal" autocomplete="off" maxlength="6" placeholder="0 %" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">定額費 ¥</label>
-              <input v-model.number="txForm.fix" type="number" inputmode="numeric" min="0" placeholder="0" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <input :value="txForm.fixS" @input="txOnFix" type="text" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="¥ 0" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">含稅金額 ¥ <span class="text-red-500">*</span></label>
-              <input v-model.number="txForm.amt" type="number" inputmode="numeric" min="0" placeholder="0" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <input :value="txForm.amtS" @input="txOnAmt" type="text" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="¥ 0" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
           </div>
 
@@ -3110,46 +3107,81 @@
       const txMethods = [['card', '信用卡／銀行'], ['self', '機場現金A'], ['cj', '機場現金B'], ['city', '市區現金']];
 
       const txView = ref('calc');
-      const txMine = ref(initData('trip_taxMine', []));
       const txEnts = ref(initData('trip_taxEnts', []));
-      setupWatcher(txMine, 'trip_taxMine');
       setupWatcher(txEnts, 'trip_taxEnts');
-      const txForm = ref({ name: '', amt: null, pct: null, fix: null, tax: 0, rate: 10 });
+      const txForm = ref({ name: '', amtS: '', pctS: '', fixS: '', tax: 0, rate: 10 });
+      const txInitForm = () => ({ name: '', amtS: '', pctS: '', fixS: '', tax: 0, rate: 10 });
       const txDd = ref(false);
+      const txShowAll = ref(false);
 
       const txY = (n) => '¥' + Math.round(n || 0).toLocaleString('en-US');
       const txT = (n) => 'NT$' + Math.round((n || 0) * jpyRate.value).toLocaleString('en-US');
 
-      const txAll = computed(() => [
-        ...txMine.value.map(m => ({ n: m.n, p: '我的店家', pct: m.pct || 0, fix: m.fix || 0, tax: 0, mine: true })),
-        ...TX_STORES
-      ]);
+      const txNum = (s) => { const v = parseFloat(String(s || '').replace(/[^\d.]/g, '')); return isFinite(v) ? v : 0; };
+      const txFp = (n) => n ? n + ' %' : '';
+      const txFy = (n) => n ? '¥ ' + Number(n).toLocaleString('en-US') : '';
+
+      // 店家清單 = 內建店家 + 以前輸入過的店名（取最新一筆的費率）
+      const txAll = computed(() => {
+        const seen = new Set(TX_STORES.map(s => s.n.toLowerCase()));
+        const custom = [];
+        [...txEnts.value].reverse().forEach(e => {
+          const n = (e.name || '').trim();
+          if (n && !seen.has(n.toLowerCase())) {
+            seen.add(n.toLowerCase());
+            custom.push({ n, p: '先前輸入', pct: e.pct || 0, fix: e.fix || 0, tax: e.tax ? 1 : 0 });
+          }
+        });
+        return [...custom, ...TX_STORES];
+      });
       const txFind = (n) => {
         n = (n || '').trim().toLowerCase();
         return n ? (txAll.value.find(s => s.n.toLowerCase() === n) || null) : null;
       };
       const txPre = computed(() => txFind(txForm.value.name));
       const txDdList = computed(() => {
-        const q = txPre.value ? '' : (txForm.value.name || '').trim().toLowerCase();
+        const q = txShowAll.value ? '' : (txForm.value.name || '').trim().toLowerCase();
         return txAll.value.filter(s => !q || (s.n + ' ' + s.p).toLowerCase().includes(q));
       });
       const txCloseDd = () => setTimeout(() => { txDd.value = false; }, 150);
       const txApply = (s) => {
-        txForm.value.pct = s.pct || null;
-        txForm.value.fix = s.fix || null;
+        txForm.value.pctS = txFp(s.pct);
+        txForm.value.fixS = txFy(s.fix);
         txForm.value.tax = s.tax ? 1 : 0;
       };
       const txPick = (s) => { txForm.value.name = s.n; txApply(s); txDd.value = false; };
 
-      const txSaveMine = () => {
-        const n = txForm.value.name.trim();
-        if (!n) return;
-        txMine.value = [{ n, pct: Number(txForm.value.pct) || 0, fix: Number(txForm.value.fix) || 0 }, ...txMine.value.filter(m => m.n.toLowerCase() !== n.toLowerCase())].slice(0, 50);
-        window.appToast && window.appToast('已儲存為我的店家');
+      // 輸入完整店名時才套用預設費率
+      const txOnName = () => { const p = txFind(txForm.value.name); if (p) txApply(p); };
+
+      // 點進店家欄位：展開完整清單並全選文字，方便直接改選
+      const txFocusName = (e) => {
+        txShowAll.value = true;
+        txDd.value = true;
+        const el = e.target;
+        setTimeout(() => { try { el.select(); } catch (x) {} }, 0);
       };
-      const txDelMine = (n) => {
-        if (!confirm('確定刪除我的店家「' + n + '」嗎？')) return;
-        txMine.value = txMine.value.filter(m => m.n !== n);
+
+      // 數字欄位自動加上 % 或 ¥
+      const txOnPct = (e) => {
+        let c = e.target.value.replace(/[^\d.]/g, '');
+        const i = c.indexOf('.');
+        if (i > -1) c = c.slice(0, i + 1) + c.slice(i + 1).replace(/\./g, '');
+        c = c.slice(0, 5);
+        if (parseFloat(c) > 100) c = '100';
+        txForm.value.pctS = c ? c + ' %' : '';
+        e.target.value = txForm.value.pctS;
+        try { e.target.setSelectionRange(c.length, c.length); } catch (x) {}
+      };
+      const txOnFix = (e) => {
+        const v = e.target.value.replace(/[^\d]/g, '').slice(0, 6);
+        txForm.value.fixS = v ? '¥ ' + parseInt(v, 10).toLocaleString('en-US') : '';
+        e.target.value = txForm.value.fixS;
+      };
+      const txOnAmt = (e) => {
+        const v = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
+        txForm.value.amtS = v ? '¥ ' + parseInt(v, 10).toLocaleString('en-US') : '';
+        e.target.value = txForm.value.amtS;
       };
 
       const txCalc = (e, m) => {
@@ -3167,7 +3199,7 @@
       };
       const txCur = computed(() => {
         const f = txForm.value;
-        return { name: f.name, incl: Number(f.amt) || 0, rate: f.rate, pct: Number(f.pct) || 0, fix: Number(f.fix) || 0, tax: f.tax ? 1 : 0 };
+        return { name: f.name, incl: txNum(f.amtS), rate: f.rate, pct: Math.min(100, txNum(f.pctS)), fix: txNum(f.fixS), tax: f.tax ? 1 : 0 };
       });
       const txR = computed(() => {
         if (txCur.value.incl <= 0) return null;
@@ -3188,6 +3220,7 @@
           mk('佔含稅價', x => ({ t: (x.net / x.incl * 100).toFixed(2) + '%', cls: 'text-slate-700' }))
         ];
       });
+
       const txFeeText = (e) => {
         const a = [];
         if (e.pct) a.push(e.pct + '%');
@@ -3210,18 +3243,15 @@
         return s;
       });
       const txTotalBest = computed(() => Math.max(...txMethods.map(m => txTotals.value[m[0]])));
+
       const showTxModal = ref(false);
       const txEditIdx = ref(-1);
-      const txInitForm = () => ({ name: '', amt: null, pct: null, fix: null, tax: 0, rate: 10 });
-
-      // 輸入完整店名時才套用預設費率
-      const txOnName = () => { const p = txFind(txForm.value.name); if (p) txApply(p); };
 
       const openAddTx = () => { txEditIdx.value = -1; txForm.value = txInitForm(); txDd.value = false; showTxModal.value = true; };
       const editTx = (i) => {
         const e = txEnts.value[i];
         txEditIdx.value = i;
-        txForm.value = { name: e.name, amt: e.incl, pct: e.pct || null, fix: e.fix || null, tax: e.tax ? 1 : 0, rate: e.rate };
+        txForm.value = { name: e.name, amtS: txFy(e.incl), pctS: txFp(e.pct), fixS: txFy(e.fix), tax: e.tax ? 1 : 0, rate: e.rate };
         txDd.value = false;
         showTxModal.value = true;
       };
@@ -3233,7 +3263,7 @@
           txEnts.value[txEditIdx.value] = rec;
         } else {
           if (txEnts.value.length >= 30) return alert('明細最多 30 筆');
-                txEnts.value.push(rec);
+          txEnts.value.push(rec);
         }
         showTxModal.value = false;
       };
@@ -3619,9 +3649,10 @@
         openDepAirportDropdown, openArrAirportDropdown,
         selectDepAirport, selectArrAirport, closeDepAirportDropdown, closeArrAirportDropdown,weeklyEditor, toggleEditorDay, applyEditor, setEditorClosed, loadDayToEditor,
         todos, todoFilter, todoFilters, filteredTodos, showTodoModal, isEditTodo, formTodo, openAddTodo, editTodo, saveTodo, deleteTodo,
-        txView, txMine, txEnts, txForm, txDd, txMethods, txPlatforms, txPre, txDdList, txCloseDd, txPick, txSaveMine, txDelMine,
+        txView, txEnts, txForm, txDd, txMethods, txPlatforms, txPre, txDdList, txCloseDd, txPick,
         txR, txBest, txRows, txFeeText, txEntRes, txTotals, txTotalBest, txY, txT,
-        showTxModal, txEditIdx, openAddTx, editTx, saveTx, delTx, txOnName
+        showTxModal, txEditIdx, openAddTx, editTx, saveTx, delTx, txOnName,
+        txShowAll, txFocusName, txOnPct, txOnFix, txOnAmt
       };
     }
   }).mount('#app');
