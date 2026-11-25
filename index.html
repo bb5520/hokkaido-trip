@@ -3161,28 +3161,33 @@
         setTimeout(() => { try { el.select(); } catch (x) {} }, 0);
       };
 
-      // 數字欄位自動加上 % 或 ¥
+      // 數字欄位自動加上 % 或 ¥（只改資料，由 v-model 負責顯示）
       const txOnPct = (e) => {
         let c = e.target.value.replace(/[^\d.]/g, '');
         const i = c.indexOf('.');
         if (i > -1) c = c.slice(0, i + 1) + c.slice(i + 1).replace(/\./g, '');
         c = c.slice(0, 5);
         if (parseFloat(c) > 100) c = '100';
-        txForm.value.pctS = c ? c + ' %' : '';
-        e.target.value = txForm.value.pctS;
-        try { e.target.setSelectionRange(c.length, c.length); } catch (x) {}
+        const out = c ? c + ' %' : '';
+        txForm.value.pctS = out;
+        nextTick(() => {
+          const el = e.target;
+          if (el.value !== out) el.value = out;
+          try { el.setSelectionRange(c.length, c.length); } catch (x) {}
+        });
       };
       const txOnFix = (e) => {
         const v = e.target.value.replace(/[^\d]/g, '').slice(0, 6);
-        txForm.value.fixS = v ? '¥ ' + parseInt(v, 10).toLocaleString('en-US') : '';
-        e.target.value = txForm.value.fixS;
+        const out = v ? '¥ ' + parseInt(v, 10).toLocaleString('en-US') : '';
+        txForm.value.fixS = out;
+        nextTick(() => { if (e.target.value !== out) e.target.value = out; });
       };
       const txOnAmt = (e) => {
         const v = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
-        txForm.value.amtS = v ? '¥ ' + parseInt(v, 10).toLocaleString('en-US') : '';
-        e.target.value = txForm.value.amtS;
+        const out = v ? '¥ ' + parseInt(v, 10).toLocaleString('en-US') : '';
+        txForm.value.amtS = out;
+        nextTick(() => { if (e.target.value !== out) e.target.value = out; });
       };
-
       const txCalc = (e, m) => {
         const excl = Math.round(e.incl / (1 + e.rate / 100));
         const tx = e.incl - excl;
