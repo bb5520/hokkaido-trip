@@ -623,22 +623,19 @@
         <!-- ===== 試算（明細清單） ===== -->
         <template v-if="txView === 'calc'">
 
-          <!-- 合計 -->
-          <div v-if="txEnts.length" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-            <h2 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-receipt text-ice-600"></i>合計（{{ txEnts.length }} 家）</h2>
-            <div class="grid grid-cols-4 gap-1.5">
-              <div v-for="m in txMethods" :key="m[0]" :class="['rounded-lg border p-1.5 text-center', txTotals[m[0]] === txTotalBest && txTotalBest > 0 ? 'bg-ice-100 border-ice-200' : 'bg-slate-50 border-slate-100']">
-                <div class="text-[10px] text-slate-400">{{ m[1].replace('／銀行','') }}</div>
-                <div :class="['text-[13px] font-bold', txTotals[m[0]] === txTotalBest && txTotalBest > 0 ? 'text-ice-700' : 'text-slate-800']">{{ txY(txTotals[m[0]]) }}</div>
-                <div class="text-[9px] text-slate-400">{{ txT(txTotals[m[0]]) }}</div>
-              </div>
-            </div>
+        <!-- 店家快速篩選 -->
+          <div v-if="txStoreNames.length > 1" class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+            <button v-for="n in ['', ...txStoreNames]" :key="n" @click="txFilter = n"
+              :class="['flex-none px-3 py-1.5 rounded-xl text-xs font-medium', n === txFilter ? 'bg-ice-600 text-white font-bold shadow-sm' : 'bg-white text-slate-600 border border-slate-100 shadow-sm']">
+              {{ n || '全部' }}
+            </button>
           </div>
 
           <!-- 明細卡片 -->
-          <div v-for="(e, i) in txEnts" :key="i" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <div v-for="{ e, i } in txShown" :key="i" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
             <div class="flex justify-between items-start gap-2">
               <div class="min-w-0">
+                <div v-if="e.date" class="text-[11px] font-bold text-ice-600 mb-0.5"><i class="fa-regular fa-calendar mr-1"></i>{{ txDateText(e.date) }}</div>
                 <div class="font-bold text-slate-800 text-base break-words">{{ e.name || '未命名店家' }}</div>
                 <div class="text-[11px] text-slate-400 mt-0.5">{{ txY(e.incl) }}（{{ e.rate }}%）· 手續費 {{ txFeeText(e) }}</div>
               </div>
@@ -1515,6 +1512,11 @@
         </div>
 
         <div class="space-y-3 text-xs">
+          <!-- 購買日期 -->
+          <div class="overflow-hidden">
+            <label class="block font-bold text-slate-600 mb-1">購買日期</label>
+            <input v-model="txForm.date" type="date" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
           <!-- 店家 -->
           <div>
             <div class="flex justify-between items-baseline gap-2 mb-1">
@@ -2731,8 +2733,12 @@
       const txView = ref('calc');
       const txEnts = ref(initData('trip_taxEnts', []));
       setupWatcher(txEnts, 'trip_taxEnts');
-      const txForm = ref({ name: '', amtS: '', pctS: '', fixS: '', tax: 0, rate: 10 });
-      const txInitForm = () => ({ name: '', amtS: '', pctS: '', fixS: '', tax: 0, rate: 10 });
+      const txToday = () => {
+        const d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      };
+      const txInitForm = () => ({ name: '', date: txToday(), amtS: '', pctS: '', fixS: '', tax: 0, rate: 10 });
+      const txForm = ref(txInitForm());
       const txDd = ref(false);
       const txShowAll = ref(false);
 
@@ -2829,7 +2835,7 @@
       };
       const txCur = computed(() => {
         const f = txForm.value;
-        return { name: f.name, incl: txNum(f.amtS), rate: f.rate, pct: Math.min(100, txNum(f.pctS)), fix: txNum(f.fixS), tax: f.tax ? 1 : 0 };
+        return { name: f.name, date: f.date || '', incl: txNum(f.amtS), rate: f.rate, pct: Math.min(100, txNum(f.pctS)), fix: txNum(f.fixS), tax: f.tax ? 1 : 0 };
       });
       const txR = computed(() => {
         if (txCur.value.incl <= 0) return null;
@@ -2867,12 +2873,26 @@
         });
         return o;
       };
-      const txTotals = computed(() => {
-        const s = { card: 0, self: 0, cj: 0, city: 0 };
-        txEnts.value.forEach(e => { const r = txEntRes(e); txMethods.forEach(m => { s[m[0]] += r[m[0]]; }); });
-        return s;
+
+      // 日期顯示：2026-11-25 → 2026/11/25
+      const txDateText = (d) => d ? d.replace(/-/g, '/') : '';
+
+      // 店家快速篩選
+      const txFilter = ref(''); // '' = 全部
+      const txStoreNames = computed(() => {
+        const names = [];
+        txEnts.value.forEach(e => {
+          const n = (e.name || '').trim();
+          if (n && !names.includes(n)) names.push(n);
+        });
+        return names;
       });
-      const txTotalBest = computed(() => Math.max(...txMethods.map(m => txTotals.value[m[0]])));
+      // 保留原本的位置編號 i，編輯和刪除才不會對錯筆
+      const txShown = computed(() => {
+        const all = txEnts.value.map((e, i) => ({ e, i }));
+        if (!txFilter.value || !txStoreNames.value.includes(txFilter.value)) return all;
+        return all.filter(r => (r.e.name || '').trim() === txFilter.value);
+      });
 
       const showTxModal = ref(false);
       const txEditIdx = ref(-1);
@@ -2881,7 +2901,7 @@
       const editTx = (i) => {
         const e = txEnts.value[i];
         txEditIdx.value = i;
-        txForm.value = { name: e.name, amtS: txFy(e.incl), pctS: txFp(e.pct), fixS: txFy(e.fix), tax: e.tax ? 1 : 0, rate: e.rate };
+        txForm.value = { name: e.name, date: e.date || '', amtS: txFy(e.incl), pctS: txFp(e.pct), fixS: txFy(e.fix), tax: e.tax ? 1 : 0, rate: e.rate };
         txDd.value = false;
         showTxModal.value = true;
       };
@@ -3280,7 +3300,7 @@
         selectDepAirport, selectArrAirport, closeDepAirportDropdown, closeArrAirportDropdown,weeklyEditor, toggleEditorDay, applyEditor, setEditorClosed, loadDayToEditor,
         todos, todoFilter, todoFilters, filteredTodos, showTodoModal, isEditTodo, formTodo, openAddTodo, editTodo, saveTodo, deleteTodo,
         txView, txEnts, txForm, txDd, txMethods, txPlatforms, txPre, txDdList, txCloseDd, txPick,
-        txR, txBest, txRows, txFeeText, txEntRes, txTotals, txTotalBest, txY, txT,
+        txR, txBest, txRows, txFeeText, txEntRes, txY, txT, txDateText, txFilter, txStoreNames, txShown,
         showTxModal, txEditIdx, openAddTx, editTx, saveTx, delTx, txOnName,
         txShowAll, txFocusName, txOnPct, txOnFix, txOnAmt
       };
