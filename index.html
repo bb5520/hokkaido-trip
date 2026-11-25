@@ -127,13 +127,13 @@
     <!-- 主內容區域 -->
     <main class="relative z-10 bg-[#eef4f8] pt-5 px-4 flex-1">
 
-      <!-- ================= 1. 每日行程表 Tab ================= -->
+      <!-- ================= 1. 行程 Tab ================= -->
       <section v-if="currentTab === 'itinerary'" class="space-y-4">
-        
-        <!-- (1) 日期橫向滑動選單 -->
+
+        <!-- 日期橫向滑動選單 -->
         <div class="flex space-x-3 overflow-x-auto no-scrollbar py-1">
-          <button 
-            v-for="(day, index) in dateList" 
+          <button
+            v-for="(day, index) in dateList"
             :key="index"
             @click="selectedDateIndex = index"
             :class="['flex-shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-2xl transition-all',
@@ -144,7 +144,7 @@
           </button>
         </div>
 
-        <!-- (2) 分類篩選下拉選單 -->
+        <!-- 分類篩選 -->
         <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl shadow-sm border border-slate-100">
           <span class="text-xs font-bold text-slate-500"><i class="fa-solid fa-filter mr-1"></i>行程類別</span>
           <select v-model="selectedCategory" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none text-slate-700 font-medium">
@@ -153,26 +153,23 @@
           </select>
         </div>
 
-        <!-- (3) 行程卡片列表 -->
+        <!-- 行程卡片列表 -->
         <div class="space-y-3">
           <div v-for="(item, idx) in filteredItinerary" :key="item.id" class="relative group">
-            
-            <!-- (6) 交通時間 (顯示於卡片之間) -->
+
+            <!-- 交通時間 (顯示於卡片之間，點擊開啟大眾運輸導航) -->
             <div v-if="idx > 0" class="flex items-center justify-center my-2 text-xs text-slate-400 font-medium">
               <div class="h-4 w-[2px] bg-ice-200 mr-2"></div>
-              
-              <!-- 將原本的純文字 span 改為可點擊的 button，自動抓取上一站與本站名稱 -->
-              <button @click.stop="openDirections(filteredItinerary[idx - 1].location || filteredItinerary[idx - 1].name, item.location || item.name)" 
+              <button @click.stop="openDirections(filteredItinerary[idx - 1].location || filteredItinerary[idx - 1].name, item.location || item.name)"
                       class="bg-white border border-ice-100 px-3 py-1 rounded-full text-[11px] shadow-sm flex items-center gap-1.5 text-ice-700 hover:bg-ice-50 hover:shadow transition cursor-pointer active:scale-95">
                 <i :class="item.transitIcon || 'fa-solid fa-train-subway'"></i>
                 <span>{{ item.transitTime || '大眾運輸導航' }}</span>
                 <i class="fa-solid fa-chevron-right text-[8px] opacity-60"></i>
               </button>
-
               <div class="h-4 w-[2px] bg-ice-200 ml-2"></div>
             </div>
 
-            <!-- 航班專屬顯示卡片 -->
+            <!-- 航班專屬卡片 -->
             <div v-if="item.category === '航班'" class="tk2">
               <div class="absolute top-0 left-0 right-0 h-1.5 z-20" :style="airlineAssets(item.flightNo) ? airlineAssets(item.flightNo).bar : 'background:linear-gradient(90deg,#38bdf8,#0284c7)'"></div>
               <div class="tk2-top relative px-4 pt-5 pb-4">
@@ -207,53 +204,6 @@
                     <div class="relative h-4 text-xs text-[#0a3fbf] whitespace-nowrap"><span class="absolute right-0 top-0">{{ (item.arrAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.arrTerminal">{{ ' ' + item.arrTerminal }}</span></span></div>
                   </div>
                 </div>
-                <div v-if="false" class="relative mt-4">
-                  <div class="text-center">
-                    <span class="inline-block border border-sky-200 bg-white text-[#0a3fbf] text-xs font-bold px-2 py-0.5 rounded-full">{{ item.flightNo || '未填寫' }}</span>
-                  </div>
-                  <div class="grid grid-cols-[auto_1fr_auto] items-center gap-2 mt-1.5">
-                    <div class="text-xl font-bold text-[#0a3fbf] leading-none tabular-nums">{{ item.depTime || '--:--' }}</div>
-                    <div class="flex items-center text-[#0a3fbf]">
-                      <span class="w-2 h-2 rounded-full border-2 border-current flex-shrink-0"></span>
-                      <span class="flex-1 border-t-2 border-dashed border-current mx-1"></span>
-                      <i class="fa-solid fa-plane text-xs"></i>
-                    </div>
-                    <div class="text-xl font-bold text-[#0a3fbf] leading-none tabular-nums">{{ item.arrTime || '--:--' }}</div>
-                  </div>
-                  <div class="grid grid-cols-[auto_1fr_auto] items-center gap-2 mt-1">
-                    <div class="text-sm font-bold text-[#0a3fbf]">{{ (item.depAirport || '出發地').split(' ')[0] }}</div>
-                    <div class="text-center text-[10px] font-bold text-[#0a3fbf] whitespace-nowrap"><i class="fa-regular fa-clock mr-1"></i>{{ item.flightDuration ? '共 ' + item.flightDuration : '飛行時間' }}</div>
-                    <div class="text-sm font-bold text-[#0a3fbf]">{{ (item.arrAirport || '目的地').split(' ')[0] }}</div>
-                  </div>
-                  <div class="flex justify-between gap-2 mt-0.5 text-xs text-[#0a3fbf] whitespace-nowrap">
-                    <span>{{ (item.depAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.depTerminal">{{ '　' + item.depTerminal }}</span></span>
-                    <span>{{ (item.arrAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.arrTerminal">{{ '　' + item.arrTerminal }}</span></span>
-                  </div>
-                </div>
-                <div v-if="false" class="relative grid grid-cols-[minmax(0,1fr)_7.5rem_minmax(0,1fr)] gap-2 items-start mt-4">
-                  <div class="min-w-0">
-                    <div class="text-[10px] font-bold text-sky-400 tracking-widest">出發</div>
-                    <div class="text-xl font-bold text-[#0a3fbf] leading-none mt-0.5">{{ item.depTime || '--:--' }}</div>
-                    <div class="text-sm font-bold text-[#0a3fbf] mt-1">{{ (item.depAirport || '出發地').split(' ')[0] }}</div>
-                    <div class="text-xs text-[#0a3fbf] leading-tight break-words">{{ (item.depAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.depTerminal"> {{ item.depTerminal }}</span></div>
-                  </div>
-                  <div class="text-center px-1 min-w-[5rem] pt-2">
-                    <div class="inline-block border border-sky-200 bg-white text-[#0a3fbf] text-xs font-bold px-2 py-0.5 rounded-full">{{ item.flightNo || '未填寫' }}</div>
-                    <div class="flex items-center my-2 text-[#0a3fbf]">
-                      <span class="w-2 h-2 rounded-full border-2 border-current flex-shrink-0"></span>
-                      <span class="flex-1 border-t-2 border-dashed border-current mx-1"></span>
-                      <i class="fa-solid fa-plane text-xs"></i>
-                    </div>
-                    <div class="text-[10px] font-bold text-[#0a3fbf]"><i class="fa-regular fa-clock mr-1"></i>{{ item.flightDuration ? '共 ' + item.flightDuration : '飛行時間' }}</div>
-                    <div v-if="item.name" :class="['inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold', item.name === '轉機' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600']">{{ item.name }}</div>
-                  </div>
-                  <div class="min-w-0 text-right">
-                    <div class="text-[10px] font-bold text-sky-400 tracking-widest">抵達</div>
-                    <div class="text-xl font-bold text-[#0a3fbf] leading-none mt-0.5">{{ item.arrTime || '--:--' }}</div>
-                    <div class="text-sm font-bold text-[#0a3fbf] mt-1">{{ (item.arrAirport || '目的地').split(' ')[0] }}</div>
-                    <div class="text-xs text-[#0a3fbf] leading-tight break-words">{{ (item.arrAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.arrTerminal"> {{ item.arrTerminal }}</span></div>
-                  </div>
-                </div>
                 <div v-if="item.images && item.images.length" class="relative flex gap-2 overflow-x-auto no-scrollbar mt-4">
                   <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-14 h-14 flex-shrink-0 rounded-xl object-cover border border-sky-100 cursor-pointer">
                 </div>
@@ -284,173 +234,11 @@
                 </div>
               </template>
             </div>
-            <div v-else-if="false" class="tk-card">
-              <div class="px-4 pt-4">
-                <div class="flex items-start justify-between">
-                  <img v-if="airlineAssets(item.flightNo)" :src="resolveBlobUrl(airlineAssets(item.flightNo).logo)" alt="" class="h-6 w-auto object-contain mt-1">
-                  <div v-else class="text-xl font-bold text-[#0a3fbf] tracking-wide mt-1">{{ (item.flightNo || '').slice(0, 2).toUpperCase() || '航班' }}</div>
-                  <img v-if="airlineAssets(item.flightNo)" :src="resolveBlobUrl(airlineAssets(item.flightNo).plane)" alt="" class="w-36 -mt-1 -mr-1 pointer-events-none select-none">
-                  <i v-else class="fa-solid fa-plane-departure text-sky-200 text-4xl mt-1"></i>
-                </div>
-                <div class="inline-flex items-center gap-1.5 bg-sky-100 text-[#0a3fbf] font-bold rounded-full px-3 py-1 text-xs mt-2">
-                  <i class="fa-regular fa-calendar"></i>{{ flightDateText }}
-                </div>
-                <div class="grid grid-cols-[auto_1fr_auto] gap-3 items-start mt-4">
-                  <div class="min-w-0">
-                    <div class="text-xl font-bold text-[#0a3fbf] leading-none">{{ item.depTime || '--:--' }}</div>
-                    <div class="text-sm font-bold text-[#0a3fbf] mt-1">{{ (item.depAirport || '出發地').split(' ')[0] }}</div>
-                    <div class="text-xs text-[#0a3fbf] leading-tight break-words">{{ (item.depAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.depTerminal">{{ ' ' + item.depTerminal }}</span></div>
-                  </div>
-                  <div class="text-center px-1 min-w-[5rem]">
-                    <div class="text-xs font-bold text-[#0a3fbf]">{{ item.flightNo || '未填寫' }}</div>
-                    <div class="flex items-center my-1.5 text-[#0a3fbf]">
-                      <span class="w-2 h-2 rounded-full border-2 border-current flex-shrink-0"></span>
-                      <span class="flex-1 border-t-2 border-dashed border-current mx-1"></span>
-                      <i class="fa-solid fa-plane text-xs"></i>
-                    </div>
-                    <div class="text-[10px] font-bold text-[#0a3fbf]">{{ item.flightDuration ? '共 ' + item.flightDuration : '飛行時間' }}</div>
-                    <div v-if="item.name" :class="['text-xs font-bold mt-0.5', item.name === '轉機' ? 'text-amber-500' : 'text-green-500']">{{ item.name }}</div>
-                  </div>
-                  <div class="min-w-0 text-right">
-                    <div class="text-xl font-bold text-[#0a3fbf] leading-none">{{ item.arrTime || '--:--' }}</div>
-                    <div class="text-sm font-bold text-[#0a3fbf] mt-1">{{ (item.arrAirport || '目的地').split(' ')[0] }}</div>
-                    <div class="text-xs text-[#0a3fbf] leading-tight break-words">{{ (item.arrAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.arrTerminal">{{ ' ' + item.arrTerminal }}</span></div>
-                  </div>
-                </div>
-                <div v-if="item.images && item.images.length" class="flex gap-2 overflow-x-auto no-scrollbar mt-4">
-                  <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-14 h-14 flex-shrink-0 rounded-xl object-cover border border-sky-100 cursor-pointer">
-                </div>
-              </div>
-              <div class="tk-perf mt-4">
-                <span class="tk-notch l"></span>
-                <span class="tk-notch r"></span>
-              </div>
-              <div class="relative overflow-hidden px-4 pt-4 pb-5 flex items-end justify-between gap-3" style="border-radius: 0 0 1.9rem 1.9rem;">
-                <svg v-if="false" viewBox="0 0 150 56" class="absolute -right-1 -bottom-1 w-36 h-14 pointer-events-none" aria-hidden="true">
-                  <g fill="#4fb0f2" stroke="#4fb0f2" stroke-width="2"><circle cx="40" cy="40" r="13"/><circle cx="62" cy="30" r="17"/><circle cx="88" cy="36" r="14"/><circle cx="110" cy="44" r="12"/><circle cx="132" cy="48" r="10"/><rect x="40" y="40" width="70" height="16"/></g>
-                  <g fill="#d9eefc"><circle cx="40" cy="40" r="11"/><circle cx="62" cy="30" r="15"/><circle cx="88" cy="36" r="12"/><circle cx="110" cy="44" r="10"/><circle cx="132" cy="48" r="8"/><rect x="40" y="42" width="70" height="14"/></g>
-                </svg>
-                <div class="relative min-w-0">
-                  <template v-if="flightPrice(item.id)">
-                    <div class="text-xl font-bold text-sky-500 leading-none">{{ flightPrice(item.id).main }}</div>
-                    <div class="text-[10px] font-bold text-slate-500 mt-1">{{ [flightPrice(item.id).sub, flightPrice(item.id).pay].filter(Boolean).join(' · ') }}</div>
-                  </template>
-                  <div v-if="item.note" class="text-xs text-slate-500 mt-1 break-words"><i class="fa-regular fa-sticky-note mr-1 text-slate-400"></i>{{ item.note }}</div>
-                </div>
-                <div class="relative flex items-center gap-2 flex-shrink-0">
-                  <button @click.stop="editItinerary(item)" aria-label="編輯" class="w-11 h-11 rounded-full text-sky-600 flex items-center justify-center"><i class="fa-solid fa-pen-to-square text-lg"></i></button>
-                </div>
-              </div>
-            </div>
-            <div v-else-if="false" class="fl-wrap rounded-3xl p-3 shadow-md">
-              <div class="fl-card relative overflow-hidden">
-                <div class="relative z-10 px-4 pt-4">
-                  <div class="flex items-start justify-between">
-                    <img v-if="airlineAssets(item.flightNo)" :src="airlineAssets(item.flightNo).logo" alt="" class="h-10 w-auto object-contain mt-1">
-                    <div v-else class="text-2xl font-extrabold text-[#0a3fbf] tracking-wide mt-1">{{ (item.flightNo || '').slice(0, 2).toUpperCase() || '航班' }}</div>
-                    <img v-if="airlineAssets(item.flightNo)" :src="airlineAssets(item.flightNo).plane" alt="" class="w-40 -mt-1 -mr-1 pointer-events-none select-none">
-                    <i v-else class="fa-solid fa-plane-departure text-sky-200 text-5xl mt-1"></i>
-                  </div>
-                  <div class="inline-flex items-center gap-2 bg-sky-100 text-[#0a3fbf] font-bold rounded-full px-4 py-1.5 text-sm mt-2">
-                    <i class="fa-regular fa-calendar"></i>{{ flightDateText }}
-                  </div>
-                  <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-start mt-5">
-                    <div class="min-w-0">
-                      <div class="text-3xl font-extrabold text-[#0a3fbf] leading-none">{{ item.depTime || '--:--' }}</div>
-                      <div class="text-xl font-extrabold text-[#0a3fbf] mt-1">{{ (item.depAirport || '出發地').split(' ')[0] }}</div>
-                      <div class="text-[11px] font-bold text-[#0a3fbf] leading-tight break-words">{{ (item.depAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.depTerminal"> {{ item.depTerminal }}</span></div>
-                    </div>
-                    <div class="text-center px-1 pt-0.5 w-28">
-                      <div class="text-sm font-bold text-[#0a3fbf]">{{ item.flightNo || '未填寫' }}</div>
-                      <div class="flex items-center my-1.5 text-[#0a3fbf]">
-                        <span class="w-2.5 h-2.5 rounded-full border-2 border-current flex-shrink-0"></span>
-                        <span class="flex-1 border-t-2 border-dashed border-current mx-1"></span>
-                        <i class="fa-solid fa-plane text-sm"></i>
-                      </div>
-                      <div class="text-[11px] font-bold text-[#0a3fbf]">{{ item.flightDuration ? '共 ' + item.flightDuration : '飛行時間' }}</div>
-                      <div v-if="item.name" :class="['text-sm font-extrabold mt-0.5', item.name === '轉機' ? 'text-amber-500' : 'text-green-500']">{{ item.name }}</div>
-                    </div>
-                    <div class="min-w-0 text-right">
-                      <div class="text-3xl font-extrabold text-[#0a3fbf] leading-none">{{ item.arrTime || '--:--' }}</div>
-                      <div class="text-xl font-extrabold text-[#0a3fbf] mt-1">{{ (item.arrAirport || '目的地').split(' ')[0] }}</div>
-                      <div class="text-[11px] font-bold text-[#0a3fbf] leading-tight break-words">{{ (item.arrAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.arrTerminal"> {{ item.arrTerminal }}</span></div>
-                    </div>
-                  </div>
-                  <div v-if="item.images && item.images.length" class="flex gap-2 overflow-x-auto no-scrollbar mt-4">
-                    <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-14 h-14 flex-shrink-0 rounded-xl object-cover border border-sky-100 cursor-pointer">
-                  </div>
-                </div>
-                <div class="relative z-10 mt-4">
-                  <div class="fl-perf"></div>
-                  <span class="fl-notch" style="left:-15px"></span>
-                  <span class="fl-notch" style="right:-15px"></span>
-                </div>
-                <div class="relative z-10 px-4 pt-4 flex items-end justify-between gap-3">
-                  <div class="min-w-0">
-                    <template v-if="flightPrice(item.id)">
-                      <div class="text-3xl font-extrabold text-sky-500 leading-none">{{ flightPrice(item.id).main }}</div>
-                      <div class="text-xs font-bold text-slate-500 mt-1">{{ [flightPrice(item.id).sub, flightPrice(item.id).pay].filter(Boolean).join(' · ') }}</div>
-                    </template>
-                    <div v-if="item.note" class="text-xs text-slate-500 mt-1 break-words"><i class="fa-regular fa-sticky-note mr-1 text-slate-400"></i>{{ item.note }}</div>
-                  </div>
-                  <div class="flex items-center gap-2 flex-shrink-0">
-                    <button @click.stop="openMap(item.location)" aria-label="導航" class="w-11 h-11 rounded-full border-2 border-sky-500 text-sky-600 bg-white/80 flex items-center justify-center"><i class="fa-solid fa-diamond-turn-right"></i></button>
-                    <button @click.stop="editItinerary(item)" class="flex items-center gap-2 border-2 border-sky-500 text-sky-600 font-bold rounded-full px-5 h-11 bg-white/80"><i class="fa-solid fa-pen-to-square text-lg"></i>編輯</button>
-                  </div>
-                </div>
-                <div class="h-14"></div>
-                <svg viewBox="0 0 400 80" preserveAspectRatio="none" class="absolute bottom-0 left-0 w-full h-14 z-0 pointer-events-none"><path d="M0 80 L90 52 L140 40 L200 8 L260 40 L320 54 L400 80 Z" fill="#7dbbf0" fill-opacity=".55"/><path d="M200 8 L224 30 L212 26 L202 34 L192 27 L178 30 Z" fill="#fff"/></svg>
-              </div>
-            </div>
-            <div v-else-if="false"
-                 class="bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-2xl p-4 shadow-md relative overflow-hidden border border-slate-700">
-              <div class="absolute -right-4 -bottom-4 opacity-10 text-7xl"><i class="fa-solid fa-plane-departure"></i></div>
-              <div v-if="item.images && item.images.length" class="relative -mx-4 -mt-4 mb-3">
-                <div class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
-                  <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-full h-44 flex-shrink-0 snap-center object-cover bg-slate-700 cursor-pointer">
-                </div>
-                <span v-if="item.images.length > 1" class="absolute right-3 bottom-3 bg-black/60 text-white text-[10px] font-bold rounded-full px-2 py-0.5"><i class="fa-solid fa-images mr-1"></i>{{ item.images.length }}</span>
-              </div>
-              <div class="flex justify-between items-center text-xs text-slate-300 mb-2">
-                <span class="bg-ice-600/40 text-ice-200 px-2 py-0.5 rounded-full font-bold">航班 · {{ item.flightNo || '未填寫' }}</span>
-                <!-- 獨立的導航按鈕 -->
-                <button @click.stop="openMap(item.location)" class="hover:text-white transition cursor-pointer flex items-center z-10 relative">
-                  <i class="fa-solid fa-diamond-turn-right text-ice-400 mr-1"></i>點擊導航
-                </button>
-              </div>
-              <div class="flex justify-between items-center my-2">
-                <div class="w-1/3">
-                  <div class="text-2xl font-bold leading-tight break-words">{{ (item.depAirport || '出發地').split(' ')[0] }}</div>
-                  <div v-if="(item.depAirport || '').split(' ').slice(1).join(' ')" class="text-[11px] text-slate-300 leading-tight break-words">{{ (item.depAirport || '').split(' ').slice(1).join(' ') }}</div>
-                  <div v-if="item.depTerminal" class="inline-block mt-1 bg-ice-600/40 text-ice-200 text-[10px] font-bold px-1.5 py-0.5 rounded">{{ item.depTerminal }}</div>
-                  <div class="text-xs text-slate-400">{{ item.depTime || '--:--' }} 起飛</div>
-                </div>
-                <div class="text-center w-1/3">
-                  <i class="fa-solid fa-plane text-ice-400 text-lg"></i>
-                  <div class="text-[10px] text-slate-400 mt-1">{{ item.flightDuration || '飛行時間' }}</div>
-                </div>
-                <div class="text-right w-1/3">
-                  <div class="text-2xl font-bold leading-tight break-words">{{ (item.arrAirport || '目的地').split(' ')[0] }}</div>
-                  <div v-if="(item.arrAirport || '').split(' ').slice(1).join(' ')" class="text-[11px] text-slate-300 leading-tight break-words">{{ (item.arrAirport || '').split(' ').slice(1).join(' ') }}</div>
-                  <div v-if="item.arrTerminal" class="inline-block mt-1 bg-ice-600/40 text-ice-200 text-[10px] font-bold px-1.5 py-0.5 rounded">{{ item.arrTerminal }}</div>
-                  <div class="text-xs text-slate-400">{{ item.arrTime || '--:--' }} 抵達</div>
-                </div>
-              </div>
-              <div v-if="false" class="flex gap-2 mt-2 overflow-x-auto no-scrollbar relative z-10">
-                <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-16 h-16 flex-shrink-0 rounded-lg object-cover border border-slate-600 cursor-pointer">
-              </div>
-              <div class="text-xs text-slate-300 mt-2 pt-2 border-t border-slate-700/60 flex justify-between items-center relative z-10">
-                <span class="pr-2">備註: {{ item.note }}</span>
-                <button @click.stop="editItinerary(item)" class="text-slate-400 hover:text-white cursor-pointer p-1">
-                  <i class="fa-solid fa-pen-to-square text-lg"></i>
-                </button>
-              </div>
-            </div>
 
             <!-- 一般行程卡片 -->
-            <div v-else 
+            <div v-else
                  class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative hover:shadow-md transition overflow-hidden">
-              
+
               <!-- 行程照片 (卡片最上方，與卡片同寬) -->
               <div v-if="item.images && item.images.length" class="relative -mx-4 -mt-4 mb-3">
                 <div class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
@@ -462,13 +250,12 @@
               <!-- 頂部類別標籤與操作 -->
               <div class="flex justify-between items-start mb-2">
                 <div class="flex items-start gap-2 min-w-0 flex-1">
-                    <span :class="getCategoryBadgeClass(item.category)" class="px-2 py-0.5 rounded-md text-[11px] font-bold flex-shrink-0 whitespace-nowrap mt-0.5">
-                      {{ item.category }}
-                    </span>
-                    <h3 class="font-bold text-slate-800 text-base min-w-0">{{ item.name }}</h3>
-                  </div>
-                  <div class="flex items-center space-x-1 flex-shrink-0">
-                  <!-- 上下移動拖曳按鈕 (模擬拖曳) -->
+                  <span :class="getCategoryBadgeClass(item.category)" class="px-2 py-0.5 rounded-md text-[11px] font-bold flex-shrink-0 whitespace-nowrap mt-0.5">
+                    {{ item.category }}
+                  </span>
+                  <h3 class="font-bold text-slate-800 text-base min-w-0">{{ item.name }}</h3>
+                </div>
+                <div class="flex items-center space-x-1 flex-shrink-0">
                   <button @click.stop="moveItem(idx, -1)" class="p-1 text-slate-300 hover:text-ice-600"><i class="fa-solid fa-chevron-up text-xs"></i></button>
                   <button @click.stop="moveItem(idx, 1)" class="p-1 text-slate-300 hover:text-ice-600"><i class="fa-solid fa-chevron-down text-xs"></i></button>
                   <button @click.stop="editItinerary(item)" class="p-1 text-slate-400 hover:text-ice-600 ml-1"><i class="fa-solid fa-pen"></i></button>
@@ -503,10 +290,7 @@
                 <div v-if="item.note" class="flex items-start gap-2.5 bg-amber-50 border border-amber-200/70 rounded-xl px-3 py-2.5 mt-2.5 text-[13px] leading-relaxed text-slate-700 whitespace-pre-line break-words"><i class="fa-regular fa-lightbulb text-amber-500 text-base mt-0.5 flex-shrink-0"></i><span class="min-w-0">{{ item.note }}</span></div>
               </div>
 
-              <!-- 獨立的導航按鈕 -->
-              <div v-if="false" class="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
-                <img v-for="(photo, pi) in item.images" :key="photo.id" :src="resolveBlobUrl(photo.id)" @click.stop="openGallery(item.images, pi)" class="w-20 h-20 flex-shrink-0 rounded-xl object-cover border border-slate-100 cursor-pointer">
-              </div>
+              <!-- 導航按鈕 -->
               <button @click.stop="openMap(item.location)" class="w-full mt-3 pt-2 border-t border-slate-100 flex justify-end items-center text-[11px] text-ice-600 font-medium hover:text-ice-700 cursor-pointer">
                 <span>Google Maps 導航</span>
                 <i class="fa-solid fa-location-arrow ml-1"></i>
@@ -516,7 +300,7 @@
           </div>
         </div>
 
-        <!-- (5) 新增行程右下角浮動按鈕 -->
+        <!-- 新增行程浮動按鈕 -->
         <button @click="openAddModal" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
           <i class="fa-solid fa-plus"></i>
         </button>
@@ -525,7 +309,7 @@
 
       <!-- ================= 2. 資訊 Tab ================= -->
       <section v-if="currentTab === 'info'" class="space-y-4">
-        
+
         <!-- 航班資訊 (同步自「行程」分頁，內容唯讀，僅可加附件) -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
           <div class="flex items-center justify-between mb-3">
@@ -685,7 +469,7 @@
           </div>
         </div>
 
-        <!-- 租車資訊 (可能沒有租車) -->
+        <!-- 租車資訊 -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -726,8 +510,50 @@
 
       </section>
 
+      <!-- ================= 3. 待辦 Tab ================= -->
+      <section v-if="currentTab === 'todo'" class="space-y-3">
 
-      <!-- ================= 3. 購物清單 Tab ================= -->
+        <!-- 篩選膠囊（顯示數量） -->
+        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+          <button v-for="f in todoFilters" :key="f.name" @click="todoFilter = f.name"
+            :class="['flex-none px-3 py-1.5 rounded-xl text-xs font-medium', todoFilter === f.name ? 'bg-ice-600 text-white font-bold shadow-sm' : 'bg-white text-slate-600 border border-slate-100 shadow-sm']">
+            {{ f.name }} {{ f.count }}
+          </button>
+        </div>
+
+        <!-- 待辦卡片 -->
+        <div v-for="t in filteredTodos" :key="t.id" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-start gap-3">
+            <button @click="t.done = !t.done" aria-label="已完成"
+              :class="['w-8 h-8 rounded-lg border-2 flex-shrink-0 flex items-center justify-center', t.done ? 'bg-ice-600 border-ice-600 text-white' : 'bg-white border-slate-300']">
+              <i v-if="t.done" class="fa-solid fa-check text-sm"></i>
+            </button>
+
+            <h3 :class="['flex-1 min-w-0 font-bold text-base break-words pt-0.5', t.done ? 'line-through text-slate-400' : 'text-slate-800']">{{ t.text }}</h3>
+
+            <div class="flex items-center space-x-1 flex-shrink-0 pt-1">
+              <button @click="editTodo(t)" aria-label="編輯" class="p-1 text-slate-400 hover:text-ice-600"><i class="fa-solid fa-pen text-xs"></i></button>
+              <button @click="deleteTodo(t.id)" aria-label="刪除" class="p-1 text-red-400 hover:text-red-600"><i class="fa-solid fa-trash text-xs"></i></button>
+            </div>
+          </div>
+
+          <!-- 備註（與行程卡片相同樣式） -->
+          <div v-if="t.note" class="flex items-start gap-2.5 bg-amber-50 border border-amber-200/70 rounded-xl px-3 py-2.5 mt-2.5 text-[13px] leading-relaxed text-slate-700 whitespace-pre-line break-words">
+            <i class="fa-regular fa-lightbulb text-amber-500 text-base mt-0.5 flex-shrink-0"></i><span class="min-w-0">{{ t.note }}</span>
+          </div>
+        </div>
+
+        <div v-if="filteredTodos.length === 0" class="bg-white rounded-2xl shadow-sm border border-slate-100 text-slate-400 text-center py-6 text-sm">
+          {{ todos.length ? '此分類沒有項目' : '尚未新增待辦事項' }}
+        </div>
+
+        <!-- 新增浮動按鈕 -->
+        <button @click="openAddTodo" aria-label="新增待辦" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      </section>
+
+      <!-- ================= 4. 購物清單 Tab ================= -->
       <section v-if="currentTab === 'shopping'" id="souv-host" class="space-y-3"></section>
       <section v-if="false" class="space-y-3">
         <div v-for="(item, idx) in shoppingList" :key="item.id"
@@ -782,104 +608,7 @@
 
       </section>
 
-      <!-- ================= 4. 花費 Tab ================= -->
-      <section v-if="currentTab === 'expenses'" class="space-y-4">
-        
-        <!-- 總花費統計卡片 (自動換算為日幣 JPY 加總，含手動紀錄 + 資訊分頁自動帶入的金額；會依「花費類別」篩選結果計算) -->
-        <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-md">
-          <div class="text-xs text-slate-400">{{ selectedExpenseCategory === '全部' ? '總花費統計' : selectedExpenseCategory + ' 花費統計' }} (換算為日幣 JPY)</div>
-          <div class="text-3xl font-bold mt-1 text-amber-300">¥ {{ totalExpensesJPY.toLocaleString() }}</div>
-          <div class="text-xs text-slate-400 mt-1">約合 NT$ {{ Math.round(totalExpensesJPY * jpyRate).toLocaleString() }}</div>
-        </div>
-
-        <!-- 花費類別篩選下拉選單 -->
-        <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl shadow-sm border border-slate-100">
-          <span class="text-xs font-bold text-slate-500"><i class="fa-solid fa-filter mr-1"></i>花費類別</span>
-          <select v-model="selectedExpenseCategory" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none text-slate-700 font-medium">
-            <option value="全部">全部類別</option>
-            <option v-for="cat in ['交通','飲食','住宿','門票','購物','其他']" :key="cat" :value="cat">{{ cat }}</option>
-          </select>
-        </div>
-
-        <!-- 花費列表 (手動紀錄可編輯/刪除；來自「資訊」分頁的金額自動帶入，僅可在資訊分頁編輯) -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
-          <div v-for="exp in filteredExpenses" :key="exp.key" class="p-3.5 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <div class="w-10 h-10 rounded-xl bg-ice-50 text-ice-600 flex items-center justify-center text-base font-bold">
-                <i :class="exp.icon || getExpenseIcon(exp.category)"></i>
-              </div>
-              <div>
-                <div class="font-bold text-slate-800 text-sm flex items-center gap-1.5 flex-wrap">
-                  <span>{{ exp.name }}</span>
-                </div>
-                <div class="text-[11px] text-slate-400">{{ [exp.dateLabel, exp.payMethod].filter(Boolean).join(' · ') }}</div>
-              </div>
-            </div>
-            <div class="text-right">
-              <div class="font-bold text-slate-800 text-sm">{{ priceDisplay(exp.amount, exp.currency) }}</div>
-              <div class="flex items-center justify-end gap-2 mt-0.5">
-                <template v-if="!exp.auto">
-                  <button @click="editExpense(exp)" class="text-slate-400 hover:text-ice-600 p-1" title="編輯花費"><i class="fa-solid fa-pen text-xs"></i></button>
-                  <button @click="confirmDeleteExpense(exp.id)" class="text-red-400 hover:text-red-600 p-1" title="刪除花費"><i class="fa-solid fa-trash text-xs"></i></button>
-                </template>
-                <span v-else class="text-[10px] text-slate-300 flex items-center gap-1" title="請至「資訊」分頁編輯"><i class="fa-solid fa-circle-info"></i>資訊分頁編輯</span>
-              </div>
-            </div>
-          </div>
-          <div v-if="filteredExpenses.length === 0" class="text-slate-400 text-center py-6 text-sm">{{ selectedExpenseCategory === '全部' ? '尚未新增花費紀錄' : '此類別尚無花費紀錄' }}</div>
-        </div>
-
-        <!-- 新增花費浮動按鈕 -->
-        <button @click="openAddExpenseModal" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
-          <i class="fa-solid fa-plus"></i>
-        </button>
-
-      </section>
-      
-      <!-- ================= 待辦 Tab ================= -->
-      <section v-if="currentTab === 'todo'" class="space-y-3">
-
-        <!-- 篩選膠囊（顯示數量） -->
-        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
-          <button v-for="f in todoFilters" :key="f.name" @click="todoFilter = f.name"
-            :class="['flex-none px-3 py-1.5 rounded-xl text-xs font-medium', todoFilter === f.name ? 'bg-ice-600 text-white font-bold shadow-sm' : 'bg-white text-slate-600 border border-slate-100 shadow-sm']">
-            {{ f.name }} {{ f.count }}
-          </button>
-        </div>
-
-        <!-- 待辦卡片 -->
-        <div v-for="t in filteredTodos" :key="t.id" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <div class="flex items-start gap-3">
-            <button @click="t.done = !t.done" aria-label="已完成"
-              :class="['w-8 h-8 rounded-lg border-2 flex-shrink-0 flex items-center justify-center', t.done ? 'bg-ice-600 border-ice-600 text-white' : 'bg-white border-slate-300']">
-              <i v-if="t.done" class="fa-solid fa-check text-sm"></i>
-            </button>
-
-            <h3 :class="['flex-1 min-w-0 font-bold text-base break-words pt-0.5', t.done ? 'line-through text-slate-400' : 'text-slate-800']">{{ t.text }}</h3>
-
-            <div class="flex items-center space-x-1 flex-shrink-0 pt-1">
-              <button @click="editTodo(t)" aria-label="編輯" class="p-1 text-slate-400 hover:text-ice-600"><i class="fa-solid fa-pen text-xs"></i></button>
-              <button @click="deleteTodo(t.id)" aria-label="刪除" class="p-1 text-red-400 hover:text-red-600"><i class="fa-solid fa-trash text-xs"></i></button>
-            </div>
-          </div>
-
-          <!-- 備註（與行程卡片相同樣式） -->
-          <div v-if="t.note" class="flex items-start gap-2.5 bg-amber-50 border border-amber-200/70 rounded-xl px-3 py-2.5 mt-2.5 text-[13px] leading-relaxed text-slate-700 whitespace-pre-line break-words">
-            <i class="fa-regular fa-lightbulb text-amber-500 text-base mt-0.5 flex-shrink-0"></i><span class="min-w-0">{{ t.note }}</span>
-          </div>
-        </div>
-
-        <div v-if="filteredTodos.length === 0" class="bg-white rounded-2xl shadow-sm border border-slate-100 text-slate-400 text-center py-6 text-sm">
-          {{ todos.length ? '此分類沒有項目' : '尚未新增待辦事項' }}
-        </div>
-
-        <!-- 新增浮動按鈕 -->
-        <button @click="openAddTodo" aria-label="新增待辦" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
-          <i class="fa-solid fa-plus"></i>
-        </button>
-      </section>
-
-      <!-- ================= 退稅 Tab ================= -->
+      <!-- ================= 5. 退稅 Tab ================= -->
       <section v-if="currentTab === 'tax'" class="space-y-3">
 
         <!-- 分段切換 -->
@@ -981,10 +710,64 @@
         </template>
       </section>
 
-      <!-- ================= 5. 設定 Tab ================= -->
+      <!-- ================= 6. 花費 Tab ================= -->
+      <section v-if="currentTab === 'expenses'" class="space-y-4">
+
+        <!-- 總花費統計卡片 (換算為日幣 JPY；含手動紀錄 + 資訊分頁自動帶入的金額；依「花費類別」篩選結果計算) -->
+        <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-md">
+          <div class="text-xs text-slate-400">{{ selectedExpenseCategory === '全部' ? '總花費統計' : selectedExpenseCategory + ' 花費統計' }} (換算為日幣 JPY)</div>
+          <div class="text-3xl font-bold mt-1 text-amber-300">¥ {{ totalExpensesJPY.toLocaleString() }}</div>
+          <div class="text-xs text-slate-400 mt-1">約合 NT$ {{ Math.round(totalExpensesJPY * jpyRate).toLocaleString() }}</div>
+        </div>
+
+        <!-- 花費類別篩選 -->
+        <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl shadow-sm border border-slate-100">
+          <span class="text-xs font-bold text-slate-500"><i class="fa-solid fa-filter mr-1"></i>花費類別</span>
+          <select v-model="selectedExpenseCategory" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none text-slate-700 font-medium">
+            <option value="全部">全部類別</option>
+            <option v-for="cat in ['交通','飲食','住宿','門票','購物','其他']" :key="cat" :value="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <!-- 花費列表 (手動紀錄可編輯/刪除；來自「資訊」分頁的金額自動帶入，僅可在資訊分頁編輯) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
+          <div v-for="exp in filteredExpenses" :key="exp.key" class="p-3.5 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-ice-50 text-ice-600 flex items-center justify-center text-base font-bold">
+                <i :class="exp.icon || getExpenseIcon(exp.category)"></i>
+              </div>
+              <div>
+                <div class="font-bold text-slate-800 text-sm flex items-center gap-1.5 flex-wrap">
+                  <span>{{ exp.name }}</span>
+                </div>
+                <div class="text-[11px] text-slate-400">{{ [exp.dateLabel, exp.payMethod].filter(Boolean).join(' · ') }}</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="font-bold text-slate-800 text-sm">{{ priceDisplay(exp.amount, exp.currency) }}</div>
+              <div class="flex items-center justify-end gap-2 mt-0.5">
+                <template v-if="!exp.auto">
+                  <button @click="editExpense(exp)" class="text-slate-400 hover:text-ice-600 p-1" title="編輯花費"><i class="fa-solid fa-pen text-xs"></i></button>
+                  <button @click="confirmDeleteExpense(exp.id)" class="text-red-400 hover:text-red-600 p-1" title="刪除花費"><i class="fa-solid fa-trash text-xs"></i></button>
+                </template>
+                <span v-else class="text-[10px] text-slate-300 flex items-center gap-1" title="請至「資訊」分頁編輯"><i class="fa-solid fa-circle-info"></i>資訊分頁編輯</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="filteredExpenses.length === 0" class="text-slate-400 text-center py-6 text-sm">{{ selectedExpenseCategory === '全部' ? '尚未新增花費紀錄' : '此類別尚無花費紀錄' }}</div>
+        </div>
+
+        <!-- 新增花費浮動按鈕 -->
+        <button @click="openAddExpenseModal" class="fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+
+      </section>
+
+      <!-- ================= 7. 設定 Tab ================= -->
       <section v-if="currentTab === 'settings'" class="space-y-4">
 
-        <!-- 首頁封面圖片設定 (無需預覽，開啟彈跳視窗編輯) -->
+        <!-- 首頁封面圖片 -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -1051,7 +834,6 @@
           <div v-else class="text-xs text-slate-400">此瀏覽器不支援儲存空間查詢</div>
         </div>
 
-
         <!-- 資料備份與還原 -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
           <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -1060,7 +842,7 @@
           <div class="text-[11px] text-slate-500 mb-4 leading-relaxed">
             <p>強烈建議定期備份！將目前的行程、花費與所有照片匯出至手機儲存空間中。</p>
           </div>
-  
+
           <div class="grid grid-cols-2 gap-3">
             <button @click="exportData" class="flex items-center justify-center gap-1.5 bg-ice-50 text-ice-700 font-bold py-2.5 rounded-xl text-sm border border-ice-100 hover:bg-ice-100 active:scale-95 transition">
               <i class="fa-solid fa-download"></i> 匯出備份
@@ -1069,11 +851,10 @@
               <i class="fa-solid fa-upload"></i> 還原備份
             </button>
           </div>
-          <!-- 隱藏的檔案上傳輸入框 -->
           <input type="file" ref="fileInputRef" accept=".json" class="hidden" @change="importData">
         </div>
 
-        <!-- 帳號與同步 -->
+        <!-- 帳號與雲端同步（按鈕由 sync.js 以 data-sync 接手） -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
           <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
             <i class="fa-solid fa-cloud text-ice-600"></i> 帳號與雲端同步
@@ -1087,42 +868,19 @@
             </button>
           </div>
         </div>
-  
-      </section>
 
-      <!-- ================= 彈出視窗 Modal: 首頁封面照片編輯 ================= -->
-      <div v-if="showBannerModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
-          <div class="flex justify-between items-center border-b pb-2">
-            <h3 class="font-bold text-slate-800">更換首頁封面照片</h3>
-            <button @click="showBannerModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
-          </div>
-          <div class="space-y-3 text-xs">
-            <!-- 目前封面預覽 -->
-            <div class="w-full h-40 rounded-xl overflow-hidden bg-slate-100">
-              <img :src="bannerImageInput || bannerImage" class="w-full h-full object-cover block" />
-            </div>
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">選擇新照片</label>
-              <input type="file" @change="handleBannerUpload" accept="image/*" class="w-full text-slate-500 text-xs">
-            </div>
-          </div>
-          <button @click="saveBannerImage" class="w-full bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">
-            更新封面照片
-          </button>
-        </div>
-      </div>
+      </section>
 
     </main>
 
     <!-- ================= 底部固定分頁選單 (Bottom Tab Bar) ================= -->
     <nav class="fixed bottom-0 left-0 right-0 z-30 max-w-md mx-auto px-4 pb-4">
       <div class="flex bg-white/90 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-white/40 gap-1">
-        <button 
-          v-for="tab in tabs" 
+        <button
+          v-for="tab in tabs"
           :key="tab.id"
           @click="currentTab = tab.id"
-          :class="['flex-1 flex flex-col items-center justify-center h-14 rounded-xl transition-all duration-300', 
+          :class="['flex-1 flex flex-col items-center justify-center h-14 rounded-xl transition-all duration-300',
                    currentTab === tab.id ? 'bg-ice-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-ice-600 hover:bg-ice-50']"
         >
           <i :class="[tab.icon, 'text-lg']"></i>
@@ -1131,7 +889,11 @@
       </div>
     </nav>
 
-    <!-- ================= 彈出視窗 Modal: 行程新增/編輯 ================= -->
+    <!-- =====================================================================
+         彈出視窗 (Modals)：依分頁順序排列
+         ===================================================================== -->
+
+    <!-- ================= Modal: 行程 新增/編輯 ================= -->
     <div v-if="showItineraryModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
         <div class="flex justify-between items-center border-b pb-2">
@@ -1140,7 +902,7 @@
         </div>
 
         <div class="space-y-3 text-xs">
-          <!-- 基本資訊：名稱與分類 (通用) -->
+          <!-- 名稱與分類 (通用) -->
           <div>
             <label class="block font-bold text-slate-600 mb-1">行程名稱 <span class="text-red-500">*</span></label>
             <input v-if="formItinerary.category !== '航班'" v-model="formItinerary.name" type="text" placeholder="輸入名稱 (如: 長榮航空、小樽運河)" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
@@ -1159,7 +921,7 @@
             </select>
           </div>
 
-          <!-- ================= 航班專屬欄位 ================= -->
+          <!-- 航班專屬欄位 -->
           <div v-if="formItinerary.category === '航班'" class="space-y-3 p-3 bg-slate-50 border rounded-xl">
             <div>
               <label class="block font-bold text-slate-600 mb-1">航班編號 <span class="text-red-500">*</span></label>
@@ -1170,7 +932,6 @@
                 <label class="block font-bold text-slate-600 mb-1">出發機場</label>
                 <div class="relative">
                   <input
-                    ref="depAirportInputRef"
                     v-model="formItinerary.depAirport"
                     @focus="openDepAirportDropdown"
                     @input="openDepAirportDropdown"
@@ -1179,8 +940,6 @@
                     placeholder="輸入關鍵字 (桃園 / TPE)"
                     class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500 text-slate-700">
                   <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
-
-                  <!-- 直接放在 relative 容器內，不使用 teleport -->
                   <div v-if="depAirportOpen && filteredDepAirports.length"
                     class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 py-1">
                     <button
@@ -1194,21 +953,6 @@
                   </div>
                 </div>
               </div>
-
-              <teleport to="body">
-                <div v-if="depAirportOpen && filteredDepAirports.length"
-                     :style="depAirportDropdownStyle"
-                     class="fixed bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-[100]">
-                  <button
-                    v-for="ap in filteredDepAirports"
-                    :key="ap"
-                    type="button"
-                    @mousedown.prevent="selectDepAirport(ap)"
-                    class="w-full text-left px-3 py-2 text-xs hover:bg-ice-50 text-slate-700">
-                    {{ ap }}
-                  </button>
-                </div>
-              </teleport>
               <div>
                 <label class="block font-bold text-slate-600 mb-1">出發時間</label>
                 <input v-model="formItinerary.depTime" type="time" class="w-full bg-white border p-2 rounded-lg outline-none">
@@ -1218,7 +962,6 @@
                 <label class="block font-bold text-slate-600 mb-1">抵達機場</label>
                 <div class="relative">
                   <input
-                    ref="arrAirportInputRef"
                     v-model="formItinerary.arrAirport"
                     @focus="openArrAirportDropdown"
                     @input="openArrAirportDropdown"
@@ -1227,7 +970,6 @@
                     placeholder="輸入關鍵字 (新千歲 / CTS)"
                     class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500 text-slate-700">
                   <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
-
                   <div v-if="arrAirportOpen && filteredArrAirports.length"
                        class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 py-1">
                     <button
@@ -1241,25 +983,11 @@
                   </div>
                 </div>
               </div>
-
-              <teleport to="body">
-                <div v-if="arrAirportOpen && filteredArrAirports.length"
-                     :style="arrAirportDropdownStyle"
-                     class="fixed bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-[100]">
-                  <button
-                    v-for="ap in filteredArrAirports"
-                    :key="ap"
-                    type="button"
-                    @mousedown.prevent="selectArrAirport(ap)"
-                    class="w-full text-left px-3 py-2 text-xs hover:bg-ice-50 text-slate-700">
-                    {{ ap }}
-                  </button>
-                </div>
-              </teleport>
               <div>
                 <label class="block font-bold text-slate-600 mb-1">抵達時間</label>
                 <input v-model="formItinerary.arrTime" type="time" class="w-full bg-white border p-2 rounded-lg outline-none">
               </div>
+
               <div>
                 <label class="block font-bold text-slate-600 mb-1">出發航廈</label>
                 <div class="relative">
@@ -1269,11 +997,6 @@
                     <button v-for="t in filteredDepTerminals" :key="t" type="button" @mousedown.prevent="selectDepTerminal(t)" class="w-full text-left px-3 py-2 text-sm hover:bg-ice-50 text-slate-700">{{ t }}</button>
                   </div>
                 </div>
-                <select v-if="false" :value="formItinerary.depTerminal" @change="setTerminal($event, 'depTerminal')" class="w-full bg-white border p-2 rounded-lg outline-none">
-                  <option value="">未選擇</option>
-                  <option v-for="t in terminalOptions" :key="t" :value="t">{{ t }}</option>
-                  <option value="__custom__">＋ 自訂航廈…</option>
-                </select>
               </div>
               <div>
                 <label class="block font-bold text-slate-600 mb-1">抵達航廈</label>
@@ -1284,11 +1007,6 @@
                     <button v-for="t in filteredArrTerminals" :key="t" type="button" @mousedown.prevent="selectArrTerminal(t)" class="w-full text-left px-3 py-2 text-sm hover:bg-ice-50 text-slate-700">{{ t }}</button>
                   </div>
                 </div>
-                <select v-if="false" :value="formItinerary.arrTerminal" @change="setTerminal($event, 'arrTerminal')" class="w-full bg-white border p-2 rounded-lg outline-none">
-                  <option value="">未選擇</option>
-                  <option v-for="t in terminalOptions" :key="t" :value="t">{{ t }}</option>
-                  <option value="__custom__">＋ 自訂航廈…</option>
-                </select>
               </div>
             </div>
             <div>
@@ -1301,7 +1019,7 @@
             </div>
           </div>
 
-          <!-- ================= 一般行程專屬欄位 ================= -->
+          <!-- 一般行程專屬欄位 -->
           <template v-else>
             <div v-if="['景點','住宿','美食','購物'].includes(formItinerary.category)">
               <div class="flex items-center justify-between mb-1">
@@ -1314,7 +1032,7 @@
                 </button>
               </div>
 
-              <!-- 單一營業時間 (原本的文字輸入) -->
+              <!-- 單一營業時間 -->
               <input v-if="!formItinerary.useWeekly" v-model="formItinerary.openHours" type="text" placeholder="例如: 09:00 - 18:00" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
 
               <!-- 每週營業時間表 (批次編輯版) -->
@@ -1413,81 +1131,32 @@
       </div>
     </div>
 
-    <!-- ================= 彈出視窗 Modal: 新增/編輯 購物清單 ================= -->
-    <div v-if="showShoppingModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+    <!-- ================= Modal: 航班附加文件 (唯讀航班資訊 + 附件) ================= -->
+    <div v-if="showFlightModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4">
         <div class="flex justify-between items-center border-b pb-2">
-          <h3 class="font-bold text-slate-800">{{ isEditShoppingMode ? '編輯購物清單' : '新增購物想買清單' }}</h3>
-          <button @click="showShoppingModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+          <h3 class="font-bold text-slate-800">航班附加文件</h3>
+          <button @click="showFlightModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
         </div>
         <div class="space-y-3 text-xs">
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">商品名稱 <span class="text-red-500">*</span></label>
-            <input v-model="formShopping.name" type="text" placeholder="例如: 白色戀人 巧克力禮盒" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">購買地點</label>
-            <input v-model="formShopping.location" type="text" placeholder="例如: 新千歲機場 / 唐吉訶德 狸小路店" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          <div class="bg-slate-50 border border-slate-100 rounded-xl p-3">
+            <div class="font-bold text-slate-700 mb-1">{{ activeFlightInfo.label }}</div>
+            <div class="text-slate-500">{{ activeFlightInfo.route }}</div>
+            <div class="text-[10px] mt-2 text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>如需修改航班內容，請至「行程」分頁編輯該航班</div>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">數量</label>
-              <input v-model.number="formShopping.quantity" type="number" min="1" placeholder="1" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <label class="block font-bold text-slate-600 mb-1">託運行李 (kg)</label>
+              <input v-model="formFlightDoc.baggageChecked" type="text" placeholder="例如: 23" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
-              <label class="block font-bold text-slate-600 mb-1">幣別</label>
-              <select v-model="formShopping.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-                <option value="JPY">日幣 JPY</option>
-                <option value="TWD">台幣 TWD</option>
-              </select>
+              <label class="block font-bold text-slate-600 mb-1">隨身行李 (kg)</label>
+              <input v-model="formFlightDoc.baggageCarryon" type="text" placeholder="例如: 7" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">價格</label>
-            <input v-model.number="formShopping.price" type="number" placeholder="例如: 980" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div v-if="formShopping.price && formShopping.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formShopping.price * jpyRate).toLocaleString() }}</div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">照片上傳 (可多選，點擊縮圖可放大並左右滑動)</label>
-            <input type="file" multiple @change="e => handleDocUploadMulti(e, formShopping.images)" accept="image/*" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formShopping.images && formShopping.images.length" class="flex flex-wrap gap-2 mt-1">
-              <div v-for="(photo, pi) in formShopping.images" :key="pi" class="relative">
-                <img :src="resolveBlobUrl(photo.id)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" @click="openGallery(formShopping.images, pi)">
-                <button type="button" @click="removeDocument(formShopping.images, pi)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
-          </div>
-        </div>
-        <div class="flex gap-2 pt-2">
-          <button v-if="isEditShoppingMode" @click="confirmDeleteShoppingItem(formShopping.id)" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
-          <button @click="saveShoppingItem" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ================= 彈出視窗 Modal: 新增/編輯花費 ================= -->
-    <div v-if="showExpenseModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4">
-        <div class="flex justify-between items-center border-b pb-2">
-          <h3 class="font-bold text-slate-800">{{ isEditExpenseMode ? '編輯花費' : '記錄花費' }}</h3>
-          <button @click="showExpenseModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
-        </div>
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">類別 <span class="text-red-500">*</span></label>
-            <select v-model="formExpense.category" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-              <option value="">未選擇</option>
-              <option v-for="cat in ['交通','飲食','住宿','門票','購物','其他']" :key="cat" :value="cat">{{ cat }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">消費名稱 <span class="text-red-500">*</span></label>
-            <input v-model="formExpense.name" type="text" placeholder="例如: 湯咖哩" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">付款方式</label>
-            <select v-model="formExpense.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <select v-model="formFlightDoc.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
               <option value="">未選擇</option>
               <option value="現金">現金</option>
               <option value="信用卡">信用卡</option>
@@ -1495,27 +1164,325 @@
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">金額 <span class="text-red-500">*</span></label>
-              <input v-model.number="formExpense.amount" type="number" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <label class="block font-bold text-slate-600 mb-1">金額</label>
+              <input v-model.number="formFlightDoc.price" type="number" placeholder="例如: 12000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">幣別</label>
-              <select v-model="formExpense.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <select v-model="formFlightDoc.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
                 <option value="JPY">日幣 JPY</option>
                 <option value="TWD">台幣 TWD</option>
               </select>
             </div>
           </div>
-          <div v-if="formExpense.amount && formExpense.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formExpense.amount * jpyRate).toLocaleString() }}</div>
+          <div v-if="formFlightDoc.price && formFlightDoc.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formFlightDoc.price * jpyRate).toLocaleString() }}</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">相關文件 (機票/訂位截圖、PDF等，可多選)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formFlightDoc.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formFlightDoc.documents && formFlightDoc.documents.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(doc, di) in formFlightDoc.documents" :key="doc.id" class="relative">
+                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
+                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
+                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
+                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
+                </div>
+                <button type="button" @click="removeDocument(formFlightDoc.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+        </div>
+        <button @click="saveFlightInfo" :disabled="fileUploading" :class="['w-full font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
+      </div>
+    </div>
+
+    <!-- ================= Modal: 住宿補充資訊 (名稱唯讀，其餘可編輯) ================= -->
+    <div v-if="showHotelModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">住宿補充資訊</h3>
+          <button @click="showHotelModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">飯店名稱</label>
+            <div class="w-full bg-slate-100 border border-slate-200 p-2.5 rounded-xl text-slate-500">{{ formHotelInfo.name }}</div>
+            <div class="text-[10px] text-slate-400 mt-1"><i class="fa-solid fa-circle-info mr-1"></i>如需修改飯店名稱，請至「行程」分頁編輯</div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">電話</label>
+            <input v-model="formHotelInfo.phone" type="text" placeholder="例如: +81 11-208-5555" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">地址</label>
+            <input v-model="formHotelInfo.address" type="text" placeholder="飯店地址" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
+            <input v-model="formHotelInfo.location" type="text" placeholder="不填則預設搜尋飯店名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
+            <select v-model="formHotelInfo.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
+              <option value="現金">現金</option>
+              <option value="信用卡">信用卡</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">金額</label>
+              <input v-model.number="formHotelInfo.price" type="number" placeholder="例如: 15000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">幣別</label>
+              <select v-model="formHotelInfo.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+                <option value="JPY">日幣 JPY</option>
+                <option value="TWD">台幣 TWD</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="formHotelInfo.price && formHotelInfo.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formHotelInfo.price * jpyRate).toLocaleString() }}</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">相關文件 (訂房確認單等，可多選)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formHotelInfo.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formHotelInfo.documents && formHotelInfo.documents.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(doc, di) in formHotelInfo.documents" :key="doc.id" class="relative">
+                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
+                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
+                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
+                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
+                </div>
+                <button type="button" @click="removeDocument(formHotelInfo.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+        </div>
+        <button @click="saveHotelInfo" :disabled="fileUploading" :class="['w-full font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
+      </div>
+    </div>
+
+    <!-- ================= Modal: 一日遊 新增/編輯 ================= -->
+    <div v-if="showDayTourModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">{{ isEditDayTourMode ? '編輯一日遊' : '新增一日遊' }}</h3>
+          <button @click="showDayTourModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">名稱 <span class="text-red-500">*</span></label>
+            <input v-model="formDayTour.name" type="text" placeholder="例如: 富良野薰衣草一日遊" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
+            <input v-model="formDayTour.bookingNo" type="text" placeholder="例如: KKD-20260207-001" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">集合/出發時間</label>
+            <input v-model="formDayTour.time" type="text" placeholder="例如: Day 2 08:30 於飯店大廳集合" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
+            <input v-model="formDayTour.location" type="text" placeholder="不填則預設搜尋名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
+            <select v-model="formDayTour.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
+              <option value="現金">現金</option>
+              <option value="信用卡">信用卡</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">金額</label>
+              <input v-model.number="formDayTour.price" type="number" placeholder="例如: 3500" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">幣別</label>
+              <select v-model="formDayTour.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+                <option value="JPY">日幣 JPY</option>
+                <option value="TWD">台幣 TWD</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="formDayTour.price && formDayTour.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formDayTour.price * jpyRate).toLocaleString() }}</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">相關文件 (預約確認單、票券等，可多選)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formDayTour.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formDayTour.documents && formDayTour.documents.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(doc, di) in formDayTour.documents" :key="doc.id" class="relative">
+                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
+                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
+                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
+                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
+                </div>
+                <button type="button" @click="removeDocument(formDayTour.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">備註</label>
+            <textarea v-model="formDayTour.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2" placeholder="例如: 需自備護照、含中文導覽"></textarea>
+          </div>
         </div>
         <div class="flex gap-2 pt-2">
-          <button v-if="isEditExpenseMode" @click="confirmDeleteExpense(formExpense.id)" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
-          <button @click="saveExpense" class="flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl">{{ isEditExpenseMode ? '儲存變更' : '儲存紀錄' }}</button>
+          <button v-if="isEditDayTourMode" @click="deleteDayTour" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button @click="saveDayTour" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
         </div>
       </div>
     </div>
 
-    <!-- Modal: 待辦 新增/編輯 -->
+    <!-- ================= Modal: 其他預約 新增/編輯 ================= -->
+    <div v-if="showOtherBookingModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">{{ isEditOtherBookingMode ? '編輯其他預約' : '新增其他預約' }}</h3>
+          <button @click="showOtherBookingModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">名稱 <span class="text-red-500">*</span></label>
+            <input v-model="formOtherBooking.name" type="text" placeholder="例如: 白色戀人公園門票 / 溫泉券" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
+            <input v-model="formOtherBooking.bookingNo" type="text" placeholder="例如: TIX-20260207-001" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">時間</label>
+            <input v-model="formOtherBooking.time" type="text" placeholder="例如: Day 3 全日有效" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
+            <input v-model="formOtherBooking.location" type="text" placeholder="不填則預設搜尋名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
+            <select v-model="formOtherBooking.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
+              <option value="現金">現金</option>
+              <option value="信用卡">信用卡</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">金額</label>
+              <input v-model.number="formOtherBooking.price" type="number" placeholder="例如: 1000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">幣別</label>
+              <select v-model="formOtherBooking.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+                <option value="JPY">日幣 JPY</option>
+                <option value="TWD">台幣 TWD</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="formOtherBooking.price && formOtherBooking.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formOtherBooking.price * jpyRate).toLocaleString() }}</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">相關文件 (預約確認單、票券等，可多選)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formOtherBooking.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formOtherBooking.documents && formOtherBooking.documents.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(doc, di) in formOtherBooking.documents" :key="doc.id" class="relative">
+                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
+                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
+                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
+                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
+                </div>
+                <button type="button" @click="removeDocument(formOtherBooking.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">備註</label>
+            <textarea v-model="formOtherBooking.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button v-if="isEditOtherBookingMode" @click="deleteOtherBooking" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button @click="saveOtherBooking" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Modal: 租車 新增/編輯 ================= -->
+    <div v-if="showCarModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-slate-800">{{ isEditCarMode ? '編輯租車資訊' : '新增租車資訊' }}</h3>
+          <button @click="showCarModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">租車公司/地點 <span class="text-red-500">*</span></label>
+            <input v-model="formCar.name" type="text" placeholder="例如: TOYOTA Rent a Car 新千歲機場店" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
+            <input v-model="formCar.bookingNo" type="text" placeholder="例如: R-88902312" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">取車時間</label>
+            <input v-model="formCar.pickupTime" type="text" placeholder="例如: Day 1 14:30" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
+            <input v-model="formCar.location" type="text" placeholder="不填則預設搜尋租車地點名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
+            <select v-model="formCar.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
+              <option value="現金">現金</option>
+              <option value="信用卡">信用卡</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">金額</label>
+              <input v-model.number="formCar.price" type="number" placeholder="例如: 8000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">幣別</label>
+              <select v-model="formCar.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+                <option value="JPY">日幣 JPY</option>
+                <option value="TWD">台幣 TWD</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="formCar.price && formCar.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formCar.price * jpyRate).toLocaleString() }}</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">相關文件 (租車確認單等，可多選)</label>
+            <input type="file" multiple @change="e => handleDocUploadMulti(e, formCar.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
+            <div v-if="formCar.documents && formCar.documents.length" class="flex flex-wrap gap-2 mt-1">
+              <div v-for="(doc, di) in formCar.documents" :key="doc.id" class="relative">
+                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
+                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
+                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
+                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
+                </div>
+                <button type="button" @click="removeDocument(formCar.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">備註</label>
+            <textarea v-model="formCar.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2" placeholder="例如: 需年滿20歲、需國際駕照正本"></textarea>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button v-if="isEditCarMode" @click="deleteCar" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button @click="saveCar" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Modal: 待辦 新增/編輯 ================= -->
     <div v-if="showTodoModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
         <div class="flex justify-between items-center border-b pb-2">
@@ -1539,7 +1506,7 @@
       </div>
     </div>
 
-    <!-- Modal: 退稅 新增/編輯 -->
+    <!-- ================= Modal: 退稅 新增/編輯 ================= -->
     <div v-if="showTxModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
         <div class="flex justify-between items-center border-b pb-2">
@@ -1632,32 +1599,28 @@
       </div>
     </div>
 
-    <!-- ================= 彈出視窗 Modal: 航班附加文件 (唯讀航班資訊 + 附件) ================= -->
-    <div v-if="showFlightModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <!-- ================= Modal: 花費 新增/編輯 ================= -->
+    <div v-if="showExpenseModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4">
         <div class="flex justify-between items-center border-b pb-2">
-          <h3 class="font-bold text-slate-800">航班附加文件</h3>
-          <button @click="showFlightModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+          <h3 class="font-bold text-slate-800">{{ isEditExpenseMode ? '編輯花費' : '記錄花費' }}</h3>
+          <button @click="showExpenseModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
         </div>
         <div class="space-y-3 text-xs">
-          <div class="bg-slate-50 border border-slate-100 rounded-xl p-3">
-            <div class="font-bold text-slate-700 mb-1">{{ activeFlightInfo.label }}</div>
-            <div class="text-slate-500">{{ activeFlightInfo.route }}</div>
-            <div class="text-[10px] mt-2 text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>如需修改航班內容，請至「行程」分頁編輯該航班</div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">類別 <span class="text-red-500">*</span></label>
+            <select v-model="formExpense.category" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <option value="">未選擇</option>
+              <option v-for="cat in ['交通','飲食','住宿','門票','購物','其他']" :key="cat" :value="cat">{{ cat }}</option>
+            </select>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">託運行李 (kg)</label>
-              <input v-model="formFlightDoc.baggageChecked" type="text" placeholder="例如: 23" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">隨身行李 (kg)</label>
-              <input v-model="formFlightDoc.baggageCarryon" type="text" placeholder="例如: 7" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-            </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">消費名稱 <span class="text-red-500">*</span></label>
+            <input v-model="formExpense.name" type="text" placeholder="例如: 湯咖哩" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">付款方式</label>
-            <select v-model="formFlightDoc.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <select v-model="formExpense.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
               <option value="">未選擇</option>
               <option value="現金">現金</option>
               <option value="信用卡">信用卡</option>
@@ -1665,389 +1628,49 @@
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">金額</label>
-              <input v-model.number="formFlightDoc.price" type="number" placeholder="例如: 12000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <label class="block font-bold text-slate-600 mb-1">金額 <span class="text-red-500">*</span></label>
+              <input v-model.number="formExpense.amount" type="number" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">幣別</label>
-              <select v-model="formFlightDoc.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <select v-model="formExpense.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
                 <option value="JPY">日幣 JPY</option>
                 <option value="TWD">台幣 TWD</option>
               </select>
             </div>
           </div>
-          <div v-if="formFlightDoc.price && formFlightDoc.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formFlightDoc.price * jpyRate).toLocaleString() }}</div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">相關文件 (機票/訂位截圖、PDF等，可多選)</label>
-            <input type="file" multiple @change="e => handleDocUploadMulti(e, formFlightDoc.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formFlightDoc.documents && formFlightDoc.documents.length" class="flex flex-wrap gap-2 mt-1">
-              <div v-for="(doc, di) in formFlightDoc.documents" :key="doc.id" class="relative">
-                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
-                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
-                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
-                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
-                </div>
-                <button type="button" @click="removeDocument(formFlightDoc.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-            <div v-if="false" class="space-y-1.5">
-              <div v-for="(doc, di) in formFlightDoc.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-                <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
-                <button type="button" @click="removeDocument(formFlightDoc.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
-          </div>
-        </div>
-        <button @click="saveFlightInfo" :disabled="fileUploading" :class="['w-full font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
-      </div>
-    </div>
-
-    <!-- ================= 彈出視窗 Modal: 住宿補充資訊 (名稱唯讀，其餘可編輯) ================= -->
-    <div v-if="showHotelModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
-        <div class="flex justify-between items-center border-b pb-2">
-          <h3 class="font-bold text-slate-800">住宿補充資訊</h3>
-          <button @click="showHotelModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
-        </div>
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">飯店名稱</label>
-            <div class="w-full bg-slate-100 border border-slate-200 p-2.5 rounded-xl text-slate-500">{{ formHotelInfo.name }}</div>
-            <div class="text-[10px] text-slate-400 mt-1"><i class="fa-solid fa-circle-info mr-1"></i>如需修改飯店名稱，請至「行程」分頁編輯</div>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">電話</label>
-            <input v-model="formHotelInfo.phone" type="text" placeholder="例如: +81 11-208-5555" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">地址</label>
-            <input v-model="formHotelInfo.address" type="text" placeholder="飯店地址" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
-            <input v-model="formHotelInfo.location" type="text" placeholder="不填則預設搜尋飯店名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
-            <select v-model="formHotelInfo.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-              <option value="">未選擇</option>
-              <option value="現金">現金</option>
-              <option value="信用卡">信用卡</option>
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">金額</label>
-              <input v-model.number="formHotelInfo.price" type="number" placeholder="例如: 15000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">幣別</label>
-              <select v-model="formHotelInfo.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-                <option value="JPY">日幣 JPY</option>
-                <option value="TWD">台幣 TWD</option>
-              </select>
-            </div>
-          </div>
-          <div v-if="formHotelInfo.price && formHotelInfo.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formHotelInfo.price * jpyRate).toLocaleString() }}</div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">相關文件 (訂房確認單等，可多選)</label>
-            <input type="file" multiple @change="e => handleDocUploadMulti(e, formHotelInfo.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formHotelInfo.documents && formHotelInfo.documents.length" class="flex flex-wrap gap-2 mt-1">
-              <div v-for="(doc, di) in formHotelInfo.documents" :key="doc.id" class="relative">
-                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
-                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
-                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
-                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
-                </div>
-                <button type="button" @click="removeDocument(formHotelInfo.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-            <div v-if="false" class="space-y-1.5">
-              <div v-for="(doc, di) in formHotelInfo.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-                <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
-                <button type="button" @click="removeDocument(formHotelInfo.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
-          </div>
-        </div>
-        <button @click="saveHotelInfo" :disabled="fileUploading" :class="['w-full font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
-      </div>
-    </div>
-
-    <!-- ================= 彈出視窗 Modal: 新增/編輯租車 ================= -->
-    <div v-if="showCarModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
-        <div class="flex justify-between items-center border-b pb-2">
-          <h3 class="font-bold text-slate-800">{{ isEditCarMode ? '編輯租車資訊' : '新增租車資訊' }}</h3>
-          <button @click="showCarModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
-        </div>
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">租車公司/地點 <span class="text-red-500">*</span></label>
-            <input v-model="formCar.name" type="text" placeholder="例如: TOYOTA Rent a Car 新千歲機場店" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
-            <input v-model="formCar.bookingNo" type="text" placeholder="例如: R-88902312" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">取車時間</label>
-            <input v-model="formCar.pickupTime" type="text" placeholder="例如: Day 1 14:30" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
-            <input v-model="formCar.location" type="text" placeholder="不填則預設搜尋租車地點名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
-            <select v-model="formCar.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-              <option value="">未選擇</option>
-              <option value="現金">現金</option>
-              <option value="信用卡">信用卡</option>
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">金額</label>
-              <input v-model.number="formCar.price" type="number" placeholder="例如: 8000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">幣別</label>
-              <select v-model="formCar.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-                <option value="JPY">日幣 JPY</option>
-                <option value="TWD">台幣 TWD</option>
-              </select>
-            </div>
-          </div>
-          <div v-if="formCar.price && formCar.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formCar.price * jpyRate).toLocaleString() }}</div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">相關文件 (租車確認單等，可多選)</label>
-            <input type="file" multiple @change="e => handleDocUploadMulti(e, formCar.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formCar.documents && formCar.documents.length" class="flex flex-wrap gap-2 mt-1">
-              <div v-for="(doc, di) in formCar.documents" :key="doc.id" class="relative">
-                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
-                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
-                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
-                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
-                </div>
-                <button type="button" @click="removeDocument(formCar.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-            <div v-if="false" class="space-y-1.5">
-              <div v-for="(doc, di) in formCar.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-                <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
-                <button type="button" @click="removeDocument(formCar.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">備註</label>
-            <textarea v-model="formCar.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2" placeholder="例如: 需年滿20歲、需國際駕照正本"></textarea>
-          </div>
+          <div v-if="formExpense.amount && formExpense.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formExpense.amount * jpyRate).toLocaleString() }}</div>
         </div>
         <div class="flex gap-2 pt-2">
-          <button v-if="isEditCarMode" @click="deleteCar" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
-          <button @click="saveCar" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
+          <button v-if="isEditExpenseMode" @click="confirmDeleteExpense(formExpense.id)" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button @click="saveExpense" class="flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl">{{ isEditExpenseMode ? '儲存變更' : '儲存紀錄' }}</button>
         </div>
       </div>
     </div>
 
-    <!-- ================= 彈出視窗 Modal: 新增/編輯 一日遊 ================= -->
-    <div v-if="showDayTourModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <!-- ================= Modal: 首頁封面照片編輯 ================= -->
+    <div v-if="showBannerModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
         <div class="flex justify-between items-center border-b pb-2">
-          <h3 class="font-bold text-slate-800">{{ isEditDayTourMode ? '編輯一日遊' : '新增一日遊' }}</h3>
-          <button @click="showDayTourModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+          <h3 class="font-bold text-slate-800">更換首頁封面照片</h3>
+          <button @click="showBannerModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
         </div>
         <div class="space-y-3 text-xs">
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">名稱 <span class="text-red-500">*</span></label>
-            <input v-model="formDayTour.name" type="text" placeholder="例如: 富良野薰衣草一日遊" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+          <div class="w-full h-40 rounded-xl overflow-hidden bg-slate-100">
+            <img :src="bannerImageInput || bannerImage" class="w-full h-full object-cover block" />
           </div>
           <div>
-            <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
-            <input v-model="formDayTour.bookingNo" type="text" placeholder="例如: KKD-20260207-001" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">集合/出發時間</label>
-            <input v-model="formDayTour.time" type="text" placeholder="例如: Day 2 08:30 於飯店大廳集合" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
-            <input v-model="formDayTour.location" type="text" placeholder="不填則預設搜尋名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
-            <select v-model="formDayTour.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-              <option value="">未選擇</option>
-              <option value="現金">現金</option>
-              <option value="信用卡">信用卡</option>
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">金額</label>
-              <input v-model.number="formDayTour.price" type="number" placeholder="例如: 3500" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">幣別</label>
-              <select v-model="formDayTour.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-                <option value="JPY">日幣 JPY</option>
-                <option value="TWD">台幣 TWD</option>
-              </select>
-            </div>
-          </div>
-          <div v-if="formDayTour.price && formDayTour.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formDayTour.price * jpyRate).toLocaleString() }}</div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">相關文件 (預約確認單、票券等，可多選)</label>
-            <input type="file" multiple @change="e => handleDocUploadMulti(e, formDayTour.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formDayTour.documents && formDayTour.documents.length" class="flex flex-wrap gap-2 mt-1">
-              <div v-for="(doc, di) in formDayTour.documents" :key="doc.id" class="relative">
-                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
-                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
-                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
-                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
-                </div>
-                <button type="button" @click="removeDocument(formDayTour.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-            <div v-if="false" class="space-y-1.5">
-              <div v-for="(doc, di) in formDayTour.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-                <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
-                <button type="button" @click="removeDocument(formDayTour.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">備註</label>
-            <textarea v-model="formDayTour.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2" placeholder="例如: 需自備護照、含中文導覽"></textarea>
+            <label class="block font-bold text-slate-600 mb-1">選擇新照片</label>
+            <input type="file" @change="handleBannerUpload" accept="image/*" class="w-full text-slate-500 text-xs">
           </div>
         </div>
-        <div class="flex gap-2 pt-2">
-          <button v-if="isEditDayTourMode" @click="deleteDayTour" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
-          <button @click="saveDayTour" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
-        </div>
+        <button @click="saveBannerImage" class="w-full bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">
+          更新封面照片
+        </button>
       </div>
     </div>
 
-    <!-- ================= 彈出視窗 Modal: 新增/編輯 其他預約 ================= -->
-    <div v-if="showOtherBookingModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
-        <div class="flex justify-between items-center border-b pb-2">
-          <h3 class="font-bold text-slate-800">{{ isEditOtherBookingMode ? '編輯其他預約' : '新增其他預約' }}</h3>
-          <button @click="showOtherBookingModal = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
-        </div>
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">名稱 <span class="text-red-500">*</span></label>
-            <input v-model="formOtherBooking.name" type="text" placeholder="例如: 白色戀人公園門票 / 溫泉券" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
-            <input v-model="formOtherBooking.bookingNo" type="text" placeholder="例如: TIX-20260207-001" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">時間</label>
-            <input v-model="formOtherBooking.time" type="text" placeholder="例如: Day 3 全日有效" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
-            <input v-model="formOtherBooking.location" type="text" placeholder="不填則預設搜尋名稱" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">付款方式</label>
-            <select v-model="formOtherBooking.payMethod" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-              <option value="">未選擇</option>
-              <option value="現金">現金</option>
-              <option value="信用卡">信用卡</option>
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">金額</label>
-              <input v-model.number="formOtherBooking.price" type="number" placeholder="例如: 1000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-600 mb-1">幣別</label>
-              <select v-model="formOtherBooking.currency" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
-                <option value="JPY">日幣 JPY</option>
-                <option value="TWD">台幣 TWD</option>
-              </select>
-            </div>
-          </div>
-          <div v-if="formOtherBooking.price && formOtherBooking.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formOtherBooking.price * jpyRate).toLocaleString() }}</div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">相關文件 (預約確認單、票券等，可多選)</label>
-            <input type="file" multiple @change="e => handleDocUploadMulti(e, formOtherBooking.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
-            <div v-if="formOtherBooking.documents && formOtherBooking.documents.length" class="flex flex-wrap gap-2 mt-1">
-              <div v-for="(doc, di) in formOtherBooking.documents" :key="doc.id" class="relative">
-                <img v-if="doc.type && doc.type.startsWith('image/')" :src="resolveBlobUrl(doc.id)" @click="viewDocument(doc)" class="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer">
-                <div v-else @click="viewDocument(doc)" class="w-16 h-16 rounded-lg border border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer px-1">
-                  <i class="fa-solid fa-file-pdf text-red-400 text-xl"></i>
-                  <span class="text-[9px] text-slate-500 truncate w-full text-center mt-0.5">{{ doc.name }}</span>
-                </div>
-                <button type="button" @click="removeDocument(formOtherBooking.documents, di)" class="absolute -top-1.5 -right-1.5 bg-black/60 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-            <div v-if="false" class="space-y-1.5">
-              <div v-for="(doc, di) in formOtherBooking.documents" :key="di" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-                <button type="button" @click="viewDocument(doc)" class="truncate flex items-center gap-1 text-ice-700 hover:underline"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</button>
-                <button type="button" @click="removeDocument(formOtherBooking.documents, di)" class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"><i class="fa-solid fa-xmark"></i></button>
-              </div>
-            </div>
-            <div v-if="fileUploading" class="text-[11px] text-ice-600 mt-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i>檔案讀取中，請稍候...</div>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">備註</label>
-            <textarea v-model="formOtherBooking.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2"></textarea>
-          </div>
-        </div>
-        <div class="flex gap-2 pt-2">
-          <button v-if="isEditOtherBookingMode" @click="deleteOtherBooking" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
-          <button @click="saveOtherBooking" :disabled="fileUploading" :class="['flex-1 font-bold py-2.5 rounded-xl', fileUploading ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-ice-600 text-white']">{{ fileUploading ? '讀取中...' : '儲存' }}</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ================= 彈出視窗 Modal: 附件清單 ================= -->
-    <div v-if="docListModal.show" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[55] flex items-center justify-center p-4" @click.self="docListModal.show = false">
-      <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-3 max-h-[70vh] overflow-y-auto">
-        <div class="flex justify-between items-center border-b pb-2">
-          <h3 class="font-bold text-slate-800 text-sm truncate pr-2">{{ docListModal.title }} · 附件</h3>
-          <button @click="docListModal.show = false" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
-        </div>
-        <div class="space-y-1.5 text-xs">
-          <button v-for="(doc, di) in docListModal.documents" :key="di" type="button" @click="viewDocument(doc)" class="w-full flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 hover:bg-ice-50">
-            <span class="truncate flex items-center gap-1.5 text-ice-700"><i class="fa-solid fa-paperclip"></i>{{ doc.name }}</span>
-            <i class="fa-solid fa-chevron-right text-slate-300"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ================= 彈出視窗 Modal: 附件預覽 (文件/PDF，含下載) ================= -->
-    <div v-if="previewDoc" class="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4" @click.self="previewDoc = null">
-      <div class="bg-white rounded-2xl p-4 max-w-md w-full max-h-[85vh] overflow-y-auto space-y-3">
-        <div class="flex justify-between items-center border-b pb-2">
-          <h3 class="font-bold text-slate-800 text-sm truncate pr-2">{{ previewDoc.name }}</h3>
-          <button @click="previewDoc = null" class="text-slate-400 flex-shrink-0"><i class="fa-solid fa-xmark text-lg"></i></button>
-        </div>
-        <div>
-          <!-- 修正處：將 previewDoc.data 替換為 resolveBlobUrl(previewDoc.id) -->
-          <img v-if="previewDoc.type && previewDoc.type.startsWith('image/')" :src="resolveBlobUrl(previewDoc.id)" class="w-full rounded-xl">
-          <iframe v-else-if="previewDoc.type === 'application/pdf'" :src="resolveBlobUrl(previewDoc.id)" class="w-full h-[65vh] rounded-xl border border-slate-200"></iframe>
-          <div v-else class="text-xs text-slate-500 text-center py-6">此檔案類型無法直接預覽，請下載後查看。</div>
-        </div>
-        <!-- 修正處：下載連結也一併修正 -->
-        <a :href="resolveBlobUrl(previewDoc.id)" :download="previewDoc.name" class="block text-center bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">下載檔案</a>
-      </div>
-    </div>
-
-    <!-- ================= 彈出視窗 Modal: 購物照片圖庫 (左右滑動瀏覽，無下載) ================= -->
+    <!-- ================= Modal: 圖片圖庫 (行程照片；左右滑動、雙指縮放) ================= -->
     <div v-if="galleryModal.show" class="fixed inset-0 bg-black/85 z-[65] flex flex-col" @click.self="closeGallery">
       <div class="flex justify-between items-center p-4 text-white flex-shrink-0" @click.self="closeGallery">
         <span class="text-sm font-medium">{{ galleryModal.index + 1 }} / {{ galleryModal.images.length }}</span>
@@ -2848,7 +2471,7 @@
       const setTerminal = (e, field) => {
         let v = e.target.value;
         if (v === '__custom__') {
-          const name = prompt('請輸入航廈名稱（例如：第2航廈、國際航廈）');
+          const name = prompt('請輸入航廈名稱（例如：T1、國際航廈）');
           if (name === null) { e.target.value = formItinerary.value[field] || ''; return; }
           v = name.trim().slice(0, 20);
         }
