@@ -6,10 +6,10 @@ var rawSet=Storage.prototype.setItem,rawGet=Storage.prototype.getItem;
 function lraw(k){return rawGet.call(localStorage,k)}
 function lg(k,d){try{var v=JSON.parse(lraw(k));return v==null?d:v}catch(e){return d}}
 function ls(k,v){rawSet.call(localStorage,k,JSON.stringify(v))}
-var dirty=lg("sync_dirty",{}),meta=lg("sync_meta",{}),bq=lg("sync_blobq",[]),base=lg("sync_base",{}),stale={},chg=false,authed=false,busy=false,again=false,pt=0,sb=null,mode="",readyRes;
+var dirty=lg("sync_dirty",{}),meta=lg("sync_meta",{}),bq=lg("sync_blobq",[]),base=lg("sync_base",{}),stale={},chgKeys={},chg=false,authed=false,busy=false,again=false,pt=0,sb=null,mode="",readyRes;
 var ready=new Promise(function(r){readyRes=r});
 try{sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}})}catch(e){}
-Storage.prototype.setItem=function(k,v){rawSet.call(this,k,v);if(this===localStorage&&KEYS.indexOf(k)>=0){dirty[k]=1;ls("sync_dirty",dirty);sched()}};
+Storage.prototype.setItem=function(k,v){var eqv=(this===localStorage&&rawGet.call(this,k)===String(v));rawSet.call(this,k,v);if(!eqv&&this===localStorage&&KEYS.indexOf(k)>=0){dirty[k]=1;ls("sync_dirty",dirty);sched()}};
 function sched(){clearTimeout(pt);pt=setTimeout(syncNow,2000)}
 
 /* ================= 合併邏輯（三方合併：上次同步的版本 / 我的版本 / 雲端版本） ================= */
@@ -165,7 +165,7 @@ function pushScalar(k){
 function finish(k,ts,mine,result){
  meta[k]=ts;
  if(lraw(k)===mine){
-  if(result!==mine){rawSet.call(localStorage,k,result);stale[k]=1;chg=true}   /* 別人的修改合併進來了 */
+  if(result!==mine){rawSet.call(localStorage,k,result);stale[k]=1;chg=true;chgKeys[k]=1}   /* 別人的修改合併進來了 */
   else base[k]=result;                                                       /* 本機與雲端一致，記為新的「上次同步版本」 */
   delete dirty[k]}
  /* 同步途中本機又被改過：保持待同步，下一輪再合併 */
@@ -196,7 +196,7 @@ function pushDirty(){
  return p.then(saveState)}
 function remote(){return sb.from("trip_kv").select("key,updated_at").then(function(r){if(r.error)throw r.error;var m={};r.data.forEach(function(x){m[x.key]=x.updated_at});return m})}
 function syncData(){
- chg=false;
+ chg=false;chgKeys={};
  return remote().then(function(rem){
   var first=!Object.keys(meta).length,hasL=KEYS.some(function(k){return lraw(k)!=null}),hasR=Object.keys(rem).length>0,useLocal=false;
   if(first&&hasL&&hasR)useLocal=!confirm("雲端已有資料，這支手機也有本機資料。\n\n行程、待辦、購物、退稅、花費等清單會自動合併，不會互相覆蓋。\n封面、匯率、旅行日期只能二選一：\n\n按「確定」＝採用雲端的\n按「取消」＝採用這支手機的");
@@ -213,9 +213,17 @@ function syncData(){
   if(!need.length)return;
   return sb.from("trip_kv").select("key,value,updated_at").in("key",need).then(function(v){
    if(v.error)throw v.error;
-   v.data.forEach(function(x){if(!dirty[x.key]){rawSet.call(localStorage,x.key,x.value);meta[x.key]=x.updated_at;if(KIND[x.key])stale[x.key]=1;chg=true}});
+   v.data.forEach(function(x){if(!dirty[x.key]){rawSet.call(localStorage,x.key,x.value);meta[x.key]=x.updated_at;if(KIND[x.key])stale[x.key]=1;chg=true;chgKeys[x.key]=1}});
    ls("sync_meta",meta)})}).then(function(){return chg})}
 function applyUpdate(){
+ var ks=Object.keys(chgKeys),live=window.TRIP_LIVE||[],now=[],rest=[];
+ ks.forEach(function(k){(live.indexOf(k)>=0?now:rest).push(k)});
+ if(now.length){
+  try{window.dispatchEvent(new CustomEvent("trip-data-updated",{detail:now}))}catch(e){}
+  now.forEach(function(k){delete stale[k];if(KIND[k]&&!dirty[k]&&lraw(k)!=null)base[k]=lraw(k)});
+  ls("sync_base",base)}
+ if(rest.length)applyUpdateOld()}
+function applyUpdateOld(){
  var last=+sessionStorage.getItem("sync_rl")||0;
  if(!document.querySelector(".fixed.inset-0")&&Date.now()-last>20000){sessionStorage.setItem("sync_rl",String(Date.now()));reloading=true;location.reload()}
  else setSt("有新資料，點此更新",true,true)}
@@ -226,8 +234,19 @@ function syncNow(){
  return seed().then(syncData).then(function(ch){return flushBlobs().then(function(){return ch})}).then(function(ch){
   var n=new Date();setSt("已同步 "+n.getHours()+":"+("0"+n.getMinutes()).slice(-2));if(ch)applyUpdate()
  }).catch(function(){setSt("離線或同步失敗，點此選單",true)}).then(function(){busy=false;if(again){again=false;sched()}})}
+/* ---------- 即時更新 ---------- */
+var ch=null,rt=0;
+function subscribe(){
+ if(!sb||!authed||ch)return;
+ try{
+  ch=sb.channel("trip-kv").on("postgres_changes",{event:"*",schema:"public",table:"trip_kv"},function(p){
+   var n=p&&p.new;if(n&&n.key&&meta[n.key]===n.updated_at)return;   /* 自己剛寫的，不用理 */
+   clearTimeout(rt);rt=setTimeout(syncNow,300)}).subscribe()
+ }catch(e){ch=null}}
+function unsubscribe(){try{if(ch)sb.removeChannel(ch)}catch(e){}ch=null}
+setInterval(function(){if(authed&&!document.hidden)syncNow()},30000);   /* 保險：連線被中斷時靠它補 */
 /* ---------- 登入 / 登出 ---------- */
-function onAuthed(fresh){authed=true;chip.style.display="block";setSt("同步中…");readyRes();
+function onAuthed(fresh){authed=true;subscribe();chip.style.display="block";setSt("同步中…");readyRes();
  if(fresh){lb.disabled=true;msg.style.color="#64748b";msg.textContent="同步資料中…"}else lockOff();
  syncNow().then(function(){if(fresh&&!reloading){lockOff();lb.disabled=false;msg.textContent="";msg.style.color="#dc2626"}})}
 function login(){lb.disabled=true;msg.textContent="";
@@ -251,6 +270,6 @@ window.addEventListener("message",function(e){if(e.origin!==location.origin||!e.
 if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
 if(!sb){readyRes();chip.style.display="block";setSt("同步元件未載入，請重新整理",true)}else{
  if(outFlag){sb.auth.signOut({scope:"local"}).catch(function(){});readyRes();lockOn();return}
- sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_OUT"){authed=false;chip.style.display="none";lockOn()}});
+ sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_OUT"){authed=false;unsubscribe();chip.style.display="none";lockOn()}});
  sb.auth.getSession().then(function(r){if(r.data&&r.data.session)onAuthed();else{readyRes();lockOn()}}).catch(function(){readyRes()})}
 })();
