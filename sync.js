@@ -10,7 +10,7 @@ var dirty=lg("sync_dirty",{}),meta=lg("sync_meta",{}),bq=lg("sync_blobq",[]),bas
 var ready=new Promise(function(r){readyRes=r});
 try{sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}})}catch(e){}
 Storage.prototype.setItem=function(k,v){var eqv=(this===localStorage&&rawGet.call(this,k)===String(v));rawSet.call(this,k,v);if(!eqv&&this===localStorage&&KEYS.indexOf(k)>=0){dirty[k]=1;ls("sync_dirty",dirty);sched()}};
-function sched(){clearTimeout(pt);pt=setTimeout(syncNow,2000)}
+function sched(){clearTimeout(pt);pt=setTimeout(syncNow,500)}
 
 /* ================= 合併邏輯（三方合併：上次同步的版本 / 我的版本 / 雲端版本） ================= */
 /* MERGE-START */
