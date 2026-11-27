@@ -126,7 +126,7 @@ var stl=document.createElement("style");stl.textContent="html.sv-lock body{visib
 function lockOn(){document.documentElement.classList.add("sv-lock");ov.style.display="flex"}
 function lockOff(){document.documentElement.classList.remove("sv-lock");ov.style.display="none"}
 if(!hasTok||outFlag)lockOn();
-function setSt(t,bad,upd){chip.textContent=t;chip.style.color=bad?"#dc2626":"#475569";chip.style.background=upd?"#fde68a":"rgba(255,255,255,.88)";mode=upd?"reload":""}
+function setSt(t,bad,upd){chip.textContent=t+rtLabel();chip.style.color=bad?"#dc2626":"#475569";chip.style.background=upd?"#fde68a":"rgba(255,255,255,.88)";mode=upd?"reload":""}
 /* ---------- 本機圖片庫(IndexedDB) ---------- */
 function odb(){return new Promise(function(r,j){var q=indexedDB.open(DB,1);q.onupgradeneeded=function(){q.result.createObjectStore(ST)};q.onsuccess=function(){r(q.result)};q.onerror=function(){j(q.error)}})}
 function iget(id){return odb().then(function(db){return new Promise(function(r){var q=db.transaction(ST).objectStore(ST).get(id);q.onsuccess=function(){r(q.result||null)};q.onerror=function(){r(null)}})})}
@@ -224,9 +224,8 @@ function applyUpdate(){
   ls("sync_base",base)}
  if(rest.length)applyUpdateOld()}
 function applyUpdateOld(){
- var last=+sessionStorage.getItem("sync_rl")||0;
- if(!document.querySelector(".fixed.inset-0")&&Date.now()-last>20000){sessionStorage.setItem("sync_rl",String(Date.now()));reloading=true;location.reload()}
- else setSt("有新資料，點此更新",true,true)}
+ /* 不再自動重新整理：畫面停留在使用者目前的位置 */
+ setSt(window.TRIP_LIVE?"有新資料（此分頁需手動更新），點此更新":"畫面程式未更新，請檢查 index.html",true,true)}
 function syncNow(){
  if(!sb||!authed)return Promise.resolve();
  if(busy){again=true;return Promise.resolve()}
@@ -235,16 +234,37 @@ function syncNow(){
   var n=new Date();setSt("已同步 "+n.getHours()+":"+("0"+n.getMinutes()).slice(-2));if(ch)applyUpdate()
  }).catch(function(){setSt("離線或同步失敗，點此選單",true)}).then(function(){busy=false;if(again){again=false;sched()}})}
 /* ---------- 即時更新 ---------- */
-var ch=null,rt=0;
+var ch=null,rt=0,rtOk=false,rtTry=0,rtWait=0,tick=0;
+function rtLabel(){return rtOk?" ·即時":(authed?" ·輪詢":"")}
 function subscribe(){
  if(!sb||!authed||ch)return;
- try{
-  ch=sb.channel("trip-kv").on("postgres_changes",{event:"*",schema:"public",table:"trip_kv"},function(p){
-   var n=p&&p.new;if(n&&n.key&&meta[n.key]===n.updated_at)return;   /* 自己剛寫的，不用理 */
-   clearTimeout(rt);rt=setTimeout(syncNow,300)}).subscribe()
- }catch(e){ch=null}}
-function unsubscribe(){try{if(ch)sb.removeChannel(ch)}catch(e){}ch=null}
-setInterval(function(){if(authed&&!document.hidden)syncNow()},30000);   /* 保險：連線被中斷時靠它補 */
+ sb.auth.getSession().then(function(r){
+  var tok=r&&r.data&&r.data.session&&r.data.session.access_token;
+  try{if(tok)sb.realtime.setAuth(tok)}catch(e){}
+  if(ch||!authed)return;
+  var me=sb.channel("trip-kv-"+Math.random().toString(36).slice(2,8));ch=me;
+  me.on("postgres_changes",{event:"*",schema:"public",table:"trip_kv"},function(p){
+    var n=p&&p.new;if(n&&n.key&&meta[n.key]===n.updated_at)return;   /* 自己剛寫的，不用理 */
+    clearTimeout(rt);rt=setTimeout(syncNow,150)
+  }).subscribe(function(st,err){
+    if(me!==ch)return;
+    if(st==="SUBSCRIBED"){rtOk=true;rtTry=0;syncNow()}
+    else if(st==="CHANNEL_ERROR"||st==="TIMED_OUT"||st==="CLOSED"){
+      rtOk=false;window.__rtErr=st+(err&&err.message?": "+err.message:"");resub()}})
+ }).catch(function(){})}
+function resub(){
+ if(rtWait||!authed)return;
+ var c=ch;ch=null;try{if(c)sb.removeChannel(c)}catch(e){}
+ rtWait=setTimeout(function(){rtWait=0;rtTry++;subscribe()},Math.min(30000,2000*(rtTry+1)))}
+function unsubscribe(){
+ rtOk=false;clearTimeout(rtWait);rtWait=0;
+ var c=ch;ch=null;try{if(c)sb.removeChannel(c)}catch(e){}}
+/* 即時連線正常時約每分鐘補查一次；連不上時每 8 秒查一次 */
+setInterval(function(){tick++;if(!authed||document.hidden)return;if(!rtOk||tick%8===0)syncNow()},8000);
+/* 從背景切回來時，連線多半已經失效，重新建立 */
+document.addEventListener("visibilitychange",function(){
+ if(document.hidden||!authed)return;
+ rtTry=0;unsubscribe();subscribe()});
 /* ---------- 登入 / 登出 ---------- */
 function onAuthed(fresh){authed=true;subscribe();chip.style.display="block";setSt("同步中…");readyRes();
  if(fresh){lb.disabled=true;msg.style.color="#64748b";msg.textContent="同步資料中…"}else lockOff();
