@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Trip App</title>
+  <title>北海道冰雪之旅 - Trip App</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
   <script src="sync.js"></script>
@@ -24,7 +24,7 @@
     img-src 'self' data: https://images.unsplash.com;
     font-src 'self';
     frame-src 'self' data:;
-    connect-src 'self' https://*.supabase.co wss://*.supabase.co;
+    connect-src 'self' https://*.supabase.co;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
@@ -42,7 +42,7 @@
   <!-- 設定狀態列樣式 (預設、黑色、透明) -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <!-- 設定 iOS 桌面的 App 名稱 -->
-  <meta name="apple-mobile-web-app-title" content="Trip" />
+  <meta name="apple-mobile-web-app-title" content="北海道之旅" />
   <!-- 設定 iOS 桌面的 App 圖示 (請在 GitHub 根目錄放一張 512x512 的 icon.png) -->
   <link rel="apple-touch-icon" href="icon.png" />
 
@@ -123,7 +123,7 @@
     <!-- 頁首 Banner 區塊 (固定高度，用 object-cover 縮放填滿) -->
     <div class="relative w-full h-56 overflow-hidden bg-slate-300">
       <!-- 頁首背景圖片 -->
-      <img :src="bannerImage" alt="Trip" class="w-full h-full object-cover block" />
+      <img :src="bannerImage" alt="北海道之旅" class="w-full h-full object-cover block" />
       
       <!-- 漸層遮罩讓文字與Tab更清晰 -->
       <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10"></div>
@@ -164,6 +164,18 @@
                :data-itin-id="item.id"
                :class="{ 'itin-dragging': draggingId === item.id }"
                @pointerdown="onItinPointerDown($event, item.id)">
+
+            <!-- 交通時間 (顯示於卡片之間，點擊開啟大眾運輸導航) -->
+            <div v-if="idx > 0" class="flex items-center justify-center my-2 text-xs text-slate-400 font-medium">
+              <div class="h-4 w-[2px] bg-ice-200 mr-2"></div>
+              <button @click.stop="openDirections(filteredItinerary[idx - 1].location || filteredItinerary[idx - 1].name, item.location || item.name)"
+                      class="bg-white border border-ice-100 px-3 py-1 rounded-full text-[11px] shadow-sm flex items-center gap-1.5 text-ice-700 hover:bg-ice-50 hover:shadow transition cursor-pointer active:scale-95">
+                <i :class="item.transitIcon || 'fa-solid fa-train-subway'"></i>
+                <span>{{ item.transitTime || '大眾運輸導航' }}</span>
+                <i class="fa-solid fa-chevron-right text-[8px] opacity-60"></i>
+              </button>
+              <div class="h-4 w-[2px] bg-ice-200 ml-2"></div>
+            </div>
 
             <!-- 航班專屬卡片 -->
             <div v-if="item.category === '航班'" class="tk2">
@@ -864,11 +876,6 @@
 
     </main>
 
-    <!-- 其他人修改了你正在看的資料時的提醒條 -->
-    <div v-if="liveNotice" class="fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-[80] max-w-md mx-auto bg-slate-800 text-white text-xs rounded-xl px-4 py-3 shadow-lg flex items-start gap-2">
-      <i class="fa-solid fa-rotate mt-0.5 text-amber-300"></i><span class="min-w-0 break-words">{{ liveNotice }}</span>
-    </div>
-
     <!-- ================= 底部固定分頁選單 (Bottom Tab Bar) ================= -->
     <nav class="fixed bottom-0 left-0 right-0 z-30 max-w-md mx-auto px-4 pb-4">
       <div class="flex bg-white/90 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-white/40 gap-1">
@@ -1018,10 +1025,21 @@
           <!-- 一般行程專屬欄位 -->
           <template v-else>
             <div v-if="['景點','住宿','美食','購物'].includes(formItinerary.category)">
-              <label class="block font-bold text-slate-600 mb-1">營業時間</label>
+              <div class="flex items-center justify-between mb-1">
+                <label class="font-bold text-slate-600">營業時間</label>
+                <button type="button" @click="setUseWeekly(!formItinerary.useWeekly)" class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                  <span>每日不同</span>
+                  <span :class="['w-8 h-5 rounded-full relative transition-colors', formItinerary.useWeekly ? 'bg-ice-600' : 'bg-slate-300']">
+                    <span :class="['absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all', formItinerary.useWeekly ? 'left-3.5' : 'left-0.5']"></span>
+                  </span>
+                </button>
+              </div>
+
+              <!-- 單一營業時間 -->
+              <input v-if="!formItinerary.useWeekly" v-model="formItinerary.openHours" type="text" placeholder="例如: 09:00 - 18:00" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
 
               <!-- 每週營業時間表 (批次編輯版) -->
-              <div class="bg-slate-50 border rounded-xl p-2.5 space-y-3">
+              <div v-else class="bg-slate-50 border rounded-xl p-2.5 space-y-3">
 
                 <!-- ① 選擇星期 -->
                 <div>
@@ -1513,7 +1531,7 @@
               <span v-else-if="txForm.name.trim()" class="text-[11px] text-amber-600 font-bold text-right">自訂店家：請輸入手續費</span>
             </div>
             <div class="relative">
-              <input v-model="txForm.name" @focus="txFocusName($event)" @click="txFocusName($event)" @input="txDd = true; txShowAll = false; txOnName()" @blur="txCloseDd" type="text" maxlength="40" autocomplete="off" placeholder="輸入搜尋，或點選清單"
+              <input v-model="txForm.name" @focus="txFocusName(event)"@click="txFocusName(event)" @input="txDd = true; txShowAll = false; txOnName()" @blur="txCloseDd" type="text" maxlength="40" autocomplete="off" placeholder="輸入搜尋，或點選清單"
                      class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500">
               <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
               <div v-if="txDd && txDdList.length" class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 p-1">
@@ -1583,7 +1601,7 @@
         </div>
 
         <div class="flex gap-2 pt-2">
-          <button v-if="txEditIdx > -1" @click="delTx(txEditId != null ? txEnts.findIndex(x => x.id === txEditId) : txEditIdx)" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button v-if="txEditIdx > -1" @click="delTx(txEditIdx)" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
           <button @click="saveTx" class="flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl">儲存</button>
         </div>
       </div>
@@ -1671,7 +1689,7 @@
            @touchmove="galleryTouchMove"
            @touchend="galleryTouchEnd">
         <img v-if="galleryModal.images[galleryModal.index]" :src="resolveBlobUrl(galleryModal.images[galleryModal.index].id)"
-             :style="{ transform: `translate(${galleryPan.x}px, ${galleryPan.y}px) scale(${galleryZoom})` }"
+             :style="{ transform: `translate(${galleryPan.x}px, galleryPan.ypx)scale({galleryZoom})` }"
              class="max-w-full max-h-full object-contain select-none" draggable="false">
       </div>
       <div v-if="galleryModal.images.length > 1" class="flex justify-center gap-1.5 p-4 flex-shrink-0" @click.self="closeGallery">
@@ -2178,7 +2196,7 @@
           d.setDate(d.getDate() + i);
           list.push({
             week: weekdayNames[d.getDay()],
-            date: `${d.getMonth() + 1}/${d.getDate()}`,
+            date: `d.getMonth()+1/{d.getDate()}`,
             full: d.toISOString().split('T')[0]
           });
         }
@@ -2214,7 +2232,14 @@
 
       const openMap = (locationName) => {
         if (!locationName) return;
-        const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=transit`;
+        const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
+        window.open(url, '_blank');
+      };
+
+      // 新增路線導航函數
+      const openDirections = (origin, destination) => {
+        if (!origin || !destination) return alert('缺少起點或終點資訊無法導航');
+        const url = `https://www.google.com/maps/dir/?api=1&origin=encodeURIComponent(origin)&destination={encodeURIComponent(destination)}&travelmode=transit`;
         window.open(url, '_blank');
       };
 
@@ -2425,26 +2450,19 @@
 
       const showItineraryModal = ref(false);
       const isEditMode = ref(false);
-      const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', useWeekly: true, weeklyHours: emptyWeek(), ticket: '', note: '', location: '', flightNo: '', depTerminal: '', arrTerminal: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '', images: [] });
+      const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', useWeekly: false, weeklyHours: [], ticket: '', note: '', location: '', flightNo: '', depTerminal: '', arrTerminal: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '', images: [] });
       const formItinerary = ref(initFormItinerary());
 
       const openAddModal = () => {
         isEditMode.value = false;
         formItinerary.value = initFormItinerary();
-        resetWeeklyEditor();
         depAirportOpen.value = false;
         arrAirportOpen.value = false;
         showItineraryModal.value = true;
       };
       const editItinerary = (item) => {
         isEditMode.value = true;
-        formItinerary.value = {
-          ...initFormItinerary(), ...item,
-          useWeekly: true,
-          images: item.images ? [...item.images] : [],
-          weeklyHours: (item.weeklyHours && item.weeklyHours.length === 7) ? item.weeklyHours.map(d => ({ ...d })) : emptyWeek()
-        };
-        resetWeeklyEditor();
+        formItinerary.value = { ...initFormItinerary(), ...item, images: item.images ? [...item.images] : [], weeklyHours: item.weeklyHours ? item.weeklyHours.map(d => ({ ...d })) : [] };
         depAirportOpen.value = false;
         arrAirportOpen.value = false;
         showItineraryModal.value = true;
@@ -2456,11 +2474,6 @@
           return alert('請填寫「航班編號」後再儲存');
         }
         formItinerary.value.flightNo = (formItinerary.value.flightNo || '').trim().toUpperCase();
-        // 沒填任何營業時間（或不是會用到營業時間的分類）就不存，卡片上也不會出現空的營業時間
-        const hasHours = ['景點', '住宿', '美食', '購物'].includes(formItinerary.value.category)
-          && formItinerary.value.weeklyHours.some(d => d.closed || d.open || d.close || d.open2 || d.close2);
-        formItinerary.value.useWeekly = hasHours;
-        if (!hasHours) formItinerary.value.weeklyHours = [];
         if (!itineraryData.value[selectedDateIndex.value]) itineraryData.value[selectedDateIndex.value] = [];
         const currentList = itineraryData.value[selectedDateIndex.value];
         if (!formItinerary.value.location) {
@@ -2471,7 +2484,7 @@
         
         if (isEditMode.value) {
           const idx = currentList.findIndex(i => i.id === formItinerary.value.id);
-          if (idx !== -1) currentList[idx] = { ...formItinerary.value }; else currentList.push({ ...formItinerary.value });
+          if (idx !== -1) currentList[idx] = { ...formItinerary.value };
         } else {
           formItinerary.value.id = Date.now();
           currentList.push({ ...formItinerary.value });
@@ -2546,7 +2559,7 @@
         if (!price || isNaN(num)) return '';
         if (currency === 'JPY') {
           const twd = Math.round(num * jpyRate.value);
-          return `¥ ${num.toLocaleString()} (約 NT$ ${twd.toLocaleString()})`;
+          return `¥ num.toLocaleString()(約NT ${twd.toLocaleString()})`;
         }
         return `NT$ ${num.toLocaleString()}`;
       };
@@ -2601,7 +2614,7 @@
       const flightDateText = computed(() => {
         const d = new Date(tripStartDate.value + 'T00:00:00');
         d.setDate(d.getDate() + selectedDateIndex.value);
-        return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}（${'日一二三四五六'[d.getDay()]}）`;
+        return `d.getFullYear()/{d.getMonth() + 1}/d.getDate()（{'日一二三四五六'[d.getDay()]}）`;
       });
       const airlineAssets = (flightNo) => {
         const code = String(flightNo || '').trim().slice(0, 2).toUpperCase();
@@ -2631,7 +2644,7 @@
           id: f.id, dayIndex: f.dayIndex, 
           label: f.name + (f.flightNo ? ` (${f.flightNo})` : ''), 
           duration: f.flightDuration || '未填寫飛行時間', 
-          route: `${f.depAirport || '出發地'}${f.depTerminal ? '（' + f.depTerminal + '）' : ''} ${f.depTime || '--:--'} ➔ ${f.arrAirport || '目的地'}${f.arrTerminal ? '（' + f.arrTerminal + '）' : ''} ${f.arrTime || '--:--'}`,
+          route: `f.depAirport||'出發地'{f.depTerminal ? '（' + f.depTerminal + '）' : ''} ${f.depTime || '--:--'} ➔ f.arrAirport||'目的地'{f.arrTerminal ? '（' + f.arrTerminal + '）' : ''} ${f.arrTime || '--:--'}`, 
           documents: extra.documents || [], 
           price: extra.price || null, 
           currency: extra.currency || 'JPY', 
@@ -2731,7 +2744,7 @@
           if (!formObj.value.location) formObj.value.location = formObj.value.name;
           if (isEditMode.value) {
             const idx = dataRef.value.findIndex(i => i.id === formObj.value.id);
-            if (idx !== -1) dataRef.value[idx] = { ...formObj.value }; else dataRef.value.push({ ...formObj.value });
+            if (idx !== -1) dataRef.value[idx] = { ...formObj.value };
           } else {
             formObj.value.id = Date.now();
             dataRef.value.push({ ...formObj.value });
@@ -3006,11 +3019,11 @@
 
       const showTxModal = ref(false);
       const txEditIdx = ref(-1);
-      const txEditId = ref(null);
-      const openAddTx = () => { txEditIdx.value = -1; txEditId.value = null; txForm.value = txInitForm(); txDd.value = false; showTxModal.value = true; };
+
+      const openAddTx = () => { txEditIdx.value = -1; txForm.value = txInitForm(); txDd.value = false; showTxModal.value = true; };
       const editTx = (i) => {
         const e = txEnts.value[i];
-        if (e.id == null) e.id = newId(); txEditId.value = e.id; txEditIdx.value = i;
+        txEditIdx.value = i;
         txForm.value = { name: e.name, date: e.date || '', amtS: txFy(e.incl), pctS: txFp(e.pct), fixS: txFy(e.fix), tax: e.tax ? 1 : 0, rate: e.rate };
         txDd.value = false;
         showTxModal.value = true;
@@ -3020,9 +3033,7 @@
         if (txCur.value.incl <= 0) return alert('請填寫含稅金額');
         const rec = { ...txCur.value, name: txForm.value.name.trim() };
         if (txEditIdx.value > -1) {
-          const at = txEnts.value.findIndex(x => x.id === txEditId.value);
-          if (at > -1) { rec.id = txEnts.value[at].id; txEnts.value[at] = rec; }
-          else { rec.id = txEditId.value || newId(); txEnts.value.push(rec); }
+          txEnts.value[txEditIdx.value] = rec;
         } else {
           if (txEnts.value.length >= 30) return alert('明細最多 30 筆');
           txEnts.value.push(rec);
@@ -3079,7 +3090,7 @@
         const rec = { id: f.id, text: f.text.trim(), note: (f.note || '').trim(), done: !!f.done };
         if (isEditTodo.value) {
           const idx = todos.value.findIndex(t => t.id === rec.id);
-          if (idx !== -1) todos.value[idx] = rec; else todos.value.push(rec);
+          if (idx !== -1) todos.value[idx] = rec;
         } else {
           rec.id = Date.now();
           todos.value.push(rec);
@@ -3102,7 +3113,7 @@
           const yyyy = d.getFullYear();
           const mm = String(d.getMonth() + 1).padStart(2, '0');
           const dd = String(d.getDate()).padStart(2, '0');
-          return `${yyyy}-${mm}-${dd}`;
+          return `yyyy-{mm}-${dd}`;
         };
         
         // --- 航班花費加總 (將名稱統一為「機票」) ---
@@ -3180,7 +3191,7 @@
         if (!formExpense.value.name || !formExpense.value.amount) return alert('請填寫消費名稱與金額');
         if (isEditExpenseMode.value) {
           const idx = expenses.value.findIndex(e => e.id === formExpense.value.id);
-          if (idx !== -1) expenses.value[idx] = { ...expenses.value[idx], ...formExpense.value }; else expenses.value.unshift({ ...formExpense.value });
+          if (idx !== -1) expenses.value[idx] = { ...expenses.value[idx], ...formExpense.value };
         } else {
           expenses.value.unshift({ id: Date.now(), ...formExpense.value, date: new Date().toISOString().split('T')[0] });
         }
@@ -3281,7 +3292,7 @@
         const link = document.createElement('a');
         link.href = url;
         const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
-        link.download = `TripBackup_${date}${filenameSuffix}.json`;
+        link.download = `TripBackup_date{filenameSuffix}.json`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -3372,123 +3383,6 @@
       // 進入設定分頁時自動檢查一次
       watch(currentTab, (tab) => { if (tab === 'settings') checkStorageUsage(); });
 
-      // ===== 彈窗即時同步：別人改了你正在編輯的那一筆 =====
-      const liveNotice = ref('');
-      let liveNoticeTimer = 0;
-      const showLiveNotice = (msg) => {
-        liveNotice.value = msg;
-        clearTimeout(liveNoticeTimer);
-        liveNoticeTimer = setTimeout(() => { liveNotice.value = ''; }, 7000);
-      };
-      const lsClone = (v) => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
-      const lsCanon = (v) => (v === null || v === undefined) ? 'null'
-        : typeof v !== 'object' ? JSON.stringify(v)
-        : Array.isArray(v) ? '[' + v.map(lsCanon).join(',') + ']'
-        : '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + lsCanon(v[k])).join(',') + '}';
-      const LIVE_LABELS = {
-        name: '名稱', category: '分類', openHours: '營業時間', useWeekly: '營業時間', weeklyHours: '營業時間',
-        ticket: '門票', note: '備註', location: '導航名稱', flightNo: '航班編號',
-        depAirport: '出發機場', depTime: '出發時間', arrAirport: '抵達機場', arrTime: '抵達時間',
-        depTerminal: '出發航廈', arrTerminal: '抵達航廈', flightDuration: '飛行時間', images: '照片',
-        baggageChecked: '託運行李', baggageCarryon: '隨身行李', payMethod: '付款方式', price: '金額',
-        currency: '幣別', documents: '相關文件', phone: '電話', address: '地址', bookingNo: '預約號碼',
-        pickupTime: '取車時間', time: '時間', text: '待辦事項', done: '完成狀態', amount: '金額', date: '日期',
-        amtS: '含稅金額', pctS: '手續費', fixS: '定額費', rate: '稅率'
-      };
-      const modalSyncs = [];
-      const regModalSync = (cfg) => {
-        const s = { cfg, base: null, gone: false };
-        modalSyncs.push(s);
-        // 彈窗打開的瞬間，記下「打開時的內容」，之後才能分辨哪些欄位是使用者自己改的
-        watch(cfg.open, (on) => {
-          s.gone = false;
-          if (!on) { s.base = null; return; }
-          const rec = cfg.id() != null ? cfg.find() : null;
-          s.base = rec ? lsClone(cfg.toForm(rec)) : null;
-        });
-      };
-      const mergeIntoForm = (s) => {
-        const c = s.cfg;
-        if (!c.open.value || !s.base) return;          // 沒開彈窗，或是「新增」模式：不處理
-        const rec = c.find();
-        const form = c.form.value;
-        const title = c.title();
-        if (!rec) {
-          if (!s.gone) { s.gone = true; showLiveNotice('「' + title + '」已被其他人刪除。若按儲存，會重新建立這一筆'); }
-          return;
-        }
-        s.gone = false;
-        const next = c.toForm(rec);
-        const changed = new Set(), conflict = new Set();
-        Object.keys(next).forEach(k => {
-          const nv = lsCanon(next[k]), bv = lsCanon(s.base[k]), fv = lsCanon(form[k]);
-          if (nv === bv) return;                                        // 對方沒改這欄
-          if (fv === bv) { form[k] = lsClone(next[k]); changed.add(LIVE_LABELS[k] || null); }   // 你沒動過 → 直接換
-          else if (fv !== nv) conflict.add(LIVE_LABELS[k] || null);     // 兩邊都改且不同 → 保留你的
-        });
-        s.base = lsClone(next);
-        const nm = (set) => [...set].filter(Boolean).join('、');
-        if (!changed.size && !conflict.size) return;
-        let msg = '「' + title + '」剛被其他人更新' + (nm(changed) ? '：' + nm(changed) : '');
-        if (conflict.size) msg += '。你也改了' + (nm(conflict) || '部分欄位') + '，已保留你輸入的內容，儲存後會蓋掉對方的修改';
-        showLiveNotice(msg);
-      };
-
-      regModalSync({ title: () => formItinerary.value.name || '行程', open: showItineraryModal, form: formItinerary,
-        id: () => formItinerary.value.id,
-        find: () => { for (const day of itineraryData.value) { const r = (day || []).find(x => x.id === formItinerary.value.id); if (r) return r; } return undefined; },
-        toForm: (it) => ({ ...initFormItinerary(), ...it, images: it.images ? [...it.images] : [], weeklyHours: it.weeklyHours ? it.weeklyHours.map(d => ({ ...d })) : [] }) });
-      regModalSync({ title: () => activeFlightInfo.value.label || '航班', open: showFlightModal, form: formFlightDoc,
-        id: () => formFlightDoc.value.id,
-        find: () => flightsInfo.value.find(f => f.id === formFlightDoc.value.id),
-        toForm: (f) => ({ id: f.id, documents: f.documents ? [...f.documents] : [], price: f.price || null, currency: f.currency || 'JPY', payMethod: f.payMethod || '', baggageChecked: f.baggageChecked || '', baggageCarryon: f.baggageCarryon || '' }) });
-      regModalSync({ title: () => formHotelInfo.value.name || '住宿', open: showHotelModal, form: formHotelInfo,
-        id: () => formHotelInfo.value.id,
-        find: () => hotelsInfo.value.find(h => h.id === formHotelInfo.value.id),
-        toForm: (h) => ({ ...h, documents: h.documents ? [...h.documents] : [] }) });
-      [[car, carRentals, initCar], [tour, dayTours, initDayTour], [other, otherBookings, initOther]].forEach(([c, data, init]) => {
-        regModalSync({ title: () => c.formObj.value.name || '資料', open: c.showModal, form: c.formObj,
-          id: () => c.formObj.value.id,
-          find: () => data.value.find(x => x.id === c.formObj.value.id),
-          toForm: (it) => ({ ...init(), ...it, documents: it.documents ? [...it.documents] : [] }) });
-      });
-      regModalSync({ title: () => formTodo.value.text || '待辦', open: showTodoModal, form: formTodo,
-        id: () => formTodo.value.id,
-        find: () => todos.value.find(t => t.id === formTodo.value.id),
-        toForm: (t) => ({ id: t.id, text: t.text, note: t.note || '', done: !!t.done }) });
-      regModalSync({ title: () => formExpense.value.name || '花費', open: showExpenseModal, form: formExpense,
-        id: () => formExpense.value.id,
-        find: () => expenses.value.find(e => e.id === formExpense.value.id),
-        toForm: (e) => ({ id: e.id, category: e.category, name: e.name, amount: e.amount, currency: e.currency || 'JPY', payMethod: e.payMethod, date: e.date }) });
-      regModalSync({ title: () => txForm.value.name || '退稅明細', open: showTxModal, form: txForm,
-        id: () => txEditId.value,
-        find: () => txEnts.value.find(x => x.id === txEditId.value),
-        toForm: (e) => ({ name: e.name, date: e.date || '', amtS: txFy(e.incl), pctS: txFp(e.pct), fixS: txFy(e.fix), tax: e.tax ? 1 : 0, rate: e.rate }) });
-
-      // ===== 雲端即時更新：別支手機改了資料，直接換進畫面 =====
-      const LIVE_MAP = {
-        trip_banner: bannerImage, trip_jpyRate: jpyRate,
-        trip_itinerary: itineraryData, trip_startDate: tripStartDate, trip_days: tripDays,
-        trip_flightExtras: flightExtras, trip_hotelExtras: hotelExtras,
-        trip_carRentals: carRentals, trip_dayTours: dayTours, trip_otherBookings: otherBookings,
-        trip_shopping: shoppingList, trip_expenses: expenses, trip_todos: todos, trip_taxEnts: txEnts
-      };
-      window.TRIP_LIVE = Object.keys(LIVE_MAP);
-      window.addEventListener('trip-data-updated', (ev) => {
-        const keys = (ev && ev.detail) || [];
-        Object.keys(LIVE_MAP).forEach(k => {
-          if (!keys.includes(k)) return;
-          try {
-            const raw = localStorage.getItem(k);
-            if (raw != null) LIVE_MAP[k].value = JSON.parse(raw);
-          } catch (e) {}
-        });
-        if (keys.includes('trip_jpyRate')) twdToJpyInput.value = Number((1 / jpyRate.value).toFixed(3));
-        if (keys.includes('trip_startDate')) tripStartDateInput.value = tripStartDate.value;
-        if (keys.includes('trip_days')) tripDaysInput.value = tripDays.value;
-        try { modalSyncs.forEach(mergeIntoForm); } catch (e) { console.warn('modal sync', e); }
-      });
-
       const localStorageUsageKB = computed(() => {
         let total = 0;
         for (const key in localStorage) {
@@ -3501,7 +3395,7 @@
 
       return {
         currentTab, tabs, dateList, selectedDateIndex, categories, selectedCategory,
-        filteredItinerary, openMap, draggingId, onItinPointerDown, weekDayLabels, expandedHours, copyWeeklyHours, weekIdxOfSelectedDay, formatDayHours, todayHoursText, toggleHoursExpand, weekDayFull, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
+        filteredItinerary, openMap, openDirections, draggingId, onItinPointerDown, weekDayLabels, expandedHours, setUseWeekly, copyWeeklyHours, weekIdxOfSelectedDay, formatDayHours, todayHoursText, toggleHoursExpand, weekDayFull, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
         isEditShoppingMode, openAddShoppingModal, editShoppingItem, saveShoppingItem, confirmDeleteShoppingItem,
         setShoppingCardRef, draggingShopping, onGripPointerDown,
         expenses, showExpenseModal, formExpense, isEditExpenseMode, selectedExpenseCategory,
@@ -3531,7 +3425,7 @@
         txView, txEnts, txForm, txDd, txMethods, txPlatforms, txPre, txDdList, txCloseDd, txPick,
         txR, txBest, txRows, txFeeText, txEntRes, txY, txT, txDateText, txFilter, txStoreNames, txShown,
         showTxModal, txEditIdx, openAddTx, editTx, saveTx, delTx, txOnName,
-        txShowAll, txFocusName, txOnPct, txOnFix, txOnAmt, liveNotice, txEditId
+        txShowAll, txFocusName, txOnPct, txOnFix, txOnAmt
       };
     }
   }).mount('#app');
