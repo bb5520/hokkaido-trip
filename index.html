@@ -98,6 +98,7 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     body { background-color: #eef4f8; }
+    .itin-drag { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
     /* Vue 尚未接管畫面前，先隱藏整個 App，避免出現未渲染的 {{ }} 模板閃爍畫面 */
     [v-cloak] { display: none !important; }
 
@@ -155,7 +156,7 @@
 
         <!-- 行程卡片列表 -->
         <div class="space-y-3">
-          <div v-for="(item, idx) in filteredItinerary" :key="item.id" class="relative group">
+          <div v-for="(item, idx) in filteredItinerary" :key="item.id" :data-iid="item.id" @touchstart.passive="itinTouchStart($event, item.id)" class="relative group itin-drag">
 
             <!-- 交通時間 (顯示於卡片之間，點擊開啟大眾運輸導航) -->
             <div v-if="idx > 0" class="flex items-center justify-center my-2 text-xs text-slate-400 font-medium">
@@ -256,8 +257,6 @@
                   <h3 class="font-bold text-slate-800 text-base min-w-0">{{ item.name }}</h3>
                 </div>
                 <div class="flex items-center space-x-1 flex-shrink-0">
-                  <button @click.stop="moveItem(idx, -1)" class="p-1 text-slate-300 hover:text-ice-600"><i class="fa-solid fa-chevron-up text-xs"></i></button>
-                  <button @click.stop="moveItem(idx, 1)" class="p-1 text-slate-300 hover:text-ice-600"><i class="fa-solid fa-chevron-down text-xs"></i></button>
                   <button @click.stop="editItinerary(item)" class="p-1 text-slate-400 hover:text-ice-600 ml-1"><i class="fa-solid fa-pen"></i></button>
                 </div>
               </div>
@@ -2236,6 +2235,111 @@
         const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=transit`;
         window.open(url, '_blank');
       };
+
+      // ===== 行程卡片：長按後拖移排序 =====
+      let itinDrag = null;
+      let itinNoClickUntil = 0;
+
+      const itinEnd = () => {
+        if (!itinDrag) return;
+        const d = itinDrag;
+        itinDrag = null;
+        clearTimeout(d.timer);
+        cancelAnimationFrame(d.raf);
+        if (!d.active) return;
+        itinNoClickUntil = Date.now() + 450;
+        const c = d.card;
+        c.style.transition = 'transform .18s ease, box-shadow .18s ease';
+        void c.offsetHeight;
+        c.style.transform = 'translateY(0) scale(1)';
+        c.style.boxShadow = '';
+        setTimeout(() => { c.style.transition = ''; c.style.transform = ''; c.style.zIndex = ''; }, 200);
+      };
+
+      const itinMove = (e) => {
+        const d = itinDrag;
+        if (!d) return;
+        const t = e.touches[0];
+        if (!t) return;
+        if (!d.active) {
+          // 還沒進入拖移就移動了 = 使用者是在捲動頁面，取消長按
+          if (Math.abs(t.clientX - d.sx) > 8 || Math.abs(t.clientY - d.sy) > 8) itinEnd();
+          return;
+        }
+        e.preventDefault();
+        d.y = t.clientY;
+      };
+
+      const itinPlace = () => {
+        const d = itinDrag;
+        if (!d || d.busy) return;
+        const c = d.card;
+        c.style.transform = '';
+        const r = c.getBoundingClientRect();
+        const top = d.y - d.grab;
+        c.style.transform = 'translateY(' + (top - r.top) + 'px) scale(1.02)';
+        const center = top + r.height / 2;
+        const sibs = Array.from(d.el.parentElement.children);
+        const i = sibs.indexOf(d.el);
+        const crossed = (w, dir) => {
+          if (!w) return false;
+          const q = w.lastElementChild.getBoundingClientRect();
+          const mid = q.top + q.height / 2;
+          return dir < 0 ? center < mid : center > mid;
+        };
+        const other = crossed(sibs[i - 1], -1) ? sibs[i - 1] : (crossed(sibs[i + 1], 1) ? sibs[i + 1] : null);
+        if (!other) return;
+        const list = itineraryData.value[selectedDateIndex.value] || [];
+        const a = list.findIndex(x => String(x.id) === String(d.id));
+        const b = list.findIndex(x => String(x.id) === other.dataset.iid);
+        if (a < 0 || b < 0) return;
+        d.busy = true;
+        const [it] = list.splice(a, 1);
+        list.splice(b, 0, it);
+        nextTick(() => { d.busy = false; });
+      };
+
+      const itinTick = () => {
+        const d = itinDrag;
+        if (!d || !d.active) return;
+        const H = window.innerHeight;
+        if (d.y < 90) window.scrollBy(0, -Math.min(16, (90 - d.y) / 4 + 2));
+        else if (d.y > H - 130) window.scrollBy(0, Math.min(16, (d.y - (H - 130)) / 4 + 2));
+        itinPlace();
+        d.raf = requestAnimationFrame(itinTick);
+      };
+
+      const itinTouchStart = (e, id) => {
+        itinEnd();
+        if (e.touches.length !== 1) return;
+        const el = e.currentTarget;
+        const card = el.lastElementChild;
+        // 只有按在卡片本體才算；交通時間按鈕、輸入欄位不觸發
+        if (!card || !card.contains(e.target) || e.target.closest('input,select,textarea')) return;
+        const t = e.touches[0];
+        const d = { id, el, card, sx: t.clientX, sy: t.clientY, y: t.clientY, grab: 0, active: false, busy: false, raf: 0, timer: 0 };
+        d.timer = setTimeout(() => {
+          if (itinDrag !== d) return;
+          d.active = true;
+          const r = card.getBoundingClientRect();
+          d.grab = d.y - r.top;
+          card.style.transition = 'none';
+          card.style.zIndex = '50';
+          card.style.boxShadow = '0 14px 30px rgba(0,0,0,.22)';
+          card.style.transform = 'scale(1.02)';
+          if (navigator.vibrate) navigator.vibrate(12);
+          d.raf = requestAnimationFrame(itinTick);
+        }, 350);
+        itinDrag = d;
+      };
+
+      window.addEventListener('touchmove', itinMove, { passive: false });
+      window.addEventListener('touchend', itinEnd);
+      window.addEventListener('touchcancel', itinEnd);
+      // 拖完放開時，擋掉那一下可能被誤判的點擊（例如開啟照片）
+      window.addEventListener('click', (e) => {
+        if (Date.now() < itinNoClickUntil) { e.stopPropagation(); e.preventDefault(); }
+      }, true);
 
       const moveItem = (index, direction) => {
         const currentList = itineraryData.value[selectedDateIndex.value];
