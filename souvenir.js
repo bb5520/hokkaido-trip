@@ -237,5 +237,13 @@ function draw(){
  var f=ib("fixed bottom-24 right-6 w-14 h-14 bg-ice-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl hover:bg-ice-700 active:scale-95 transition z-40","fa-plus");f.setAttribute("aria-label","新增伴手禮");on(f,"click",function(){openSheet(null)});root.appendChild(f)}
 /* 切到「伴手禮」分頁時，Vue 會建立 #souv-host，這裡偵測到就接手畫面 */
 function tryMount(){var r=document.getElementById("souv-host");if(r&&r!==root){root=r;load();draw()}else if(!r)root=null}
+var pendingSouv=false;
+function souvApply(){
+ if(!root){pendingSouv=false;return}
+ if(document.querySelector('.fixed.inset-0[class*="z-50"],.fixed.inset-0[class*="z-[98]"]')){setTimeout(souvApply,1000);return}
+ pendingSouv=false;load();draw()}
+window.addEventListener("trip-sync-update",function(e){
+ if(!e.detail||e.detail.keys.indexOf("trip_souvenirs")<0||pendingSouv)return;
+ pendingSouv=true;souvApply()});
 new MutationObserver(tryMount).observe(document.documentElement,{childList:true,subtree:true});
 })();
