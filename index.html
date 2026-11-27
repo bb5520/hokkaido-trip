@@ -165,18 +165,6 @@
                :class="{ 'itin-dragging': draggingId === item.id }"
                @pointerdown="onItinPointerDown($event, item.id)">
 
-            <!-- 交通時間 (顯示於卡片之間，點擊開啟大眾運輸導航) -->
-            <div v-if="idx > 0" class="flex items-center justify-center my-2 text-xs text-slate-400 font-medium">
-              <div class="h-4 w-[2px] bg-ice-200 mr-2"></div>
-              <button @click.stop="openDirections(filteredItinerary[idx - 1].location || filteredItinerary[idx - 1].name, item.location || item.name)"
-                      class="bg-white border border-ice-100 px-3 py-1 rounded-full text-[11px] shadow-sm flex items-center gap-1.5 text-ice-700 hover:bg-ice-50 hover:shadow transition cursor-pointer active:scale-95">
-                <i :class="item.transitIcon || 'fa-solid fa-train-subway'"></i>
-                <span>{{ item.transitTime || '大眾運輸導航' }}</span>
-                <i class="fa-solid fa-chevron-right text-[8px] opacity-60"></i>
-              </button>
-              <div class="h-4 w-[2px] bg-ice-200 ml-2"></div>
-            </div>
-
             <!-- 航班專屬卡片 -->
             <div v-if="item.category === '航班'" class="tk2">
               <div class="absolute top-0 left-0 right-0 h-1.5 z-20" :style="airlineAssets(item.flightNo) ? airlineAssets(item.flightNo).bar : 'background:linear-gradient(90deg,#38bdf8,#0284c7)'"></div>
@@ -2237,13 +2225,6 @@
         window.open(url, '_blank');
       };
 
-      // 新增路線導航函數
-      const openDirections = (origin, destination) => {
-        if (!origin || !destination) return alert('缺少起點或終點資訊無法導航');
-        const url = `https://www.google.com/maps/dir/?api=1&origin=encodeURIComponent(origin)&destination={encodeURIComponent(destination)}&travelmode=transit`;
-        window.open(url, '_blank');
-      };
-
       // ===== 行程卡片：長按拖移排序 =====
       const draggingId = ref(null);
       let dragState = null;
@@ -3396,7 +3377,7 @@
 
       return {
         currentTab, tabs, dateList, selectedDateIndex, categories, selectedCategory,
-        filteredItinerary, openMap, openDirections, draggingId, onItinPointerDown, weekDayLabels, expandedHours, setUseWeekly, copyWeeklyHours, weekIdxOfSelectedDay, formatDayHours, todayHoursText, toggleHoursExpand, weekDayFull, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
+        filteredItinerary, openMap, draggingId, onItinPointerDown, weekDayLabels, expandedHours, setUseWeekly, copyWeeklyHours, weekIdxOfSelectedDay, formatDayHours, todayHoursText, toggleHoursExpand, weekDayFull, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
         isEditShoppingMode, openAddShoppingModal, editShoppingItem, saveShoppingItem, confirmDeleteShoppingItem,
         setShoppingCardRef, draggingShopping, onGripPointerDown,
         expenses, showExpenseModal, formExpense, isEditExpenseMode, selectedExpenseCategory,
