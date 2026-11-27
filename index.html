@@ -24,7 +24,7 @@
     img-src 'self' data: https://images.unsplash.com;
     font-src 'self';
     frame-src 'self' data:;
-    connect-src 'self' https://*.supabase.co;
+    connect-src 'self' https://*.supabase.co wss://*.supabase.co;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
@@ -3364,6 +3364,29 @@
 
       // 進入設定分頁時自動檢查一次
       watch(currentTab, (tab) => { if (tab === 'settings') checkStorageUsage(); });
+
+      // ===== 雲端即時更新：別支手機改了資料，直接換進畫面 =====
+      const LIVE_MAP = {
+        trip_banner: bannerImage, trip_jpyRate: jpyRate,
+        trip_itinerary: itineraryData, trip_startDate: tripStartDate, trip_days: tripDays,
+        trip_flightExtras: flightExtras, trip_hotelExtras: hotelExtras,
+        trip_carRentals: carRentals, trip_dayTours: dayTours, trip_otherBookings: otherBookings,
+        trip_shopping: shoppingList, trip_expenses: expenses, trip_todos: todos, trip_taxEnts: txEnts
+      };
+      window.TRIP_LIVE = Object.keys(LIVE_MAP);
+      window.addEventListener('trip-data-updated', (ev) => {
+        const keys = (ev && ev.detail) || [];
+        Object.keys(LIVE_MAP).forEach(k => {
+          if (!keys.includes(k)) return;
+          try {
+            const raw = localStorage.getItem(k);
+            if (raw != null) LIVE_MAP[k].value = JSON.parse(raw);
+          } catch (e) {}
+        });
+        if (keys.includes('trip_jpyRate')) twdToJpyInput.value = Number((1 / jpyRate.value).toFixed(3));
+        if (keys.includes('trip_startDate')) tripStartDateInput.value = tripStartDate.value;
+        if (keys.includes('trip_days')) tripDaysInput.value = tripDays.value;
+      });
 
       const localStorageUsageKB = computed(() => {
         let total = 0;
