@@ -864,6 +864,11 @@
 
     </main>
 
+    <!-- 其他人修改了你正在看的資料時的提醒條 -->
+    <div v-if="liveNotice" class="fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-[80] max-w-md mx-auto bg-slate-800 text-white text-xs rounded-xl px-4 py-3 shadow-lg flex items-start gap-2">
+      <i class="fa-solid fa-rotate mt-0.5 text-amber-300"></i><span class="min-w-0 break-words">{{ liveNotice }}</span>
+    </div>
+
     <!-- ================= 底部固定分頁選單 (Bottom Tab Bar) ================= -->
     <nav class="fixed bottom-0 left-0 right-0 z-30 max-w-md mx-auto px-4 pb-4">
       <div class="flex bg-white/90 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-white/40 gap-1">
@@ -1578,7 +1583,7 @@
         </div>
 
         <div class="flex gap-2 pt-2">
-          <button v-if="txEditIdx > -1" @click="delTx(txEditIdx)" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
+          <button v-if="txEditIdx > -1" @click="delTx(txEditId != null ? txEnts.findIndex(x => x.id === txEditId) : txEditIdx)" class="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl">刪除</button>
           <button @click="saveTx" class="flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl">儲存</button>
         </div>
       </div>
@@ -2466,7 +2471,7 @@
         
         if (isEditMode.value) {
           const idx = currentList.findIndex(i => i.id === formItinerary.value.id);
-          if (idx !== -1) currentList[idx] = { ...formItinerary.value };
+          if (idx !== -1) currentList[idx] = { ...formItinerary.value }; else currentList.push({ ...formItinerary.value });
         } else {
           formItinerary.value.id = Date.now();
           currentList.push({ ...formItinerary.value });
@@ -2726,7 +2731,7 @@
           if (!formObj.value.location) formObj.value.location = formObj.value.name;
           if (isEditMode.value) {
             const idx = dataRef.value.findIndex(i => i.id === formObj.value.id);
-            if (idx !== -1) dataRef.value[idx] = { ...formObj.value };
+            if (idx !== -1) dataRef.value[idx] = { ...formObj.value }; else dataRef.value.push({ ...formObj.value });
           } else {
             formObj.value.id = Date.now();
             dataRef.value.push({ ...formObj.value });
@@ -3001,11 +3006,11 @@
 
       const showTxModal = ref(false);
       const txEditIdx = ref(-1);
-
-      const openAddTx = () => { txEditIdx.value = -1; txForm.value = txInitForm(); txDd.value = false; showTxModal.value = true; };
+      const txEditId = ref(null);
+      const openAddTx = () => { txEditIdx.value = -1; txEditId.value = null; txForm.value = txInitForm(); txDd.value = false; showTxModal.value = true; };
       const editTx = (i) => {
         const e = txEnts.value[i];
-        txEditIdx.value = i;
+        if (e.id == null) e.id = newId(); txEditId.value = e.id; txEditIdx.value = i;
         txForm.value = { name: e.name, date: e.date || '', amtS: txFy(e.incl), pctS: txFp(e.pct), fixS: txFy(e.fix), tax: e.tax ? 1 : 0, rate: e.rate };
         txDd.value = false;
         showTxModal.value = true;
@@ -3015,7 +3020,9 @@
         if (txCur.value.incl <= 0) return alert('請填寫含稅金額');
         const rec = { ...txCur.value, name: txForm.value.name.trim() };
         if (txEditIdx.value > -1) {
-          txEnts.value[txEditIdx.value] = rec;
+          const at = txEnts.value.findIndex(x => x.id === txEditId.value);
+          if (at > -1) { rec.id = txEnts.value[at].id; txEnts.value[at] = rec; }
+          else { rec.id = txEditId.value || newId(); txEnts.value.push(rec); }
         } else {
           if (txEnts.value.length >= 30) return alert('明細最多 30 筆');
           txEnts.value.push(rec);
@@ -3072,7 +3079,7 @@
         const rec = { id: f.id, text: f.text.trim(), note: (f.note || '').trim(), done: !!f.done };
         if (isEditTodo.value) {
           const idx = todos.value.findIndex(t => t.id === rec.id);
-          if (idx !== -1) todos.value[idx] = rec;
+          if (idx !== -1) todos.value[idx] = rec; else todos.value.push(rec);
         } else {
           rec.id = Date.now();
           todos.value.push(rec);
@@ -3173,7 +3180,7 @@
         if (!formExpense.value.name || !formExpense.value.amount) return alert('請填寫消費名稱與金額');
         if (isEditExpenseMode.value) {
           const idx = expenses.value.findIndex(e => e.id === formExpense.value.id);
-          if (idx !== -1) expenses.value[idx] = { ...expenses.value[idx], ...formExpense.value };
+          if (idx !== -1) expenses.value[idx] = { ...expenses.value[idx], ...formExpense.value }; else expenses.value.unshift({ ...formExpense.value });
         } else {
           expenses.value.unshift({ id: Date.now(), ...formExpense.value, date: new Date().toISOString().split('T')[0] });
         }
@@ -3365,6 +3372,99 @@
       // 進入設定分頁時自動檢查一次
       watch(currentTab, (tab) => { if (tab === 'settings') checkStorageUsage(); });
 
+      // ===== 彈窗即時同步：別人改了你正在編輯的那一筆 =====
+      const liveNotice = ref('');
+      let liveNoticeTimer = 0;
+      const showLiveNotice = (msg) => {
+        liveNotice.value = msg;
+        clearTimeout(liveNoticeTimer);
+        liveNoticeTimer = setTimeout(() => { liveNotice.value = ''; }, 7000);
+      };
+      const lsClone = (v) => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+      const lsCanon = (v) => (v === null || v === undefined) ? 'null'
+        : typeof v !== 'object' ? JSON.stringify(v)
+        : Array.isArray(v) ? '[' + v.map(lsCanon).join(',') + ']'
+        : '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + lsCanon(v[k])).join(',') + '}';
+      const LIVE_LABELS = {
+        name: '名稱', category: '分類', openHours: '營業時間', useWeekly: '營業時間', weeklyHours: '營業時間',
+        ticket: '門票', note: '備註', location: '導航名稱', flightNo: '航班編號',
+        depAirport: '出發機場', depTime: '出發時間', arrAirport: '抵達機場', arrTime: '抵達時間',
+        depTerminal: '出發航廈', arrTerminal: '抵達航廈', flightDuration: '飛行時間', images: '照片',
+        baggageChecked: '託運行李', baggageCarryon: '隨身行李', payMethod: '付款方式', price: '金額',
+        currency: '幣別', documents: '相關文件', phone: '電話', address: '地址', bookingNo: '預約號碼',
+        pickupTime: '取車時間', time: '時間', text: '待辦事項', done: '完成狀態', amount: '金額', date: '日期',
+        amtS: '含稅金額', pctS: '手續費', fixS: '定額費', rate: '稅率'
+      };
+      const modalSyncs = [];
+      const regModalSync = (cfg) => {
+        const s = { cfg, base: null, gone: false };
+        modalSyncs.push(s);
+        // 彈窗打開的瞬間，記下「打開時的內容」，之後才能分辨哪些欄位是使用者自己改的
+        watch(cfg.open, (on) => {
+          s.gone = false;
+          if (!on) { s.base = null; return; }
+          const rec = cfg.id() != null ? cfg.find() : null;
+          s.base = rec ? lsClone(cfg.toForm(rec)) : null;
+        });
+      };
+      const mergeIntoForm = (s) => {
+        const c = s.cfg;
+        if (!c.open.value || !s.base) return;          // 沒開彈窗，或是「新增」模式：不處理
+        const rec = c.find();
+        const form = c.form.value;
+        const title = c.title();
+        if (!rec) {
+          if (!s.gone) { s.gone = true; showLiveNotice('「' + title + '」已被其他人刪除。若按儲存，會重新建立這一筆'); }
+          return;
+        }
+        s.gone = false;
+        const next = c.toForm(rec);
+        const changed = new Set(), conflict = new Set();
+        Object.keys(next).forEach(k => {
+          const nv = lsCanon(next[k]), bv = lsCanon(s.base[k]), fv = lsCanon(form[k]);
+          if (nv === bv) return;                                        // 對方沒改這欄
+          if (fv === bv) { form[k] = lsClone(next[k]); changed.add(LIVE_LABELS[k] || null); }   // 你沒動過 → 直接換
+          else if (fv !== nv) conflict.add(LIVE_LABELS[k] || null);     // 兩邊都改且不同 → 保留你的
+        });
+        s.base = lsClone(next);
+        const nm = (set) => [...set].filter(Boolean).join('、');
+        if (!changed.size && !conflict.size) return;
+        let msg = '「' + title + '」剛被其他人更新' + (nm(changed) ? '：' + nm(changed) : '');
+        if (conflict.size) msg += '。你也改了' + (nm(conflict) || '部分欄位') + '，已保留你輸入的內容，儲存後會蓋掉對方的修改';
+        showLiveNotice(msg);
+      };
+
+      regModalSync({ title: () => formItinerary.value.name || '行程', open: showItineraryModal, form: formItinerary,
+        id: () => formItinerary.value.id,
+        find: () => { for (const day of itineraryData.value) { const r = (day || []).find(x => x.id === formItinerary.value.id); if (r) return r; } return undefined; },
+        toForm: (it) => ({ ...initFormItinerary(), ...it, images: it.images ? [...it.images] : [], weeklyHours: it.weeklyHours ? it.weeklyHours.map(d => ({ ...d })) : [] }) });
+      regModalSync({ title: () => activeFlightInfo.value.label || '航班', open: showFlightModal, form: formFlightDoc,
+        id: () => formFlightDoc.value.id,
+        find: () => flightsInfo.value.find(f => f.id === formFlightDoc.value.id),
+        toForm: (f) => ({ id: f.id, documents: f.documents ? [...f.documents] : [], price: f.price || null, currency: f.currency || 'JPY', payMethod: f.payMethod || '', baggageChecked: f.baggageChecked || '', baggageCarryon: f.baggageCarryon || '' }) });
+      regModalSync({ title: () => formHotelInfo.value.name || '住宿', open: showHotelModal, form: formHotelInfo,
+        id: () => formHotelInfo.value.id,
+        find: () => hotelsInfo.value.find(h => h.id === formHotelInfo.value.id),
+        toForm: (h) => ({ ...h, documents: h.documents ? [...h.documents] : [] }) });
+      [[car, carRentals, initCar], [tour, dayTours, initDayTour], [other, otherBookings, initOther]].forEach(([c, data, init]) => {
+        regModalSync({ title: () => c.formObj.value.name || '資料', open: c.showModal, form: c.formObj,
+          id: () => c.formObj.value.id,
+          find: () => data.value.find(x => x.id === c.formObj.value.id),
+          toForm: (it) => ({ ...init(), ...it, documents: it.documents ? [...it.documents] : [] }) });
+      });
+      regModalSync({ title: () => formTodo.value.text || '待辦', open: showTodoModal, form: formTodo,
+        id: () => formTodo.value.id,
+        find: () => todos.value.find(t => t.id === formTodo.value.id),
+        toForm: (t) => ({ id: t.id, text: t.text, note: t.note || '', done: !!t.done }) });
+      regModalSync({ title: () => formExpense.value.name || '花費', open: showExpenseModal, form: formExpense,
+        id: () => formExpense.value.id,
+        find: () => expenses.value.find(e => e.id === formExpense.value.id),
+        toForm: (e) => ({ id: e.id, category: e.category, name: e.name, amount: e.amount, currency: e.currency || 'JPY', payMethod: e.payMethod, date: e.date }) });
+      regModalSync({ title: () => txForm.value.name || '退稅明細', open: showTxModal, form: txForm,
+        id: () => txEditId.value,
+        find: () => txEnts.value.find(x => x.id === txEditId.value),
+        toForm: (e) => ({ name: e.name, date: e.date || '', amtS: txFy(e.incl), pctS: txFp(e.pct), fixS: txFy(e.fix), tax: e.tax ? 1 : 0, rate: e.rate }) });
+
       // ===== 雲端即時更新：別支手機改了資料，直接換進畫面 =====
       const LIVE_MAP = {
         trip_banner: bannerImage, trip_jpyRate: jpyRate,
@@ -3386,6 +3486,7 @@
         if (keys.includes('trip_jpyRate')) twdToJpyInput.value = Number((1 / jpyRate.value).toFixed(3));
         if (keys.includes('trip_startDate')) tripStartDateInput.value = tripStartDate.value;
         if (keys.includes('trip_days')) tripDaysInput.value = tripDays.value;
+        try { modalSyncs.forEach(mergeIntoForm); } catch (e) { console.warn('modal sync', e); }
       });
 
       const localStorageUsageKB = computed(() => {
@@ -3430,7 +3531,7 @@
         txView, txEnts, txForm, txDd, txMethods, txPlatforms, txPre, txDdList, txCloseDd, txPick,
         txR, txBest, txRows, txFeeText, txEntRes, txY, txT, txDateText, txFilter, txStoreNames, txShown,
         showTxModal, txEditIdx, openAddTx, editTx, saveTx, delTx, txOnName,
-        txShowAll, txFocusName, txOnPct, txOnFix, txOnAmt
+        txShowAll, txFocusName, txOnPct, txOnFix, txOnAmt, liveNotice, txEditId
       };
     }
   }).mount('#app');
