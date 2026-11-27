@@ -94,11 +94,15 @@
     .fl-card { background: #fff; border: 2px dashed #8ccaf5; border-radius: 1.5rem; }
     .fl-perf { border-top: 2px dashed #8ccaf5; }
     .fl-notch { position: absolute; top: -14px; width: 28px; height: 28px; border-radius: 50%; background-color: #bfe0fa; border: 2px dashed #8ccaf5; }
+    /* 行程卡片：拖移排序 */
+    .itin-dragging { z-index: 50; filter: drop-shadow(0 10px 18px rgba(0,0,0,.2)); transition: none; }
+    @media (pointer: coarse) {
+      .itin-card { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    }
     /* 隱藏滾動條但保持滾動 */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     body { background-color: #eef4f8; }
-    .itin-drag { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
     /* Vue 尚未接管畫面前，先隱藏整個 App，避免出現未渲染的 {{ }} 模板閃爍畫面 */
     [v-cloak] { display: none !important; }
 
@@ -156,7 +160,10 @@
 
         <!-- 行程卡片列表 -->
         <div class="space-y-3">
-          <div v-for="(item, idx) in filteredItinerary" :key="item.id" :data-iid="item.id" @touchstart.passive="itinTouchStart($event, item.id)" class="relative group itin-drag">
+          <div v-for="(item, idx) in filteredItinerary" :key="item.id" class="relative group itin-card"
+               :data-itin-id="item.id"
+               :class="{ 'itin-dragging': draggingId === item.id }"
+               @pointerdown="onItinPointerDown($event, item.id)">
 
             <!-- 交通時間 (顯示於卡片之間，點擊開啟大眾運輸導航) -->
             <div v-if="idx > 0" class="flex items-center justify-center my-2 text-xs text-slate-400 font-medium">
@@ -1524,7 +1531,7 @@
               <span v-else-if="txForm.name.trim()" class="text-[11px] text-amber-600 font-bold text-right">自訂店家：請輸入手續費</span>
             </div>
             <div class="relative">
-              <input v-model="txForm.name" @focus="txFocusName($event)" @click="txFocusName($event)" @input="txDd = true; txShowAll = false; txOnName()" @blur="txCloseDd" type="text" maxlength="40" autocomplete="off" placeholder="輸入搜尋，或點選清單"
+              <input v-model="txForm.name" @focus="txFocusName(event)"@click="txFocusName(event)" @input="txDd = true; txShowAll = false; txOnName()" @blur="txCloseDd" type="text" maxlength="40" autocomplete="off" placeholder="輸入搜尋，或點選清單"
                      class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500">
               <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
               <div v-if="txDd && txDdList.length" class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 p-1">
@@ -1682,7 +1689,7 @@
            @touchmove="galleryTouchMove"
            @touchend="galleryTouchEnd">
         <img v-if="galleryModal.images[galleryModal.index]" :src="resolveBlobUrl(galleryModal.images[galleryModal.index].id)"
-             :style="{ transform: `translate(${galleryPan.x}px, ${galleryPan.y}px) scale(${galleryZoom})` }"
+             :style="{ transform: `translate(${galleryPan.x}px, galleryPan.ypx)scale({galleryZoom})` }"
              class="max-w-full max-h-full object-contain select-none" draggable="false">
       </div>
       <div v-if="galleryModal.images.length > 1" class="flex justify-center gap-1.5 p-4 flex-shrink-0" @click.self="closeGallery">
@@ -2189,7 +2196,7 @@
           d.setDate(d.getDate() + i);
           list.push({
             week: weekdayNames[d.getDay()],
-            date: `${d.getMonth() + 1}/${d.getDate()}`,
+            date: `d.getMonth()+1/{d.getDate()}`,
             full: d.toISOString().split('T')[0]
           });
         }
@@ -2232,122 +2239,134 @@
       // 新增路線導航函數
       const openDirections = (origin, destination) => {
         if (!origin || !destination) return alert('缺少起點或終點資訊無法導航');
-        const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=transit`;
+        const url = `https://www.google.com/maps/dir/?api=1&origin=encodeURIComponent(origin)&destination={encodeURIComponent(destination)}&travelmode=transit`;
         window.open(url, '_blank');
       };
 
-      // ===== 行程卡片：長按後拖移排序 =====
-      let itinDrag = null;
-      let itinNoClickUntil = 0;
+      // ===== 行程卡片：長按拖移排序 =====
+      const draggingId = ref(null);
+      let dragState = null;
 
-      const itinEnd = () => {
-        if (!itinDrag) return;
-        const d = itinDrag;
-        itinDrag = null;
-        clearTimeout(d.timer);
-        cancelAnimationFrame(d.raf);
-        if (!d.active) return;
-        itinNoClickUntil = Date.now() + 450;
-        const c = d.card;
-        c.style.transition = 'transform .18s ease, box-shadow .18s ease';
-        void c.offsetHeight;
-        c.style.transform = 'translateY(0) scale(1)';
-        c.style.boxShadow = '';
-        setTimeout(() => { c.style.transition = ''; c.style.transform = ''; c.style.zIndex = ''; }, 200);
+      // 以 id 交換兩張卡片在當天行程中的位置（篩選類別時也不會移錯）
+      const swapItineraryItems = (idA, idB) => {
+        const list = itineraryData.value[selectedDateIndex.value];
+        if (!list) return;
+        const a = list.findIndex(i => String(i.id) === String(idA));
+        const b = list.findIndex(i => String(i.id) === String(idB));
+        if (a < 0 || b < 0) return;
+        const tmp = list[a]; list[a] = list[b]; list[b] = tmp;
       };
 
-      const itinMove = (e) => {
-        const d = itinDrag;
-        if (!d) return;
-        const t = e.touches[0];
-        if (!t) return;
-        if (!d.active) {
-          // 還沒進入拖移就移動了 = 使用者是在捲動頁面，取消長按
-          if (Math.abs(t.clientX - d.sx) > 8 || Math.abs(t.clientY - d.sy) > 8) itinEnd();
+      const blockContextMenu = (e) => e.preventDefault();
+
+      const itinCleanup = () => {
+        const s = dragState;
+        if (!s) return;
+        clearTimeout(s.timer);
+        cancelAnimationFrame(s.raf);
+        document.removeEventListener('pointermove', onItinPointerMove);
+        document.removeEventListener('pointerup', onItinPointerEnd);
+        document.removeEventListener('pointercancel', onItinPointerEnd);
+        document.removeEventListener('contextmenu', blockContextMenu);
+        if (s.onTouchMove) s.el.removeEventListener('touchmove', s.onTouchMove);
+        s.el.style.transform = '';
+        if (s.active) {
+          // 放開後瞬間會觸發 click，擋掉避免誤開照片或導航
+          const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+          window.addEventListener('click', stop, true);
+          setTimeout(() => window.removeEventListener('click', stop, true), 80);
+        }
+        draggingId.value = null;
+        dragState = null;
+      };
+
+      // 讓被拖的卡片跟著手指，並判斷是否要和上下鄰居交換
+      const updateItinDrag = () => {
+        const s = dragState;
+        if (!s || !s.active) return;
+        const r = s.el.getBoundingClientRect();
+        const natural = r.top - s.ty;                 // 沒有位移時的原始位置
+        s.ty = s.y - s.grabOff - natural;
+        s.el.style.transform = `translateY(${s.ty}px)`;
+        if (s.swapping) return;
+
+        const center = natural + s.ty + r.height / 2;
+        const sibs = Array.from(s.el.parentElement.children).filter(c => c.dataset && c.dataset.itinId !== undefined);
+        const i = sibs.indexOf(s.el);
+        let target = null;
+        const next = sibs[i + 1], prev = sibs[i - 1];
+        if (next) { const nr = next.getBoundingClientRect(); if (center > nr.top + nr.height / 2) target = next; }
+        if (!target && prev) { const pr = prev.getBoundingClientRect(); if (center < pr.top + pr.height / 2) target = prev; }
+        if (target) {
+          s.swapping = true;
+          swapItineraryItems(s.id, target.dataset.itinId);
+          nextTick(() => { if (dragState === s) { s.swapping = false; updateItinDrag(); } });
+        }
+      };
+
+      // 拖到畫面上下緣時自動捲動
+      const itinAutoScroll = () => {
+        const s = dragState;
+        if (!s || !s.active) return;
+        const edge = 80, bottomLimit = window.innerHeight - 130; // 130 = 底部選單高度
+        let v = 0;
+        if (s.y < edge) v = -Math.ceil((edge - s.y) / 5);
+        else if (s.y > bottomLimit) v = Math.ceil((s.y - bottomLimit) / 5);
+        if (v) { window.scrollBy(0, v); updateItinDrag(); }
+        s.raf = requestAnimationFrame(itinAutoScroll);
+      };
+
+      const startItinDrag = () => {
+        const s = dragState;
+        if (!s || s.active) return;
+        s.active = true;
+        draggingId.value = s.id;
+        const r = s.el.getBoundingClientRect();
+        s.grabOff = s.y - r.top;
+        s.ty = 0;
+        // 拖曳中擋掉頁面捲動（綁在卡片自己身上，換位後仍然有效）
+        s.onTouchMove = (ev) => { if (ev.cancelable) ev.preventDefault(); };
+        s.el.addEventListener('touchmove', s.onTouchMove, { passive: false });
+        try { window.getSelection().removeAllRanges(); } catch (x) {}
+        if (navigator.vibrate) navigator.vibrate(15);
+        s.raf = requestAnimationFrame(itinAutoScroll);
+      };
+
+      const onItinPointerMove = (e) => {
+        const s = dragState;
+        if (!s || e.pointerId !== s.pointerId) return;
+        s.y = e.clientY;
+        if (!s.active) {
+          const moved = Math.hypot(e.clientX - s.startX, e.clientY - s.startY);
+          if (e.pointerType === 'mouse') {
+            if (moved > 5) { clearTimeout(s.timer); startItinDrag(); updateItinDrag(); }
+          } else if (moved > 10) {
+            itinCleanup(); // 長按前就在移動 = 想捲動頁面，取消
+          }
           return;
         }
         e.preventDefault();
-        d.y = t.clientY;
+        updateItinDrag();
       };
 
-      const itinPlace = () => {
-        const d = itinDrag;
-        if (!d || d.busy) return;
-        const c = d.card;
-        c.style.transform = '';
-        const r = c.getBoundingClientRect();
-        const top = d.y - d.grab;
-        c.style.transform = 'translateY(' + (top - r.top) + 'px) scale(1.02)';
-        const center = top + r.height / 2;
-        const sibs = Array.from(d.el.parentElement.children);
-        const i = sibs.indexOf(d.el);
-        const crossed = (w, dir) => {
-          if (!w) return false;
-          const q = w.lastElementChild.getBoundingClientRect();
-          const mid = q.top + q.height / 2;
-          return dir < 0 ? center < mid : center > mid;
+      const onItinPointerEnd = (e) => {
+        if (dragState && e.pointerId === dragState.pointerId) itinCleanup();
+      };
+
+      const onItinPointerDown = (e, id) => {
+        if (dragState) return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        if (e.target.closest('button, a, input, select, textarea')) return; // 按鈕本身不觸發拖移
+        dragState = {
+          id, el: e.currentTarget, pointerId: e.pointerId,
+          startX: e.clientX, startY: e.clientY, y: e.clientY,
+          ty: 0, grabOff: 0, active: false, swapping: false, raf: 0, onTouchMove: null,
+          timer: setTimeout(startItinDrag, 350)
         };
-        const other = crossed(sibs[i - 1], -1) ? sibs[i - 1] : (crossed(sibs[i + 1], 1) ? sibs[i + 1] : null);
-        if (!other) return;
-        const list = itineraryData.value[selectedDateIndex.value] || [];
-        const a = list.findIndex(x => String(x.id) === String(d.id));
-        const b = list.findIndex(x => String(x.id) === other.dataset.iid);
-        if (a < 0 || b < 0) return;
-        d.busy = true;
-        const [it] = list.splice(a, 1);
-        list.splice(b, 0, it);
-        nextTick(() => { d.busy = false; });
-      };
-
-      const itinTick = () => {
-        const d = itinDrag;
-        if (!d || !d.active) return;
-        const H = window.innerHeight;
-        if (d.y < 90) window.scrollBy(0, -Math.min(16, (90 - d.y) / 4 + 2));
-        else if (d.y > H - 130) window.scrollBy(0, Math.min(16, (d.y - (H - 130)) / 4 + 2));
-        itinPlace();
-        d.raf = requestAnimationFrame(itinTick);
-      };
-
-      const itinTouchStart = (e, id) => {
-        itinEnd();
-        if (e.touches.length !== 1) return;
-        const el = e.currentTarget;
-        const card = el.lastElementChild;
-        // 只有按在卡片本體才算；交通時間按鈕、輸入欄位不觸發
-        if (!card || !card.contains(e.target) || e.target.closest('input,select,textarea')) return;
-        const t = e.touches[0];
-        const d = { id, el, card, sx: t.clientX, sy: t.clientY, y: t.clientY, grab: 0, active: false, busy: false, raf: 0, timer: 0 };
-        d.timer = setTimeout(() => {
-          if (itinDrag !== d) return;
-          d.active = true;
-          const r = card.getBoundingClientRect();
-          d.grab = d.y - r.top;
-          card.style.transition = 'none';
-          card.style.zIndex = '50';
-          card.style.boxShadow = '0 14px 30px rgba(0,0,0,.22)';
-          card.style.transform = 'scale(1.02)';
-          if (navigator.vibrate) navigator.vibrate(12);
-          d.raf = requestAnimationFrame(itinTick);
-        }, 350);
-        itinDrag = d;
-      };
-
-      window.addEventListener('touchmove', itinMove, { passive: false });
-      window.addEventListener('touchend', itinEnd);
-      window.addEventListener('touchcancel', itinEnd);
-      // 拖完放開時，擋掉那一下可能被誤判的點擊（例如開啟照片）
-      window.addEventListener('click', (e) => {
-        if (Date.now() < itinNoClickUntil) { e.stopPropagation(); e.preventDefault(); }
-      }, true);
-
-      const moveItem = (index, direction) => {
-        const currentList = itineraryData.value[selectedDateIndex.value];
-        const newIndex = index + direction;
-        if (newIndex < 0 || newIndex >= currentList.length) return;
-        const temp = currentList[index];
-        currentList[index] = currentList[newIndex];
-        currentList[newIndex] = temp;
+        document.addEventListener('pointermove', onItinPointerMove);
+        document.addEventListener('pointerup', onItinPointerEnd);
+        document.addEventListener('pointercancel', onItinPointerEnd);
+        document.addEventListener('contextmenu', blockContextMenu);
       };
 
       // ===== 每週營業時間 =====
@@ -2540,7 +2559,7 @@
         if (!price || isNaN(num)) return '';
         if (currency === 'JPY') {
           const twd = Math.round(num * jpyRate.value);
-          return `¥ ${num.toLocaleString()} (約 NT$ ${twd.toLocaleString()})`;
+          return `¥ num.toLocaleString()(約NT ${twd.toLocaleString()})`;
         }
         return `NT$ ${num.toLocaleString()}`;
       };
@@ -2595,7 +2614,7 @@
       const flightDateText = computed(() => {
         const d = new Date(tripStartDate.value + 'T00:00:00');
         d.setDate(d.getDate() + selectedDateIndex.value);
-        return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}（${'日一二三四五六'[d.getDay()]}）`;
+        return `d.getFullYear()/{d.getMonth() + 1}/d.getDate()（{'日一二三四五六'[d.getDay()]}）`;
       });
       const airlineAssets = (flightNo) => {
         const code = String(flightNo || '').trim().slice(0, 2).toUpperCase();
@@ -2625,7 +2644,7 @@
           id: f.id, dayIndex: f.dayIndex, 
           label: f.name + (f.flightNo ? ` (${f.flightNo})` : ''), 
           duration: f.flightDuration || '未填寫飛行時間', 
-          route: `${f.depAirport || '出發地'}${f.depTerminal ? '（' + f.depTerminal + '）' : ''} ${f.depTime || '--:--'} ➔ ${f.arrAirport || '目的地'}${f.arrTerminal ? '（' + f.arrTerminal + '）' : ''} ${f.arrTime || '--:--'}`, 
+          route: `f.depAirport||'出發地'{f.depTerminal ? '（' + f.depTerminal + '）' : ''} ${f.depTime || '--:--'} ➔ f.arrAirport||'目的地'{f.arrTerminal ? '（' + f.arrTerminal + '）' : ''} ${f.arrTime || '--:--'}`, 
           documents: extra.documents || [], 
           price: extra.price || null, 
           currency: extra.currency || 'JPY', 
@@ -3094,7 +3113,7 @@
           const yyyy = d.getFullYear();
           const mm = String(d.getMonth() + 1).padStart(2, '0');
           const dd = String(d.getDate()).padStart(2, '0');
-          return `${yyyy}-${mm}-${dd}`;
+          return `yyyy-{mm}-${dd}`;
         };
         
         // --- 航班花費加總 (將名稱統一為「機票」) ---
@@ -3273,7 +3292,7 @@
         const link = document.createElement('a');
         link.href = url;
         const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
-        link.download = `TripBackup_${date}${filenameSuffix}.json`;
+        link.download = `TripBackup_date{filenameSuffix}.json`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -3376,7 +3395,7 @@
 
       return {
         currentTab, tabs, dateList, selectedDateIndex, categories, selectedCategory,
-        filteredItinerary, openMap, openDirections, moveItem, weekDayLabels, expandedHours, setUseWeekly, copyWeeklyHours, weekIdxOfSelectedDay, formatDayHours, todayHoursText, toggleHoursExpand, weekDayFull, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
+        filteredItinerary, openMap, openDirections, raggingId, onItinPointerDown, weekDayLabels, expandedHours, setUseWeekly, copyWeeklyHours, weekIdxOfSelectedDay, formatDayHours, todayHoursText, toggleHoursExpand, weekDayFull, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
         isEditShoppingMode, openAddShoppingModal, editShoppingItem, saveShoppingItem, confirmDeleteShoppingItem,
         setShoppingCardRef, draggingShopping, onGripPointerDown,
         expenses, showExpenseModal, formExpense, isEditExpenseMode, selectedExpenseCategory,
@@ -3413,3 +3432,4 @@
 </script>
 </body>
 </html>
+
