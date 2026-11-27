@@ -1,16 +1,113 @@
 (function(){"use strict";
-var SB_URL="https://cpisljizfsovmygzhhpy.supabase.co",SB_KEY="sb_publishable_72orf9crARS0-Rfb67sFWA_x0i0GuhT";
-var KEYS=["trip_banner","trip_jpyRate","trip_itinerary","trip_flightExtras","trip_hotelExtras","trip_carRentals","trip_dayTours","trip_otherBookings","trip_shopping","trip_expenses","trip_souvenirs","trip_startDate","trip_days","souv","trip_todos","trip_taxMine","trip_taxEnts"];
+var SB_URL="https://cpisljizfsovmygzhhpy.supabase.co",SB_KEY="sb_publishable_72orf9crARS0-Rfb67sFWA_x0i0GuhT"";
+var KEYS=["trip_banner","trip_jpyRate","trip_itinerary","trip_flightExtras","trip_hotelExtras","trip_carRentals","trip_dayTours","trip_otherBookings","trip_shopping","trip_expenses","trip_souvenirs","trip_startDate","trip_days","souv","trip_todos","trip_taxEnts"];
 var BUCKET="trip-files",DB="trip_blob_store",ST="blobs";
 var rawSet=Storage.prototype.setItem,rawGet=Storage.prototype.getItem;
 function lraw(k){return rawGet.call(localStorage,k)}
 function lg(k,d){try{var v=JSON.parse(lraw(k));return v==null?d:v}catch(e){return d}}
 function ls(k,v){rawSet.call(localStorage,k,JSON.stringify(v))}
-var dirty=lg("sync_dirty",{}),meta=lg("sync_meta",{}),bq=lg("sync_blobq",[]),authed=false,busy=false,again=false,pt=0,sb=null,mode="",readyRes;
+var dirty=lg("sync_dirty",{}),meta=lg("sync_meta",{}),bq=lg("sync_blobq",[]),base=lg("sync_base",{}),stale={},chg=false,authed=false,busy=false,again=false,pt=0,sb=null,mode="",readyRes;
 var ready=new Promise(function(r){readyRes=r});
 try{sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}})}catch(e){}
 Storage.prototype.setItem=function(k,v){rawSet.call(this,k,v);if(this===localStorage&&KEYS.indexOf(k)>=0){dirty[k]=1;ls("sync_dirty",dirty);sched()}};
 function sched(){clearTimeout(pt);pt=setTimeout(syncNow,2000)}
+
+/* ================= 合併邏輯（三方合併：上次同步的版本 / 我的版本 / 雲端版本） ================= */
+/* MERGE-START */
+var KIND={trip_itinerary:"days",trip_flightExtras:"map",trip_hotelExtras:"map",trip_carRentals:"list",trip_dayTours:"list",trip_otherBookings:"list",trip_shopping:"list",trip_expenses:"list",trip_souvenirs:"list",trip_todos:"list",trip_taxEnts:"list"};
+function canon(v){
+ if(v===null||typeof v!=="object")return JSON.stringify(v);
+ if(Array.isArray(v))return "["+v.map(canon).join(",")+"]";
+ return "{"+Object.keys(v).sort().map(function(x){return JSON.stringify(x)+":"+canon(v[x])}).join(",")+"}"}
+function same(a,b){return canon(a)===canon(b)}
+function pj(s){try{return JSON.parse(s)}catch(e){return undefined}}
+function eq(a,b){if(a===b)return true;var x=pj(a),y=pj(b);return x!==undefined&&y!==undefined&&same(x,y)}
+function hash(s){var h=5381;for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;return h.toString(36)}
+function isObj(x){return !!x&&typeof x==="object"&&!Array.isArray(x)}
+function isIdList(x){return Array.isArray(x)&&x.every(function(e){return isObj(e)&&e.id!==undefined&&e.id!==null})}
+/* 舊資料沒有 id（例如退稅明細）：用內容算出固定的 id，每支手機算出來都一樣 */
+function ensureIds(arr){
+ var seen={};
+ return arr.map(function(e){
+  if(!isObj(e)||(e.id!==undefined&&e.id!==null))return e;
+  var h="L"+hash(canon(e));seen[h]=(seen[h]||0)+1;
+  var o=Object.assign({},e);o.id=h+"_"+seen[h];return o})}
+function idx(arr){
+ var o={};
+ (arr||[]).forEach(function(e){if(!isObj(e)||e.id===undefined||e.id===null)throw new Error("item without id");o[String(e.id)]=e});
+ return o}
+/* 同一筆資料：逐欄位合併。我沒改的欄位用雲端的，雲端沒改的用我的，兩邊都改了就用我的（後同步的人） */
+function mergeObj(b,m,t){
+ if(!isObj(m)||!isObj(t))return m;
+ var out={},keys={};
+ [b,m,t].forEach(function(o){if(isObj(o))Object.keys(o).forEach(function(x){keys[x]=1})});
+ Object.keys(keys).forEach(function(f){
+  var bv=isObj(b)?b[f]:undefined,mv=m[f],tv=t[f],v;
+  if(same(mv,bv))v=tv;
+  else if(same(tv,bv))v=mv;
+  else if(isIdList(mv)&&isIdList(tv)&&(bv===undefined||isIdList(bv)))v=mergeList(bv||[],mv,tv);
+  else v=mv;
+  if(v!==undefined)out[f]=v});
+ return out}
+/* 清單：依每筆的 id 合併。各自新增的都保留；一邊刪除、另一邊沒動就刪除；一邊刪除、另一邊有改就保留 */
+function mergeList(base,mine,theirs){
+ base=base||[];mine=mine||[];theirs=theirs||[];
+ var B=idx(base),M=idx(mine),T=idx(theirs),ids={},res={};
+ [base,mine,theirs].forEach(function(a){a.forEach(function(e){ids[String(e.id)]=1})});
+ Object.keys(ids).forEach(function(id){
+  var b=B[id],m=M[id],t=T[id],r;
+  if(!b){r=(m&&t)?mergeObj(undefined,m,t):(m||t)}
+  else if(!m&&!t)r=null;
+  else if(!m)r=same(t,b)?null:t;
+  else if(!t)r=same(m,b)?null:m;
+  else r=mergeObj(b,m,t);
+  if(r)res[id]=r});
+ var bi=base.map(function(e){return String(e.id)}),mi=mine.map(function(e){return String(e.id)}),ti=theirs.map(function(e){return String(e.id)});
+ function inAll(i){return B[i]&&M[i]&&T[i]}
+ var reordered=!same(bi.filter(inAll),mi.filter(inAll));
+ var primary=reordered?mi:ti,secondary=reordered?ti:mi;
+ var order=primary.filter(function(i){return res[i]});
+ secondary.forEach(function(i,k){
+  if(!res[i]||order.indexOf(i)>=0)return;
+  var pos=-1;
+  for(var j=k-1;j>=0;j--){var p=order.indexOf(secondary[j]);if(p>=0){pos=p;break}}
+  order.splice(pos+1,0,i)});
+ return order.map(function(i){return res[i]})}
+/* 以 id 為 key 的物件（航班、住宿的補充資料） */
+function mergeMap(b,m,t){
+ var out={},keys={};
+ [b,m,t].forEach(function(o){Object.keys(o).forEach(function(k){keys[k]=1})});
+ Object.keys(keys).forEach(function(k){
+  var bv=b[k],mv=m[k],tv=t[k],r;
+  if(bv===undefined){r=(mv!==undefined&&tv!==undefined)?mergeObj(undefined,mv,tv):(mv!==undefined?mv:tv)}
+  else if(mv===undefined&&tv===undefined)r=undefined;
+  else if(mv===undefined)r=same(tv,bv)?undefined:tv;
+  else if(tv===undefined)r=same(mv,bv)?undefined:mv;
+  else r=mergeObj(bv,mv,tv);
+  if(r!==undefined)out[k]=r});
+ return out}
+/* 行程：每一天各自是一份清單 */
+function mergeDays(b,m,t){
+ function arr(x){return Array.isArray(x)?x:[]}
+ b=arr(b);m=arr(m);t=arr(t);
+ var len=b.length===0?Math.max(m.length,t.length):(m.length!==b.length?m.length:t.length),out=[];
+ for(var i=0;i<len;i++)out.push(mergeList(arr(b[i]),arr(m[i]),arr(t[i])));
+ return out}
+function mergeRaw(k,baseRaw,mineRaw,theirsRaw){
+ var kd=KIND[k],m=pj(mineRaw),t=pj(theirsRaw),b=baseRaw==null?undefined:pj(baseRaw),out;
+ if(m===undefined||t===undefined)throw new Error("bad json");
+ if(kd==="map"){
+  if(!isObj(m)||!isObj(t))throw new Error("bad shape");
+  out=mergeMap(isObj(b)?b:{},m,t)}
+ else if(kd==="days"){
+  if(!Array.isArray(m)||!Array.isArray(t))throw new Error("bad shape");
+  out=mergeDays(b,m,t)}
+ else{
+  if(!Array.isArray(m)||!Array.isArray(t))throw new Error("bad shape");
+  out=mergeList(ensureIds(Array.isArray(b)?b:[]),ensureIds(m),ensureIds(t))}
+ return JSON.stringify(out)}
+/* MERGE-END */
+
 /* ---------- UI ---------- */
 function mk(t,s,x){var e=document.createElement(t);if(s)e.style.cssText=s;if(x!=null)e.textContent=x;return e}
 var IN="width:100%;height:46px;border:1px solid #e2e8f0;background:#f8fafc;color:#1e293b;border-radius:12px;padding:0 12px;font:inherit;font-size:16px;box-sizing:border-box",MB="border:0;background:none;padding:8px 14px;font-size:13px;text-align:left;color:#334155";
@@ -55,27 +152,69 @@ window.SYNC={
 };
 /* ---------- 資料同步 ---------- */
 function seed(){if(lraw("sync_seeded"))return Promise.resolve();return ikeys().then(function(ks){ks.forEach(function(id){if(bq.indexOf(id)<0)bq.push(id)});ls("sync_blobq",bq);rawSet.call(localStorage,"sync_seeded","1")}).catch(function(){})}
-function pushDirty(){
- var sent={},rows=[];
- Object.keys(dirty).forEach(function(k){var v=lraw(k);if(v==null)delete dirty[k];else{sent[k]=v;rows.push({key:k,value:v})}});
- if(!rows.length){ls("sync_dirty",dirty);return Promise.resolve()}
- return sb.from("trip_kv").upsert(rows,{onConflict:"key"}).select("key,updated_at").then(function(r){
+function saveState(){ls("sync_meta",meta);ls("sync_dirty",dirty);ls("sync_base",base)}
+function fetchRow(k){return sb.from("trip_kv").select("value,updated_at").eq("key",k).maybeSingle().then(function(r){if(r.error)throw r.error;return r.data})}
+/* 單一數值（封面、匯率、日期）無法合併：後同步的人為準 */
+function pushScalar(k){
+ var sent=lraw(k);
+ return sb.from("trip_kv").upsert([{key:k,value:sent}],{onConflict:"key"}).select("key,updated_at").then(function(r){
   if(r.error)throw r.error;
-  r.data.forEach(function(x){meta[x.key]=x.updated_at;if(lraw(x.key)===sent[x.key])delete dirty[x.key]});
-  ls("sync_meta",meta);ls("sync_dirty",dirty)})}
+  r.data.forEach(function(x){meta[x.key]=x.updated_at;if(lraw(x.key)===sent)delete dirty[x.key]});
+  saveState()})}
+/* 同步完成後的收尾：result 是雲端現在的內容 */
+function finish(k,ts,mine,result){
+ meta[k]=ts;
+ if(lraw(k)===mine){
+  if(result!==mine){rawSet.call(localStorage,k,result);stale[k]=1;chg=true}   /* 別人的修改合併進來了 */
+  else base[k]=result;                                                       /* 本機與雲端一致，記為新的「上次同步版本」 */
+  delete dirty[k]}
+ /* 同步途中本機又被改過：保持待同步，下一輪再合併 */
+ saveState()}
+/* 清單類資料：先合併再寫入；寫入時要求「雲端還是我剛剛看到的版本」，否則重來 */
+function pushMerged(k,tries){
+ if(tries>5)return Promise.reject(new Error("conflict"));
+ var mine=lraw(k);
+ if(mine==null){delete dirty[k];return Promise.resolve()}
+ return fetchRow(k).then(function(row){
+  if(!row){
+   return sb.from("trip_kv").insert({key:k,value:mine}).select("key,updated_at").then(function(r){
+    if(r.error){if(r.error.code==="23505")return pushMerged(k,tries+1);throw r.error}
+    finish(k,r.data[0].updated_at,mine,mine)})}
+  var merged=mergeRaw(k,base[k],mine,row.value);
+  if(eq(merged,row.value)){                                   /* 雲端已包含我的修改，不用寫入 */
+   finish(k,row.updated_at,mine,eq(mine,row.value)?mine:row.value);return}
+  var result=eq(merged,mine)?mine:merged;
+  return sb.from("trip_kv").update({value:result}).eq("key",k).eq("updated_at",row.updated_at).select("key,updated_at").then(function(r){
+   if(r.error)throw r.error;
+   if(!r.data||!r.data.length)return pushMerged(k,tries+1);   /* 這段時間有人改過，重新抓、重新合併 */
+   finish(k,r.data[0].updated_at,mine,result)})})}
+function pushDirty(){
+ var p=Promise.resolve();
+ Object.keys(dirty).forEach(function(k){p=p.then(function(){
+  if(lraw(k)==null){delete dirty[k];return}
+  return KIND[k]?pushMerged(k,0):pushScalar(k)})});
+ return p.then(saveState)}
 function remote(){return sb.from("trip_kv").select("key,updated_at").then(function(r){if(r.error)throw r.error;var m={};r.data.forEach(function(x){m[x.key]=x.updated_at});return m})}
-function pullChanges(){
+function syncData(){
+ chg=false;
  return remote().then(function(rem){
   var first=!Object.keys(meta).length,hasL=KEYS.some(function(k){return lraw(k)!=null}),hasR=Object.keys(rem).length>0,useLocal=false;
-  if(first&&hasL&&hasR)useLocal=!confirm("雲端已有資料，這支手機也有本機資料。\n\n按「確定」＝用雲端資料取代本機\n按「取消」＝以本機資料覆蓋雲端");
-  KEYS.forEach(function(k){if(lraw(k)!=null&&(!rem[k]||(first&&useLocal)))dirty[k]=1});
-  ls("sync_dirty",dirty);return pushDirty()}).then(remote).then(function(rem){
+  if(first&&hasL&&hasR)useLocal=!confirm("雲端已有資料，這支手機也有本機資料。\n\n行程、待辦、購物、退稅、花費等清單會自動合併，不會互相覆蓋。\n封面、匯率、旅行日期只能二選一：\n\n按「確定」＝採用雲端的\n按「取消」＝採用這支手機的");
+  KEYS.forEach(function(k){
+   if(lraw(k)==null)return;
+   if(!rem[k])dirty[k]=1;
+   else if(first&&(KIND[k]||useLocal))dirty[k]=1});
+  ls("sync_dirty",dirty);
+  return pushDirty()}).then(remote).then(function(rem){
   var need=KEYS.filter(function(k){return rem[k]&&!dirty[k]&&meta[k]!==rem[k]});
-  if(!need.length)return false;
+  /* 本機與雲端一致的清單，記為「上次同步版本」；這個頁面剛拉過新資料的先不記，避免畫面還是舊的時被誤判成刪除 */
+  KEYS.forEach(function(k){if(KIND[k]&&rem[k]&&!dirty[k]&&meta[k]===rem[k]&&!stale[k]&&lraw(k)!=null)base[k]=lraw(k)});
+  ls("sync_base",base);
+  if(!need.length)return;
   return sb.from("trip_kv").select("key,value,updated_at").in("key",need).then(function(v){
    if(v.error)throw v.error;
-   v.data.forEach(function(x){if(!dirty[x.key]){rawSet.call(localStorage,x.key,x.value);meta[x.key]=x.updated_at}});
-   ls("sync_meta",meta);return true})})}
+   v.data.forEach(function(x){if(!dirty[x.key]){rawSet.call(localStorage,x.key,x.value);meta[x.key]=x.updated_at;if(KIND[x.key])stale[x.key]=1;chg=true}});
+   ls("sync_meta",meta)})}).then(function(){return chg})}
 function applyUpdate(){
  var last=+sessionStorage.getItem("sync_rl")||0;
  if(!document.querySelector(".fixed.inset-0")&&Date.now()-last>20000){sessionStorage.setItem("sync_rl",String(Date.now()));reloading=true;location.reload()}
@@ -84,7 +223,7 @@ function syncNow(){
  if(!sb||!authed)return Promise.resolve();
  if(busy){again=true;return Promise.resolve()}
  busy=true;setSt("同步中…");
- return seed().then(pullChanges).then(function(ch){return flushBlobs().then(function(){return ch})}).then(function(ch){
+ return seed().then(syncData).then(function(ch){return flushBlobs().then(function(){return ch})}).then(function(ch){
   var n=new Date();setSt("已同步 "+n.getHours()+":"+("0"+n.getMinutes()).slice(-2));if(ch)applyUpdate()
  }).catch(function(){setSt("離線或同步失敗，點此選單",true)}).then(function(){busy=false;if(again){again=false;sched()}})}
 /* ---------- 登入 / 登出 ---------- */
@@ -95,7 +234,7 @@ function login(){lb.disabled=true;msg.textContent="";
  sb.auth.signInWithPassword({email:em.value.trim(),password:pw.value}).then(function(r){lb.disabled=false;
   if(r.error){msg.textContent=/fetch|network/i.test(r.error.message)?"網路連線失敗":"帳號或密碼錯誤";return}
   pw.value="";localStorage.removeItem("sync_out");onAuthed(true)}).catch(function(){lb.disabled=false;msg.textContent="網路連線失敗"})}
-function wipeLocal(){KEYS.concat(["sync_dirty","sync_meta","sync_blobq","sync_seeded"]).forEach(function(k){localStorage.removeItem(k)});for(var wi=localStorage.length-1;wi>=0;wi--){var wk=localStorage.key(wi);if(wk&&wk.indexOf("sb-")===0)localStorage.removeItem(wk)}var q=indexedDB.deleteDatabase(DB);q.onsuccess=q.onerror=q.onblocked=function(){location.reload()}}
+function wipeLocal(){KEYS.concat(["sync_dirty","sync_meta","sync_blobq","sync_seeded","sync_base"]).forEach(function(k){localStorage.removeItem(k)});for(var wi=localStorage.length-1;wi>=0;wi--){var wk=localStorage.key(wi);if(wk&&wk.indexOf("sb-")===0)localStorage.removeItem(wk)}var q=indexedDB.deleteDatabase(DB);q.onsuccess=q.onerror=q.onblocked=function(){location.reload()}}
 function manual(){syncNow().then(function(){if(window.appToast)window.appToast(chip.textContent)})}
 function logout(){syncNow().then(function(){var n=Object.keys(dirty).length+bq.length;
  if(!confirm(n?"還有 "+n+" 項資料尚未同步到雲端，登出會遺失它們。確定要登出嗎？":"登出會清除這支手機上的本機資料（雲端資料不受影響）。確定嗎？"))return;
@@ -115,5 +254,3 @@ if(!sb){readyRes();chip.style.display="block";setSt("同步元件未載入，請
  sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_OUT"){authed=false;chip.style.display="none";lockOn()}});
  sb.auth.getSession().then(function(r){if(r.data&&r.data.session)onAuthed();else{readyRes();lockOn()}}).catch(function(){readyRes()})}
 })();
-
-
