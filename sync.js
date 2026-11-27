@@ -53,40 +53,148 @@ window.SYNC={
   if(neg[id]&&Date.now()-neg[id]<30000)return null;
   return pend[id]||(pend[id]=sb.storage.from(BUCKET).download(id).then(function(r){if(r.error||!r.data)throw 0;return toUrl(r.data)}).then(function(u){return iput(id,u).then(function(){return u})}).catch(function(){neg[id]=Date.now();return null}).then(function(u){delete pend[id];return u}))})}
 };
-/* ---------- 資料同步 ---------- */
-function seed(){if(lraw("sync_seeded"))return Promise.resolve();return ikeys().then(function(ks){ks.forEach(function(id){if(bq.indexOf(id)<0)bq.push(id)});ls("sync_blobq",bq);rawSet.call(localStorage,"sync_seeded","1")}).catch(function(){})}
-function pushDirty(){
- var sent={},rows=[];
- Object.keys(dirty).forEach(function(k){var v=lraw(k);if(v==null)delete dirty[k];else{sent[k]=v;rows.push({key:k,value:v})}});
- if(!rows.length){ls("sync_dirty",dirty);return Promise.resolve()}
- return sb.from("trip_kv").upsert(rows,{onConflict:"key"}).select("key,updated_at").then(function(r){
-  if(r.error)throw r.error;
-  r.data.forEach(function(x){meta[x.key]=x.updated_at;if(lraw(x.key)===sent[x.key])delete dirty[x.key]});
-  ls("sync_meta",meta);ls("sync_dirty",dirty)})}
-function remote(){return sb.from("trip_kv").select("key,updated_at").then(function(r){if(r.error)throw r.error;var m={};r.data.forEach(function(x){m[x.key]=x.updated_at});return m})}
-function pullChanges(){
- return remote().then(function(rem){
-  var first=!Object.keys(meta).length,hasL=KEYS.some(function(k){return lraw(k)!=null}),hasR=Object.keys(rem).length>0,useLocal=false;
-  if(first&&hasL&&hasR)useLocal=!confirm("雲端已有資料，這支手機也有本機資料。\n\n按「確定」＝用雲端資料取代本機\n按「取消」＝以本機資料覆蓋雲端");
-  KEYS.forEach(function(k){if(lraw(k)!=null&&(!rem[k]||(first&&useLocal)))dirty[k]=1});
-  ls("sync_dirty",dirty);return pushDirty()}).then(remote).then(function(rem){
-  var need=KEYS.filter(function(k){return rem[k]&&!dirty[k]&&meta[k]!==rem[k]});
-  if(!need.length)return false;
-  return sb.from("trip_kv").select("key,value,updated_at").in("key",need).then(function(v){
-   if(v.error)throw v.error;
-   v.data.forEach(function(x){if(!dirty[x.key]){rawSet.call(localStorage,x.key,x.value);meta[x.key]=x.updated_at}});
-   ls("sync_meta",meta);return true})})}
-function applyUpdate(){
- var last=+sessionStorage.getItem("sync_rl")||0;
- if(!document.querySelector(".fixed.inset-0")&&Date.now()-last>20000){sessionStorage.setItem("sync_rl",String(Date.now()));reloading=true;location.reload()}
- else setSt("有新資料，點此更新",true,true)}
-function syncNow(){
- if(!sb||!authed)return Promise.resolve();
- if(busy){again=true;return Promise.resolve()}
- busy=true;setSt("同步中…");
- return seed().then(pullChanges).then(function(ch){return flushBlobs().then(function(){return ch})}).then(function(ch){
-  var n=new Date();setSt("已同步 "+n.getHours()+":"+("0"+n.getMinutes()).slice(-2));if(ch)applyUpdate()
- }).catch(function(){setSt("離線或同步失敗，點此選單",true)}).then(function(){busy=false;if(again){again=false;sched()}})}
+/* ---------- 資料同步（支援乾淨刪除） ---------- */
+var delMap = lg("sync_del", {}); // 記錄本機主動刪除的 key 與時間戳
+
+function markDeleted(k) {
+  if (KEYS.indexOf(k) < 0) return;
+  rawGet.call(localStorage, k) != null && Storage.prototype.removeItem.call(localStorage, k);
+  delMap[k] = Date.now();
+  delete dirty[k];
+  ls("sync_del", delMap);
+  ls("sync_dirty", dirty);
+  sched();
+}
+window.SYNC.remove = markDeleted; // 若前端有刪除某個 key 的需求可呼叫 SYNC.remove(key)
+
+function seed() {
+  if (lraw("sync_seeded")) return Promise.resolve();
+  return ikeys().then(function(ks) {
+    ks.forEach(function(id) {
+      if (bq.indexOf(id) < 0) bq.push(id);
+    });
+    ls("sync_blobq", bq);
+    rawSet.call(localStorage, "sync_seeded", "1");
+  }).catch(function() {});
+}
+
+function pushDirty() {
+  var sent = {}, rows = [], delKeys = [];
+
+  // 1. 處理本機主動刪除的 key -> 從雲端刪除
+  Object.keys(delMap).forEach(function(k) {
+    if (!dirty[k]) delKeys.push(k);
+  });
+
+  // 2. 處理本機有修改的 key -> 推上雲端
+  Object.keys(dirty).forEach(function(k) {
+    var v = lraw(k);
+    delete delMap[k];
+    if (v == null) {
+      delete dirty[k];
+    } else {
+      sent[k] = v;
+      rows.push({ key: k, value: v });
+    }
+  });
+  ls("sync_del", delMap);
+
+  var p = Promise.resolve();
+  if (delKeys.length) {
+    p = p.then(function() {
+      return sb.from("trip_kv").delete().in("key", delKeys).then(function(r) {
+        if (r.error) throw r.error;
+        delKeys.forEach(function(k) {
+          delete delMap[k];
+          delete meta[k];
+        });
+        ls("sync_del", delMap);
+        ls("sync_meta", meta);
+      });
+    });
+  }
+
+  if (!rows.length) {
+    ls("sync_dirty", dirty);
+    return p;
+  }
+
+  return p.then(function() {
+    return sb.from("trip_kv").upsert(rows, { onConflict: "key" }).select("key,updated_at").then(function(r) {
+      if (r.error) throw r.error;
+      r.data.forEach(function(x) {
+        meta[x.key] = x.updated_at;
+        if (lraw(x.key) === sent[x.key]) delete dirty[x.key];
+      });
+      ls("sync_meta", meta);
+      ls("sync_dirty", dirty);
+    });
+  });
+}
+
+function remote() {
+  return sb.from("trip_kv").select("key,updated_at").then(function(r) {
+    if (r.error) throw r.error;
+    var m = {};
+    r.data.forEach(function(x) { m[x.key] = x.updated_at; });
+    return m;
+  });
+}
+
+function pullChanges() {
+  var first = !Object.keys(meta).length;
+  var hasL = KEYS.some(function(k) { return lraw(k) != null; });
+
+  return remote().then(function(rem) {
+    var hasR = Object.keys(rem).length > 0;
+    var useLocal = false;
+
+    if (first && hasL && hasR) {
+      useLocal = !confirm("雲端已有資料，這支手機也有本機資料。\n\n按「確定」＝用雲端資料取代本機\n按「取消」＝以本機資料覆蓋雲端");
+    }
+
+    KEYS.forEach(function(k) {
+      var locVal = lraw(k);
+      if (first && hasL && hasR) {
+        // 首次雙邊都有資料：依使用者選擇決定以哪邊為準
+        if (useLocal && locVal != null) {
+          dirty[k] = 1;
+        } else if (!useLocal && rem[k]) {
+          delete dirty[k];
+        }
+      } else {
+        // 非首次衝突，或只有單邊有資料：
+        // 若雲端原本有 (meta[k]) 但現在沒了 (!rem[k])，且本機沒改過 (!dirty[k]) -> 視為雲端已刪除，本機也刪掉
+        if (meta[k] && !rem[k] && !dirty[k] && !delMap[k]) {
+          if (locVal != null) rawSet.call(localStorage, k, ""); // 或用 removeItem
+          localStorage.removeItem(k);
+          delete meta[k];
+        }
+        // 只有「真正新建立或本機有修改」的 dirty 才推；不再盲目把「雲端沒、本機有、且非 dirty」的舊資料推上去
+      }
+    });
+
+    ls("sync_dirty", dirty);
+    ls("sync_meta", meta);
+    return pushDirty();
+  }).then(remote).then(function(rem) {
+    var need = KEYS.filter(function(k) {
+      return rem[k] && !dirty[k] && !delMap[k] && meta[k] !== rem[k];
+    });
+    if (!need.length) return false;
+    return sb.from("trip_kv").select("key,value,updated_at").in("key", need).then(function(v) {
+      if (v.error) throw v.error;
+      v.data.forEach(function(x) {
+        if (!dirty[x.key] && !delMap[x.key]) {
+          rawSet.call(localStorage, x.key, x.value);
+          meta[x.key] = x.updated_at;
+        }
+      });
+      ls("sync_meta", meta);
+      return true;
+    });
+  });
+}
 /* ---------- 登入 / 登出 ---------- */
 function onAuthed(fresh){authed=true;chip.style.display="block";setSt("同步中…");readyRes();
  if(fresh){lb.disabled=true;msg.style.color="#64748b";msg.textContent="同步資料中…"}else lockOff();
