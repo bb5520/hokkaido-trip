@@ -2181,7 +2181,7 @@
       });
 
       // 天數變動時，自動增減 itineraryData 的天數陣列
-      atch(tripDays, (newDays) => {
+      watch(tripDays, (newDays) => {
         if (applyingRemote) return;
         const days = Number(newDays);
         if (!days || days < 1) return;
