@@ -1531,7 +1531,7 @@
               <span v-else-if="txForm.name.trim()" class="text-[11px] text-amber-600 font-bold text-right">自訂店家：請輸入手續費</span>
             </div>
             <div class="relative">
-              <input v-model="txForm.name" @focus="txFocusName(event)"@click="txFocusName(event)" @input="txDd = true; txShowAll = false; txOnName()" @blur="txCloseDd" type="text" maxlength="40" autocomplete="off" placeholder="輸入搜尋，或點選清單"
+              <input v-model="txForm.name" @focus="txFocusName($event)" @click="txFocusName($event)" @input="txDd = true; txShowAll = false; txOnName()" @blur="txCloseDd" type="text" maxlength="40" autocomplete="off" placeholder="輸入搜尋，或點選清單"
                      class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500">
               <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
               <div v-if="txDd && txDdList.length" class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 p-1">
@@ -1689,7 +1689,7 @@
            @touchmove="galleryTouchMove"
            @touchend="galleryTouchEnd">
         <img v-if="galleryModal.images[galleryModal.index]" :src="resolveBlobUrl(galleryModal.images[galleryModal.index].id)"
-             :style="{ transform: `translate(${galleryPan.x}px, galleryPan.ypx)scale({galleryZoom})` }"
+             :style="{ transform: `translate(${galleryPan.x}px, ${galleryPan.y}px) scale(${galleryZoom})` }"
              class="max-w-full max-h-full object-contain select-none" draggable="false">
       </div>
       <div v-if="galleryModal.images.length > 1" class="flex justify-center gap-1.5 p-4 flex-shrink-0" @click.self="closeGallery">
@@ -2196,7 +2196,7 @@
           d.setDate(d.getDate() + i);
           list.push({
             week: weekdayNames[d.getDay()],
-            date: `d.getMonth()+1/{d.getDate()}`,
+            date: `${d.getMonth() + 1}/${d.getDate()}`,
             full: d.toISOString().split('T')[0]
           });
         }
@@ -2232,7 +2232,8 @@
 
       const openMap = (locationName) => {
         if (!locationName) return;
-        const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
+        const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=transit`;
+
         window.open(url, '_blank');
       };
 
@@ -2559,7 +2560,7 @@
         if (!price || isNaN(num)) return '';
         if (currency === 'JPY') {
           const twd = Math.round(num * jpyRate.value);
-          return `¥ num.toLocaleString()(約NT ${twd.toLocaleString()})`;
+          return `¥ ${num.toLocaleString()} (約 NT$ ${twd.toLocaleString()})`;
         }
         return `NT$ ${num.toLocaleString()}`;
       };
@@ -2614,7 +2615,7 @@
       const flightDateText = computed(() => {
         const d = new Date(tripStartDate.value + 'T00:00:00');
         d.setDate(d.getDate() + selectedDateIndex.value);
-        return `d.getFullYear()/{d.getMonth() + 1}/d.getDate()（{'日一二三四五六'[d.getDay()]}）`;
+        return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}（${'日一二三四五六'[d.getDay()]}）`;
       });
       const airlineAssets = (flightNo) => {
         const code = String(flightNo || '').trim().slice(0, 2).toUpperCase();
@@ -2644,7 +2645,7 @@
           id: f.id, dayIndex: f.dayIndex, 
           label: f.name + (f.flightNo ? ` (${f.flightNo})` : ''), 
           duration: f.flightDuration || '未填寫飛行時間', 
-          route: `f.depAirport||'出發地'{f.depTerminal ? '（' + f.depTerminal + '）' : ''} ${f.depTime || '--:--'} ➔ f.arrAirport||'目的地'{f.arrTerminal ? '（' + f.arrTerminal + '）' : ''} ${f.arrTime || '--:--'}`, 
+          route: `${f.depAirport || '出發地'}${f.depTerminal ? '（' + f.depTerminal + '）' : ''} ${f.depTime || '--:--'} ➔ ${f.arrAirport || '目的地'}${f.arrTerminal ? '（' + f.arrTerminal + '）' : ''} ${f.arrTime || '--:--'}`, 
           documents: extra.documents || [], 
           price: extra.price || null, 
           currency: extra.currency || 'JPY', 
@@ -3113,7 +3114,7 @@
           const yyyy = d.getFullYear();
           const mm = String(d.getMonth() + 1).padStart(2, '0');
           const dd = String(d.getDate()).padStart(2, '0');
-          return `yyyy-{mm}-${dd}`;
+         return `${yyyy}-${mm}-${dd}`;
         };
         
         // --- 航班花費加總 (將名稱統一為「機票」) ---
@@ -3292,7 +3293,7 @@
         const link = document.createElement('a');
         link.href = url;
         const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
-        link.download = `TripBackup_date{filenameSuffix}.json`;
+        link.download = `TripBackup_${date}${filenameSuffix}.json`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
