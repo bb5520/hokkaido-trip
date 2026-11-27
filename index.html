@@ -165,18 +165,6 @@
                :class="{ 'itin-dragging': draggingId === item.id }"
                @pointerdown="onItinPointerDown($event, item.id)">
 
-            <!-- 交通時間 (顯示於卡片之間，點擊開啟大眾運輸導航) -->
-            <div v-if="idx > 0" class="flex items-center justify-center my-2 text-xs text-slate-400 font-medium">
-              <div class="h-4 w-[2px] bg-ice-200 mr-2"></div>
-              <button @click.stop="openDirections(filteredItinerary[idx - 1].location || filteredItinerary[idx - 1].name, item.location || item.name)"
-                      class="bg-white border border-ice-100 px-3 py-1 rounded-full text-[11px] shadow-sm flex items-center gap-1.5 text-ice-700 hover:bg-ice-50 hover:shadow transition cursor-pointer active:scale-95">
-                <i :class="item.transitIcon || 'fa-solid fa-train-subway'"></i>
-                <span>{{ item.transitTime || '大眾運輸導航' }}</span>
-                <i class="fa-solid fa-chevron-right text-[8px] opacity-60"></i>
-              </button>
-              <div class="h-4 w-[2px] bg-ice-200 ml-2"></div>
-            </div>
-
             <!-- 航班專屬卡片 -->
             <div v-if="item.category === '航班'" class="tk2">
               <div class="absolute top-0 left-0 right-0 h-1.5 z-20" :style="airlineAssets(item.flightNo) ? airlineAssets(item.flightNo).bar : 'background:linear-gradient(90deg,#38bdf8,#0284c7)'"></div>
@@ -1025,21 +1013,10 @@
           <!-- 一般行程專屬欄位 -->
           <template v-else>
             <div v-if="['景點','住宿','美食','購物'].includes(formItinerary.category)">
-              <div class="flex items-center justify-between mb-1">
-                <label class="font-bold text-slate-600">營業時間</label>
-                <button type="button" @click="setUseWeekly(!formItinerary.useWeekly)" class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
-                  <span>每日不同</span>
-                  <span :class="['w-8 h-5 rounded-full relative transition-colors', formItinerary.useWeekly ? 'bg-ice-600' : 'bg-slate-300']">
-                    <span :class="['absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all', formItinerary.useWeekly ? 'left-3.5' : 'left-0.5']"></span>
-                  </span>
-                </button>
-              </div>
-
-              <!-- 單一營業時間 -->
-              <input v-if="!formItinerary.useWeekly" v-model="formItinerary.openHours" type="text" placeholder="例如: 09:00 - 18:00" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <label class="block font-bold text-slate-600 mb-1">營業時間</label>
 
               <!-- 每週營業時間表 (批次編輯版) -->
-              <div v-else class="bg-slate-50 border rounded-xl p-2.5 space-y-3">
+              <div class="bg-slate-50 border rounded-xl p-2.5 space-y-3">
 
                 <!-- ① 選擇星期 -->
                 <div>
@@ -2236,13 +2213,6 @@
         window.open(url, '_blank');
       };
 
-      // 新增路線導航函數
-      const openDirections = (origin, destination) => {
-        if (!origin || !destination) return alert('缺少起點或終點資訊無法導航');
-        const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=transit`;
-        window.open(url, '_blank');
-      };
-
       // ===== 行程卡片：長按拖移排序 =====
       const draggingId = ref(null);
       let dragState = null;
@@ -2450,19 +2420,26 @@
 
       const showItineraryModal = ref(false);
       const isEditMode = ref(false);
-      const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', useWeekly: false, weeklyHours: [], ticket: '', note: '', location: '', flightNo: '', depTerminal: '', arrTerminal: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '', images: [] });
+      const initFormItinerary = () => ({ id: null, name: '', category: '', openHours: '', useWeekly: true, weeklyHours: emptyWeek(), ticket: '', note: '', location: '', flightNo: '', depTerminal: '', arrTerminal: '', depAirport: '', depTime: '', arrAirport: '', arrTime: '', flightDuration: '', images: [] });
       const formItinerary = ref(initFormItinerary());
 
       const openAddModal = () => {
         isEditMode.value = false;
         formItinerary.value = initFormItinerary();
+        resetWeeklyEditor();
         depAirportOpen.value = false;
         arrAirportOpen.value = false;
         showItineraryModal.value = true;
       };
       const editItinerary = (item) => {
         isEditMode.value = true;
-        formItinerary.value = { ...initFormItinerary(), ...item, images: item.images ? [...item.images] : [], weeklyHours: item.weeklyHours ? item.weeklyHours.map(d => ({ ...d })) : [] };
+        formItinerary.value = {
+          ...initFormItinerary(), ...item,
+          useWeekly: true,
+          images: item.images ? [...item.images] : [],
+          weeklyHours: (item.weeklyHours && item.weeklyHours.length === 7) ? item.weeklyHours.map(d => ({ ...d })) : emptyWeek()
+        };
+        resetWeeklyEditor();
         depAirportOpen.value = false;
         arrAirportOpen.value = false;
         showItineraryModal.value = true;
@@ -2474,6 +2451,11 @@
           return alert('請填寫「航班編號」後再儲存');
         }
         formItinerary.value.flightNo = (formItinerary.value.flightNo || '').trim().toUpperCase();
+        // 沒填任何營業時間（或不是會用到營業時間的分類）就不存，卡片上也不會出現空的營業時間
+        const hasHours = ['景點', '住宿', '美食', '購物'].includes(formItinerary.value.category)
+          && formItinerary.value.weeklyHours.some(d => d.closed || d.open || d.close || d.open2 || d.close2);
+        formItinerary.value.useWeekly = hasHours;
+        if (!hasHours) formItinerary.value.weeklyHours = [];
         if (!itineraryData.value[selectedDateIndex.value]) itineraryData.value[selectedDateIndex.value] = [];
         const currentList = itineraryData.value[selectedDateIndex.value];
         if (!formItinerary.value.location) {
@@ -3395,7 +3377,7 @@
 
       return {
         currentTab, tabs, dateList, selectedDateIndex, categories, selectedCategory,
-        filteredItinerary, openMap, openDirections, draggingId, onItinPointerDown, weekDayLabels, expandedHours, setUseWeekly, copyWeeklyHours, weekIdxOfSelectedDay, formatDayHours, todayHoursText, toggleHoursExpand, weekDayFull, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
+        filteredItinerary, openMap, draggingId, onItinPointerDown, weekDayLabels, expandedHours, setUseWeekly, copyWeeklyHours, weekIdxOfSelectedDay, formatDayHours, todayHoursText, toggleHoursExpand, weekDayFull, jpyRate, priceDisplay, payMethodIcon, shoppingList, showShoppingModal, formShopping,
         isEditShoppingMode, openAddShoppingModal, editShoppingItem, saveShoppingItem, confirmDeleteShoppingItem,
         setShoppingCardRef, draggingShopping, onGripPointerDown,
         expenses, showExpenseModal, formExpense, isEditExpenseMode, selectedExpenseCategory,
