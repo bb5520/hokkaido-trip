@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>北海道冰雪之旅 - Trip App</title>
+  <title>Trip App</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
   <script src="sync.js"></script>
@@ -42,7 +42,7 @@
   <!-- 設定狀態列樣式 (預設、黑色、透明) -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <!-- 設定 iOS 桌面的 App 名稱 -->
-  <meta name="apple-mobile-web-app-title" content="北海道之旅" />
+  <meta name="apple-mobile-web-app-title" content="Trip" />
   <!-- 設定 iOS 桌面的 App 圖示 (請在 GitHub 根目錄放一張 512x512 的 icon.png) -->
   <link rel="apple-touch-icon" href="icon.png" />
 
@@ -123,7 +123,7 @@
     <!-- 頁首 Banner 區塊 (固定高度，用 object-cover 縮放填滿) -->
     <div class="relative w-full h-56 overflow-hidden bg-slate-300">
       <!-- 頁首背景圖片 -->
-      <img :src="bannerImage" alt="北海道之旅" class="w-full h-full object-cover block" />
+      <img :src="bannerImage" alt="Trip" class="w-full h-full object-cover block" />
       
       <!-- 漸層遮罩讓文字與Tab更清晰 -->
       <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10"></div>
