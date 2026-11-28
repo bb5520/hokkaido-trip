@@ -2839,6 +2839,10 @@
       const txView = ref('calc');
       const txEnts = ref(initData('trip_taxEnts', []));
       setupWatcher(txEnts, 'trip_taxEnts');
+      const ensureTxIds = () => {
+        txEnts.value.forEach((e, i) => { if (e.id == null) e.id = Date.now() + i; });
+      };
+      ensureTxIds();
       const txToday = () => {
         const d = new Date();
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -3001,12 +3005,13 @@
       });
 
       const showTxModal = ref(false);
-      const txEditIdx = ref(-1);
+      const txEditId = ref(null);
+      const txEditIdx = computed(() => txEditId.value == null ? -1 : txEnts.value.findIndex(e => e.id === txEditId.value));
 
-      const openAddTx = () => { txEditIdx.value = -1; txForm.value = txInitForm(); txDd.value = false; showTxModal.value = true; };
+      const openAddTx = () => { txEditId.value = null; txForm.value = txInitForm(); txDd.value = false; showTxModal.value = true; };
       const editTx = (i) => {
         const e = txEnts.value[i];
-        txEditIdx.value = i;
+        txEditId.value = e.id;
         txForm.value = { name: e.name, date: e.date || '', amtS: txFy(e.incl), pctS: txFp(e.pct), fixS: txFy(e.fix), tax: e.tax ? 1 : 0, rate: e.rate };
         txDd.value = false;
         showTxModal.value = true;
@@ -3014,9 +3019,10 @@
       const saveTx = () => {
         if (!txForm.value.name.trim()) return alert('請填寫「店家名稱」');
         if (txCur.value.incl <= 0) return alert('請填寫含稅金額');
-        const rec = { ...txCur.value, name: txForm.value.name.trim() };
-        if (txEditIdx.value > -1) {
-          txEnts.value[txEditIdx.value] = rec;
+        const idx = txEditIdx.value;
+        const rec = { ...txCur.value, id: idx > -1 ? txEditId.value : Date.now() + Math.floor(Math.random() * 1000), name: txForm.value.name.trim() };
+        if (idx > -1) {
+          txEnts.value[idx] = rec;
         } else {
           if (txEnts.value.length >= 30) return alert('明細最多 30 筆');
           txEnts.value.push(rec);
@@ -3384,34 +3390,180 @@
         trip_carRentals: carRentals, trip_dayTours: dayTours, trip_otherBookings: otherBookings,
         trip_todos: todos, trip_taxEnts: txEnts, trip_expenses: expenses
       };
-      // 任何編輯視窗開著時先把更新排隊，關閉後再套用，避免蓋掉正在輸入的內容
-      const anyModalOpen = computed(() =>
-        showItineraryModal.value || showFlightModal.value || showHotelModal.value ||
-        car.showModal.value || tour.showModal.value || other.showModal.value ||
-        showTodoModal.value || showTxModal.value || showExpenseModal.value || showBannerModal.value);
-      const pendingKeys = new Set();
 
+      const clone = (v) => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+      const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const notify = (m) => { if (window.appToast) window.appToast(m); };
+      const FIELD_LABELS = {
+        name: '名稱', category: '分類', text: '待辦事項', note: '備註', done: '完成狀態', location: '導航名稱',
+        images: '照片', documents: '相關文件', weeklyHours: '營業時間', openHours: '營業時間', ticket: '門票金額',
+        flightNo: '航班編號', depAirport: '出發機場', arrAirport: '抵達機場', depTime: '出發時間', arrTime: '抵達時間',
+        depTerminal: '出發航廈', arrTerminal: '抵達航廈', flightDuration: '飛行時間',
+        price: '金額', amount: '金額', currency: '幣別', payMethod: '付款方式', bookingNo: '預約號碼',
+        time: '時間', pickupTime: '取車時間', phone: '電話', address: '地址',
+        baggageChecked: '託運行李', baggageCarryon: '隨身行李',
+        date: '日期', amtS: '含稅金額', pctS: '手續費', fixS: '定額費', rate: '稅率'
+      };
+      const labelOf = (keys) => [...new Set(keys.map(k => FIELD_LABELS[k] || k))].join('、');
+
+      // 每個彈跳視窗註冊一個「監看員」：同步資料進來時，把其他裝置的修改合併進正在編輯的表單
+      const modalSyncers = [];
+      const watchModal = ({ keys, isOpen, isEdit, getForm, getRemote, onDeleted, deletedMsg }) => {
+        let formBase = null, remoteBase = null, gone = false;
+
+        // 視窗開啟瞬間，記下「表單原始內容」與「當時的最新資料」作為比對基準
+        watch(isOpen, (open) => {
+          gone = false;
+          formBase = open ? clone(getForm()) : null;
+          const r = open && isEdit() ? getRemote() : null;
+          remoteBase = r ? clone(r) : null;
+        });
+
+        modalSyncers.push((changed) => {
+          if (!isOpen() || !isEdit() || gone || !formBase) return;
+          if (!keys.some(k => changed.includes(k))) return;
+
+          const remote = getRemote();
+          if (!remote) { // 這筆已被其他裝置刪除
+            gone = true;
+            if (onDeleted) onDeleted();
+            notify(deletedMsg || '此筆資料已被其他裝置刪除，儲存後會重新建立');
+            return;
+          }
+
+          const form = getForm();
+          const merged = [], conflict = [];
+          Object.keys(remote).forEach(k => {
+            if (k === 'id' || !(k in form)) return;
+            if (remoteBase && same(remote[k], remoteBase[k])) return;          // 其他裝置沒改這欄
+            if (same(form[k], remote[k])) { formBase[k] = clone(remote[k]); return; }
+            if (same(form[k], formBase[k])) {                                  // 你沒動過這欄 → 換成最新
+              form[k] = clone(remote[k]); formBase[k] = clone(remote[k]); merged.push(k);
+            } else {
+              conflict.push(k);                                                // 兩邊都改了 → 保留你的
+            }
+          });
+          remoteBase = clone(remote);
+
+          const msg = [];
+          if (merged.length) msg.push('其他裝置剛修改了「' + labelOf(merged) + '」，已自動同步');
+          if (conflict.length) msg.push('「' + labelOf(conflict) + '」與其他裝置的修改衝突，儲存後會以你的內容為準');
+          if (msg.length) notify(msg.join('｜'));
+        });
+      };
+
+      // ---- 各視窗的設定 ----
+      watchModal({ // 行程
+        keys: ['trip_itinerary'],
+        isOpen: () => showItineraryModal.value,
+        isEdit: () => isEditMode.value,
+        getForm: () => formItinerary.value,
+        getRemote: () => {
+          const it = (itineraryData.value[selectedDateIndex.value] || []).find(i => i.id === formItinerary.value.id);
+          return it && {
+            ...initFormItinerary(), ...it, useWeekly: true,
+            images: it.images ? [...it.images] : [],
+            weeklyHours: (it.weeklyHours && it.weeklyHours.length === 7) ? it.weeklyHours.map(d => ({ ...d })) : emptyWeek()
+          };
+        },
+        onDeleted: () => { isEditMode.value = false; }
+      });
+
+      watchModal({ // 待辦
+        keys: ['trip_todos'],
+        isOpen: () => showTodoModal.value,
+        isEdit: () => isEditTodo.value,
+        getForm: () => formTodo.value,
+        getRemote: () => {
+          const t = todos.value.find(x => x.id === formTodo.value.id);
+          return t && { id: t.id, text: t.text, note: t.note || '', done: !!t.done };
+        },
+        onDeleted: () => { isEditTodo.value = false; }
+      });
+
+      watchModal({ // 花費
+        keys: ['trip_expenses'],
+        isOpen: () => showExpenseModal.value,
+        isEdit: () => isEditExpenseMode.value,
+        getForm: () => formExpense.value,
+        getRemote: () => {
+          const x = expenses.value.find(e => e.id === formExpense.value.id);
+          return x && { id: x.id, category: x.category, name: x.name, amount: x.amount, currency: x.currency || 'JPY', payMethod: x.payMethod, date: x.date };
+        },
+        onDeleted: () => { isEditExpenseMode.value = false; }
+      });
+
+      watchModal({ // 退稅明細
+        keys: ['trip_taxEnts'],
+        isOpen: () => showTxModal.value,
+        isEdit: () => txEditIdx.value > -1,
+        getForm: () => txForm.value,
+        getRemote: () => {
+          const e = txEnts.value.find(x => x.id === txEditId.value);
+          return e && { name: e.name, date: e.date || '', amtS: txFy(e.incl), pctS: txFp(e.pct), fixS: txFy(e.fix), tax: e.tax ? 1 : 0, rate: e.rate };
+        }
+      });
+
+      const crudSync = (key, listRef, crud, init) => watchModal({ // 租車、一日遊、其他預約
+        keys: [key],
+        isOpen: () => crud.showModal.value,
+        isEdit: () => crud.isEditMode.value,
+        getForm: () => crud.formObj.value,
+        getRemote: () => {
+          const it = listRef.value.find(i => i.id === crud.formObj.value.id);
+          return it && { ...init(), ...it, documents: it.documents ? [...it.documents] : [] };
+        },
+        onDeleted: () => { crud.isEditMode.value = false; }
+      });
+      crudSync('trip_carRentals', carRentals, car, initCar);
+      crudSync('trip_dayTours', dayTours, tour, initDayTour);
+      crudSync('trip_otherBookings', otherBookings, other, initOther);
+
+      watchModal({ // 航班附加文件
+        keys: ['trip_flightExtras', 'trip_itinerary'],
+        isOpen: () => showFlightModal.value,
+        isEdit: () => true,
+        getForm: () => formFlightDoc.value,
+        getRemote: () => {
+          const f = flightsInfo.value.find(x => x.id === formFlightDoc.value.id);
+          return f && {
+            id: f.id, documents: f.documents ? [...f.documents] : [], price: f.price || null,
+            currency: f.currency || 'JPY', payMethod: f.payMethod || '',
+            baggageChecked: f.baggageChecked || '', baggageCarryon: f.baggageCarryon || ''
+          };
+        },
+        deletedMsg: '此航班已在其他裝置被刪除'
+      });
+
+      watchModal({ // 住宿補充資訊
+        keys: ['trip_hotelExtras', 'trip_itinerary'],
+        isOpen: () => showHotelModal.value,
+        isEdit: () => true,
+        getForm: () => formHotelInfo.value,
+        getRemote: () => {
+          const h = hotelsInfo.value.find(x => x.id === formHotelInfo.value.id);
+          return h && { ...h, documents: h.documents ? [...h.documents] : [] };
+        },
+        deletedMsg: '此住宿已在其他裝置被刪除'
+      });
+
+      // ---- 套用其他裝置傳來的資料 ----
       const applyRemoteKeys = (keys) => {
         applyingRemote = true;
         keys.forEach(k => { const r = syncRefs[k]; if (r) r.value = initData(k, r.value); });
+        if (keys.includes('trip_taxEnts')) ensureTxIds();
         if (currentTab.value !== 'settings') { // 正在設定頁輸入時不覆蓋輸入框
           tripStartDateInput.value = tripStartDate.value;
           tripDaysInput.value = tripDays.value;
           twdToJpyInput.value = Number((1 / jpyRate.value).toFixed(3));
         }
         if (selectedDateIndex.value >= tripDays.value) selectedDateIndex.value = Math.max(0, tripDays.value - 1);
+        modalSyncers.forEach(run => run(keys)); // 通知開著的視窗：合併其他裝置的修改
         nextTick(() => nextTick(() => { applyingRemote = false; }));
       };
-      const flushPending = () => {
-        if (anyModalOpen.value || !pendingKeys.size) return;
-        const keys = [...pendingKeys];
-        pendingKeys.clear();
-        applyRemoteKeys(keys);
-      };
-      watch(anyModalOpen, flushPending);
       window.addEventListener('trip-sync-update', (e) => {
-        ((e.detail && e.detail.keys) || []).forEach(k => pendingKeys.add(k));
-        flushPending();
+        const keys = (e.detail && e.detail.keys) || [];
+        if (keys.length) applyRemoteKeys(keys);
       });
       window.TRIP_LIVE = true; // 告訴 sync.js：畫面能自己更新，不要整頁重新整理
 
