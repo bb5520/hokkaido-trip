@@ -181,7 +181,7 @@
                 </div>
                 <div class="relative grid grid-cols-[auto_1fr_auto] gap-2 items-start mt-4">
                   <div>
-                    <div class="text-xl font-bold text-[#0a3fbf] leading-none tabular-nums">{{ item.depTime || '--:--' }}</div>
+                    <div class="text-xl font-bold text-[#0a3fbf] leading-none tabular-nums">{{ item.depTime || '--：--' }}</div>
                     <div class="text-sm font-bold text-[#0a3fbf] mt-1">{{ (item.depAirport || '出發地').split(' ')[0] }}</div>
                     <div class="relative h-4 text-xs text-[#0a3fbf] whitespace-nowrap"><span class="absolute left-0 top-0">{{ (item.depAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.depTerminal">{{ ' ' + item.depTerminal }}</span></span></div>
                   </div>
@@ -195,7 +195,7 @@
                     <div class="h-5 flex items-center justify-center text-[10px] font-bold text-[#0a3fbf] whitespace-nowrap"><i class="fa-regular fa-clock mr-1"></i>{{ item.flightDuration ? '共 ' + item.flightDuration : '飛行時間' }}</div>
                   </div>
                   <div class="text-right">
-                    <div class="text-xl font-bold text-[#0a3fbf] leading-none tabular-nums">{{ item.arrTime || '--:--' }}</div>
+                    <div class="text-xl font-bold text-[#0a3fbf] leading-none tabular-nums">{{ item.arrTime || '--：--' }}</div>
                     <div class="text-sm font-bold text-[#0a3fbf] mt-1">{{ (item.arrAirport || '目的地').split(' ')[0] }}</div>
                     <div class="relative h-4 text-xs text-[#0a3fbf] whitespace-nowrap"><span class="absolute right-0 top-0">{{ (item.arrAirport || '').split(' ').slice(1).join(' ') }}<span v-if="item.arrTerminal">{{ ' ' + item.arrTerminal }}</span></span></div>
                   </div>
