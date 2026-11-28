@@ -45,6 +45,69 @@ function flushBlobs(){
   return sb.storage.from(BUCKET).upload(id,b,{contentType:b.type,upsert:false}).then(function(r){if(r.error&&!/exist|duplicate/i.test(r.error.message||""))throw r.error;drop(id)})})});
  return p}
 var pend={},neg={};
+/* ---------- 逐筆合併（三方合併） ---------- */
+var MKIND={trip_itinerary:"days",trip_flightExtras:"map",trip_hotelExtras:"map",trip_carRentals:"list",trip_dayTours:"list",trip_otherBookings:"list",trip_todos:"list",trip_expenses:"list",trip_taxEnts:"list",trip_souvenirs:"list"};
+var base=lg("sync_base",{});
+function setBase(k,v){
+ if(!MKIND[k])return;
+ base[k]=v;
+ try{ls("sync_base",base)}catch(e){delete base[k];try{ls("sync_base",base)}catch(x){}}}
+function eq(a,b){return JSON.stringify(a)===JSON.stringify(b)}
+function pj(s){try{return s==null?null:JSON.parse(s)}catch(e){return null}}
+function byId(a){var m={};a.forEach(function(x){m[x.id]=x});return m}
+function sub(a,keep){return a.filter(function(i){return keep.indexOf(i)>-1})}
+
+/* 同一筆資料：逐欄合併，你沒動過的欄位換成雲端最新，你改過的欄位保留 */
+function mItem(b,l,r){
+ b=b||{};var o={},ks={};
+ [b,l,r].forEach(function(x){Object.keys(x).forEach(function(k){ks[k]=1})});
+ Object.keys(ks).forEach(function(k){
+  var v=eq(l[k],b[k])?r[k]:l[k];
+  if(v!==undefined)o[k]=v});
+ return o}
+
+/* 一份清單（每筆有 id）；有任何一筆沒有 id 就回傳 null，改用舊的整份覆蓋 */
+function mList(b,l,r){
+ b=b||[];l=l||[];r=r||[];
+ if(b.concat(l,r).some(function(x){return !x||x.id==null}))return null;
+ var B=byId(b),L=byId(l),R=byId(r);
+ function dec(id){
+  var ib=id in B,il=id in L,ir=id in R;
+  if(il&&ir)return mItem(B[id],L[id],R[id]);
+  if(il)return(ib&&eq(L[id],B[id]))?null:L[id];   /* 雲端刪了：你沒改就刪，改過就留 */
+  if(ir)return(ib&&eq(R[id],B[id]))?null:R[id];   /* 你刪了：雲端沒改就刪，改過就留 */
+  return null}
+ var bi=b.map(function(x){return x.id}),li=l.map(function(x){return x.id}),ri=r.map(function(x){return x.id});
+ var lMoved=!eq(sub(li,bi),sub(bi,li)),rMoved=!eq(sub(ri,bi),sub(bi,ri));
+ var first=(lMoved&&!rMoved)?li:ri,second=first===li?ri:li,seen={},out=[];
+ first.concat(second).forEach(function(id){
+  if(seen[id])return;seen[id]=1;
+  var x=dec(id);if(x!==null&&x!==undefined)out.push(x)});
+ return out}
+
+/* 行程：天 → 行程，逐天合併 */
+function mDays(b,l,r){
+ b=b||[];l=l||[];r=r||[];
+ var n=l.length!==b.length?l.length:r.length,out=[];
+ for(var i=0;i<n;i++){var m=mList(b[i],l[i],r[i]);if(m===null)return null;out.push(m)}
+ return out}
+
+/* 航班／住宿補充資料：{id: {...}} 的物件 */
+function mMap(b,l,r){
+ function toL(o){return Object.keys(o||{}).map(function(k){return Object.assign({id:k},o[k])})}
+ var m=mList(toL(b),toL(l),toL(r));if(m===null)return null;
+ var o={};m.forEach(function(x){var id=x.id;delete x.id;o[id]=x});return o}
+
+/* 回傳合併後的 JSON 字串；無法合併時回傳 null */
+function mergeKey(k,bs,ls_,rs){
+ var b=pj(bs),l=pj(ls_),r=pj(rs),kind=MKIND[k],m=null;
+ if(l==null||r==null)return null;
+ try{
+  if(kind==="list"&&Array.isArray(l)&&Array.isArray(r))m=mList(Array.isArray(b)?b:[],l,r);
+  else if(kind==="days"&&Array.isArray(l)&&Array.isArray(r))m=mDays(Array.isArray(b)?b:[],l,r);
+  else if(kind==="map"&&!Array.isArray(l)&&!Array.isArray(r))m=mMap(b&&typeof b==="object"?b:{},l,r);
+ }catch(e){m=null}
+ return m==null?null:JSON.stringify(m)}
 window.SYNC={
  touch:function(k){if(KEYS.indexOf(k)<0)return;dirty[k]=1;ls("sync_dirty",dirty);sched()},
  up:function(id){if(bq.indexOf(id)<0){bq.push(id);ls("sync_blobq",bq)}flushBlobs().catch(function(){})},
@@ -55,27 +118,66 @@ window.SYNC={
 };
 /* ---------- 資料同步 ---------- */
 function seed(){if(lraw("sync_seeded"))return Promise.resolve();return ikeys().then(function(ks){ks.forEach(function(id){if(bq.indexOf(id)<0)bq.push(id)});ls("sync_blobq",bq);rawSet.call(localStorage,"sync_seeded","1")}).catch(function(){})}
-function pushDirty(){
- var sent={},rows=[];
- Object.keys(dirty).forEach(function(k){var v=lraw(k);if(v==null)delete dirty[k];else{sent[k]=v;rows.push({key:k,value:v})}});
- if(!rows.length){ls("sync_dirty",dirty);return Promise.resolve()}
- return sb.from("trip_kv").upsert(rows,{onConflict:"key"}).select("key,updated_at").then(function(r){
+function plainPush(k,loc){
+ return sb.from("trip_kv").upsert([{key:k,value:loc}],{onConflict:"key"}).select("key,updated_at").then(function(r){
   if(r.error)throw r.error;
-  r.data.forEach(function(x){meta[x.key]=x.updated_at;if(lraw(x.key)===sent[x.key])delete dirty[x.key]});
-  ls("sync_meta",meta);ls("sync_dirty",dirty)})}
+  r.data.forEach(function(x){meta[x.key]=x.updated_at});
+  setBase(k,loc);
+  if(lraw(k)===loc)delete dirty[k];
+  ls("sync_meta",meta);ls("sync_dirty",dirty);
+  return[]})}
+
+/* 推送單一 key；回傳「本機內容被合併改動」的 key 清單 */
+function sendKey(k,n){
+ var loc=lraw(k);
+ if(loc==null){delete dirty[k];return Promise.resolve([])}
+ if(!MKIND[k]||n>3)return plainPush(k,loc);
+ return sb.from("trip_kv").select("value,updated_at").eq("key",k).maybeSingle().then(function(r){
+  if(r.error)throw r.error;
+  var row=r.data;
+  if(!row)return plainPush(k,loc);
+  var out=loc;
+  /* 雲端在你上次同步後被別台改過 → 合併；meta 不存在代表首次同步，維持「覆蓋」 */
+  if(meta[k]!=null&&row.updated_at!==meta[k]){
+   var m=mergeKey(k,base[k],loc,row.value);
+   if(m!=null)out=m}
+  return sb.from("trip_kv").update({value:out}).eq("key",k).eq("updated_at",row.updated_at).select("key,updated_at").then(function(w){
+   if(w.error)throw w.error;
+   if(!w.data||!w.data.length)return sendKey(k,n+1);   /* 中途又被別台寫入 → 重新合併 */
+   meta[k]=w.data[0].updated_at;setBase(k,out);
+   var changed=[];
+   if(out!==loc){
+    var now=lraw(k);
+    if(now===loc){rawSet.call(localStorage,k,out);delete dirty[k]}
+    else{                                              /* 合併期間你又改了 → 再合併一次，仍標記為待上傳 */
+     var nl=mergeKey(k,loc,now,out);
+     rawSet.call(localStorage,k,nl!=null?nl:now)}
+    changed.push(k)
+   }else if(lraw(k)===loc)delete dirty[k];
+   ls("sync_meta",meta);ls("sync_dirty",dirty);
+   return changed})})}
+
+function pushDirty(){
+ var keys=Object.keys(dirty),all=[],p=Promise.resolve();
+ if(!keys.length)return Promise.resolve([]);
+ keys.forEach(function(k){p=p.then(function(){return sendKey(k,0)}).then(function(c){all=all.concat(c)})});
+ return p.then(function(){ls("sync_dirty",dirty);return all})}
 function remote(){return sb.from("trip_kv").select("key,updated_at").then(function(r){if(r.error)throw r.error;var m={};r.data.forEach(function(x){m[x.key]=x.updated_at});return m})}
 function pullChanges(){
+ var pushed=[];
  return remote().then(function(rem){
   var first=!Object.keys(meta).length,hasL=KEYS.some(function(k){return lraw(k)!=null}),hasR=Object.keys(rem).length>0,useLocal=false;
   if(first&&hasL&&hasR)useLocal=!confirm("雲端已有資料，這支手機也有本機資料。\n\n按「確定」＝用雲端資料取代本機\n按「取消」＝以本機資料覆蓋雲端");
   KEYS.forEach(function(k){if(lraw(k)!=null&&(!rem[k]||(first&&useLocal)))dirty[k]=1});
-  ls("sync_dirty",dirty);return pushDirty()}).then(remote).then(function(rem){
+  ls("sync_dirty",dirty);return pushDirty()}).then(function(p){pushed=p;return remote()}).then(function(rem){
+  /* 升級後第一次：已與雲端一致的 key，把目前內容記成合併基準 */
+  KEYS.forEach(function(k){if(MKIND[k]&&!base[k]&&!dirty[k]&&lraw(k)!=null&&rem[k]&&meta[k]===rem[k])setBase(k,lraw(k))});
   var need=KEYS.filter(function(k){return rem[k]&&!dirty[k]&&meta[k]!==rem[k]});
-  if(!need.length)return [];
-  var chg=[];
+  if(!need.length)return pushed;
+  var chg=pushed.slice();
   return sb.from("trip_kv").select("key,value,updated_at").in("key",need).then(function(v){
    if(v.error)throw v.error;
-   v.data.forEach(function(x){if(!dirty[x.key]){rawSet.call(localStorage,x.key,x.value);meta[x.key]=x.updated_at;chg.push(x.key)}});
+   v.data.forEach(function(x){if(!dirty[x.key]){rawSet.call(localStorage,x.key,x.value);meta[x.key]=x.updated_at;setBase(x.key,x.value);chg.push(x.key)}});
    ls("sync_meta",meta);return chg})})}
 function applyUpdate(keys){
  if(window.TRIP_LIVE){window.dispatchEvent(new CustomEvent("trip-sync-update",{detail:{keys:keys||[]}}));return}
@@ -97,7 +199,7 @@ function login(){lb.disabled=true;msg.textContent="";
  sb.auth.signInWithPassword({email:em.value.trim(),password:pw.value}).then(function(r){lb.disabled=false;
   if(r.error){msg.textContent=/fetch|network/i.test(r.error.message)?"網路連線失敗":"帳號或密碼錯誤";return}
   pw.value="";localStorage.removeItem("sync_out");onAuthed(true)}).catch(function(){lb.disabled=false;msg.textContent="網路連線失敗"})}
-function wipeLocal(){KEYS.concat(["sync_dirty","sync_meta","sync_blobq","sync_seeded"]).forEach(function(k){localStorage.removeItem(k)});for(var wi=localStorage.length-1;wi>=0;wi--){var wk=localStorage.key(wi);if(wk&&wk.indexOf("sb-")===0)localStorage.removeItem(wk)}var q=indexedDB.deleteDatabase(DB);q.onsuccess=q.onerror=q.onblocked=function(){location.reload()}}
+function wipeLocal(){KEYS.concat(["sync_dirty","sync_meta","sync_blobq","sync_seeded","sync_base"]).forEach(function(k){localStorage.removeItem(k)});for(var wi=localStorage.length-1;wi>=0;wi--){var wk=localStorage.key(wi);if(wk&&wk.indexOf("sb-")===0)localStorage.removeItem(wk)}var q=indexedDB.deleteDatabase(DB);q.onsuccess=q.onerror=q.onblocked=function(){location.reload()}}
 function manual(){syncNow().then(function(){if(window.appToast)window.appToast(chip.textContent)})}
 function logout(){syncNow().then(function(){var n=Object.keys(dirty).length+bq.length;
  if(!confirm(n?"還有 "+n+" 項資料尚未同步到雲端，登出會遺失它們。確定要登出嗎？":"登出會清除這支手機上的本機資料（雲端資料不受影響）。確定嗎？"))return;
