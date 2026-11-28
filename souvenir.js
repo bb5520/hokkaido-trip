@@ -255,7 +255,23 @@ function list(){
  var g={},order=[];items.forEach(function(x){var s=x[grp]||(grp==="who"?"未指定":"未填店家");if(!g[s]){g[s]=[];order.push(s)}g[s].push(x)});
  if(!order.length){root.appendChild(h("div","bg-white rounded-2xl shadow-sm border border-slate-100 text-slate-400 text-center py-6 text-sm","尚未新增伴手禮"));return}
  if(fg&&!g[fg])fg="";
- if(order.length>1){var fl=h("div","flex gap-2 overflow-x-auto no-scrollbar py-1");[""].concat(order).forEach(function(n){var p=h("button","flex-none px-3 py-1.5 rounded-xl text-xs font-medium "+(n===fg?"bg-ice-600 text-white font-bold shadow-sm":"bg-white text-slate-600 border border-slate-100 shadow-sm"),n||"全部");on(p,"click",function(){fg=n;draw()});fl.appendChild(p)});root.appendChild(fl)}
+ if(order.length>1){
+ var fw=h("div","relative"),fin=h("input","w-full bg-white border border-slate-100 shadow-sm pl-8 pr-8 py-2.5 rounded-xl text-xs outline-none focus:border-ice-500"),
+ fdd=h("div","absolute left-0 right-0 top-full mt-1 z-30 max-h-56 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg p-1 hidden"),
+ fic=h("i","fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"),
+ fcv=h("i","fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none");
+ fin.type="text";fin.autocomplete="off";fin.value=fg;fin.placeholder=(grp==="who"?"全部的人":"全部店家")+"（點此搜尋或選擇）";
+ function showF(all){
+  fdd.textContent="";var q=all?"":fin.value.trim().toLowerCase();
+  [""].concat(order).filter(function(n){return n===""||!q||n.toLowerCase().indexOf(q)>-1}).forEach(function(n){
+   var r=h("div","px-2.5 py-2 rounded-lg text-sm cursor-pointer hover:bg-ice-50 truncate "+(n===fg?"bg-ice-100 text-ice-700 font-bold":"text-slate-800"),n||"全部");
+   on(r,"mousedown",function(e){e.preventDefault()});on(r,"click",function(){fg=n;draw()});fdd.appendChild(r)});
+  fdd.classList.remove("hidden")}
+ on(fin,"focus",function(){showF(true);setTimeout(function(){try{fin.select();fin.setSelectionRange(0,fin.value.length)}catch(e){}},0)});
+ on(fin,"click",function(){showF(true)});
+ on(fin,"input",function(){showF(false)});
+ on(fin,"blur",function(){setTimeout(function(){fdd.classList.add("hidden");fin.value=fg},150)});
+ fw.appendChild(fic);fw.appendChild(fin);fw.appendChild(fcv);fw.appendChild(fdd);root.appendChild(fw)}
  order.forEach(function(s){if(!fg||s===fg)group(s,g[s])})}
 function stats(){[["who","未指定","fa-user","依人統計"],["store","未填店家","fa-store","依店家統計"]].forEach(function(s){
  var m={},o=[],c=h("div","bg-white rounded-2xl p-4 shadow-sm border border-slate-100"),t=h("h2","text-sm font-bold text-slate-800 mb-3 flex items-center gap-2");items.forEach(function(x){var k=x[s[0]]||s[1];if(!(k in m)){m[k]=0;o.push(k)}m[k]++});
