@@ -398,8 +398,8 @@
           <div class="space-y-3 text-xs">
             <div v-for="t in dayTours" :key="t.id" class="bg-slate-50 p-3 rounded-xl border border-slate-100 relative pr-8">
               <div class="font-bold text-slate-800">{{ t.name }}</div>
-              <div v-if="t.bookingNo" class="text-slate-600 mt-1">預約號碼: {{ t.bookingNo }}</div>
-              <div v-if="t.time" class="text-slate-600">集合/出發時間: {{ t.time }}</div>
+              <div v-if="t.bookingNo" class="text-slate-600 mt-1">預約號碼：{{ t.bookingNo }}</div>
+              <div v-if="t.time" class="text-slate-600">集合/出發時間：{{ t.time }}</div>
               <div v-if="t.note" class="text-slate-500 mt-1"><i class="fa-regular fa-sticky-note mr-1"></i>{{ t.note }}</div>
               <div v-if="t.price || t.payMethod" class="flex items-center gap-1.5 mt-1">
                 <i v-if="t.payMethod" :class="payMethodIcon(t.payMethod)" :title="t.payMethod"></i>
@@ -437,8 +437,8 @@
           <div class="space-y-3 text-xs">
             <div v-for="b in otherBookings" :key="b.id" class="bg-slate-50 p-3 rounded-xl border border-slate-100 relative pr-8">
               <div class="font-bold text-slate-800">{{ b.name }}</div>
-              <div v-if="b.bookingNo" class="text-slate-600 mt-1">預約號碼: {{ b.bookingNo }}</div>
-              <div v-if="b.time" class="text-slate-600">時間: {{ b.time }}</div>
+              <div v-if="b.bookingNo" class="text-slate-600 mt-1">預約號碼：{{ b.bookingNo }}</div>
+              <div v-if="b.time" class="text-slate-600">時間：{{ b.time }}</div>
               <div v-if="b.note" class="text-slate-500 mt-1"><i class="fa-regular fa-sticky-note mr-1"></i>{{ b.note }}</div>
               <div v-if="b.price || b.payMethod" class="flex items-center gap-1.5 mt-1">
                 <i v-if="b.payMethod" :class="payMethodIcon(b.payMethod)" :title="b.payMethod"></i>
@@ -476,8 +476,8 @@
           <div class="space-y-3 text-xs">
             <div v-for="c in carRentals" :key="c.id" class="text-slate-600 space-y-1 relative pr-8">
               <div class="font-bold text-slate-800">{{ c.name }}</div>
-              <div v-if="c.bookingNo">預約號碼: {{ c.bookingNo }}</div>
-              <div v-if="c.pickupTime">取車時間: {{ c.pickupTime }}</div>
+              <div v-if="c.bookingNo">預約號碼：{{ c.bookingNo }}</div>
+              <div v-if="c.pickupTime">取車時間：{{ c.pickupTime }}</div>
               <div v-if="c.note" class="text-slate-500 mt-1"><i class="fa-regular fa-sticky-note mr-1"></i>{{ c.note }}</div>
               <div v-if="c.price || c.payMethod" class="flex items-center gap-1.5">
                 <i v-if="c.payMethod" :class="payMethodIcon(c.payMethod)" :title="c.payMethod"></i>
@@ -569,7 +569,7 @@
               <div class="font-bold text-slate-800 text-sm" :class="{'line-through text-slate-400': item.bought}">{{ item.name }}</div>
               <div v-if="item.location" class="text-[11px] text-slate-500 mt-1 flex items-center"><i class="fa-solid fa-location-dot w-3.5 text-ice-600"></i>{{ item.location }}</div>
               <div class="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-1 text-[11px] text-slate-500">
-                <span v-if="item.quantity">數量: {{ item.quantity }}</span>
+                <span v-if="item.quantity">數量：{{ item.quantity }}</span>
                 <span v-if="item.price" class="text-ice-700 font-bold">{{ priceDisplay(item.price, item.currency) }}</span>
               </div>
             </div>
@@ -798,7 +798,7 @@
             <input v-model.number="twdToJpyInput" type="number" step="0.001" placeholder="4.65" class="flex-1 min-w-0 bg-slate-50 border p-2.5 rounded-xl outline-none text-sm font-bold">
             <span class="text-xs text-slate-500 font-bold whitespace-nowrap">日圓 (JPY)</span>
           </div>
-          <div class="text-[10px] text-slate-400 mt-2">目前使用匯率: 1 TWD ≈ {{ (1 / jpyRate).toFixed(2) }} JPY (1 JPY ≈ {{ jpyRate.toFixed(3) }} TWD)</div>
+          <div class="text-[10px] text-slate-400 mt-2">目前使用匯率：1 TWD ≈ {{ (1 / jpyRate).toFixed(2) }} JPY (1 JPY ≈ {{ jpyRate.toFixed(3) }} TWD)</div>
           <button @click="saveJpyRate" class="w-full mt-3 bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">
             更新匯率
           </button>
