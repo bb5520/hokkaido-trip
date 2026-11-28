@@ -1698,7 +1698,7 @@
             localStorage.setItem(storageKey, JSON.stringify(newVal));
           } catch (e) {
             if (e.name === 'QuotaExceededError') {
-              alert('儲存空間已滿 (5MB上限)！請刪除部分照片或附件。');
+              alert('儲存空間已滿（5MB上限）！請刪除部分照片或附件。');
             }
           }
         }, { deep: true });
@@ -1862,7 +1862,7 @@
             if (window.SYNC) window.SYNC.up(id);
             docsArray.push({ id, name: file.name, type });
           } catch (error) {
-            alert('檔案處理失敗: ' + file.name);
+            alert('檔案處理失敗：' + file.name);
           }
         }
         fileUploading.value = false;
@@ -2542,7 +2542,7 @@
         if (!price || isNaN(num)) return '';
         if (currency === 'JPY') {
           const twd = Math.round(num * jpyRate.value);
-         return `¥ ${num.toLocaleString()} (約 NT$ ${twd.toLocaleString()})`;
+         return `¥ ${num.toLocaleString()}（約 NT$ ${twd.toLocaleString()}）`;
         }
         return `NT$ ${num.toLocaleString()}`;
       };
@@ -2625,9 +2625,9 @@
         const extra = flightExtras.value[f.id] || {};
         return { 
           id: f.id, dayIndex: f.dayIndex, 
-          label: f.name + (f.flightNo ? ` (${f.flightNo})` : ''), 
+          label: f.name + (f.flightNo ? ` （${f.flightNo}）` : ''), 
           duration: f.flightDuration || '未填寫飛行時間', 
-          route: `${f.depAirport || '出發地'}${f.depTerminal ? '（' + f.depTerminal + '）' : ''} ${f.depTime || '--:--'} ➔ ${f.arrAirport || '目的地'}${f.arrTerminal ? '（' + f.arrTerminal + '）' : ''} ${f.arrTime || '--:--'}`,
+          route: `${f.depAirport || '出發地'}${f.depTerminal ? '（' + f.depTerminal + '）' : ''} ${f.depTime || '--：--'} ➔ ${f.arrAirport || '目的地'}${f.arrTerminal ? '（' + f.arrTerminal + '）' : ''} ${f.arrTime || '--：--'}`,
           documents: extra.documents || [], 
           price: extra.price || null, 
           currency: extra.currency || 'JPY', 
@@ -3331,7 +3331,7 @@
               window.location.reload();
             }
           } catch (error) {
-            alert('檔案讀取失敗！請確認上傳的是正確的備份檔案 (.json)。');
+            alert('檔案讀取失敗！請確認上傳的是正確的備份檔案（.json）。');
           }
           event.target.value = '';
         };
