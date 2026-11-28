@@ -619,9 +619,15 @@
 
         <!-- 店家快速篩選 -->
           <div v-if="txStoreNames.length > 1" class="relative">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <input v-model="txFilter" type="text" placeholder="搜尋店家" class="w-full bg-white border border-slate-100 shadow-sm py-2 pl-8 pr-8 rounded-xl text-xs outline-none focus:border-ice-500">
-            <button v-if="txFilter" @click="txFilter = ''" aria-label="清除" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 p-1"><i class="fa-solid fa-xmark text-xs"></i></button>
+            <i class="fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+            <input v-model="txFilterText" @focus="txFilterFocus($event)" @click="txFilterFocus($event)" @input="txFilterShowAll = false; txFilterDd = true" @blur="txFilterBlur"
+                   type="text" autocomplete="off" placeholder="全部店家（點此搜尋或選擇）"
+                   class="w-full bg-white border border-slate-100 shadow-sm pl-8 pr-8 py-2.5 rounded-xl text-xs outline-none focus:border-ice-500">
+            <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+            <div v-if="txFilterDd" class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto z-30 p-1">
+              <div @mousedown.prevent="txPickFilter('')" :class="['px-2.5 py-2 rounded-lg text-sm cursor-pointer hover:bg-ice-50', txFilter === '' ? 'bg-ice-100 text-ice-700 font-bold' : 'text-slate-800']">全部</div>
+              <div v-for="n in txFilterList" :key="n" @mousedown.prevent="txPickFilter(n)" :class="['px-2.5 py-2 rounded-lg text-sm cursor-pointer hover:bg-ice-50 truncate', txFilter === n ? 'bg-ice-100 text-ice-700 font-bold' : 'text-slate-800']">{{ n }}</div>
+            </div>
           </div>
 
           <!-- 明細卡片 -->
@@ -3016,12 +3022,26 @@
         });
         return names;
       });
+      const txFilterText = ref('');
+      const txFilterDd = ref(false);
+      const txFilterShowAll = ref(true);
+      const txFilterList = computed(() => {
+        const q = txFilterShowAll.value ? '' : (txFilterText.value || '').trim().toLowerCase();
+        return txStoreNames.value.filter(n => !q || n.toLowerCase().includes(q));
+      });
+      const txFilterFocus = (e) => {
+        txFilterShowAll.value = true;
+        txFilterDd.value = true;
+        const el = e.target;
+        setTimeout(() => { try { el.select(); } catch (x) {} }, 0);
+      };
+      const txFilterBlur = () => setTimeout(() => { txFilterDd.value = false; txFilterText.value = txFilter.value; }, 150);
+      const txPickFilter = (n) => { txFilter.value = n; txFilterText.value = n; txFilterDd.value = false; };
       // 保留原本的位置編號 i，編輯和刪除才不會對錯筆
       const txShown = computed(() => {
         const all = txEnts.value.map((e, i) => ({ e, i }));
-        const q = (txFilter.value || '').trim().toLowerCase();
-        if (!q) return all;
-        return all.filter(r => (r.e.name || '').toLowerCase().includes(q));
+        if (!txFilter.value || !txStoreNames.value.includes(txFilter.value)) return all;
+        return all.filter(r => (r.e.name || '').trim() === txFilter.value);
       });
 
       const showTxModal = ref(false);
@@ -3617,7 +3637,7 @@
         selectDepAirport, selectArrAirport, closeDepAirportDropdown, closeArrAirportDropdown,weeklyEditor, toggleEditorDay, applyEditor, setEditorClosed, loadDayToEditor,
         todos, todoFilter, todoFilters, filteredTodos, showTodoModal, isEditTodo, formTodo, openAddTodo, editTodo, saveTodo, deleteTodo,
         txView, txEnts, txForm, txDd, txMethods, txPlatforms, txPre, txDdList, txCloseDd, txPick,
-        txR, txBest, txRows, txFeeText, txEntRes, txY, txT, txDateText, txFilter, txStoreNames, txShown,
+        txR, txBest, txRows, txFeeText, txEntRes, txY, txT, txDateText, txFilter, txStoreNames, txShown,txFilterText, txFilterDd, txFilterList, txFilterFocus, txFilterBlur, txPickFilter,
         showTxModal, txEditIdx, openAddTx, editTx, saveTx, delTx, txOnName,
         txShowAll, txFocusName, txOnPct, txOnFix, txOnAmt
       };
