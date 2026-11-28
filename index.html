@@ -2182,6 +2182,7 @@
 
       // 天數變動時，自動增減 itineraryData 的天數陣列
       watch(tripDays, (newDays) => {
+        if (applyingRemote) return;
         const days = Number(newDays);
         if (!days || days < 1) return;
         const targetLen = days; // 天數 N = N 個日期籤
@@ -3374,6 +3375,45 @@
         }
         return (total / 1024).toFixed(1);
       });
+
+      // ===== 即時同步：套用其他裝置傳來的資料（不重新整理，停留在原畫面）=====
+      let applyingRemote = false;
+      const syncRefs = {
+        trip_banner: bannerImage, trip_jpyRate: jpyRate, trip_startDate: tripStartDate, trip_days: tripDays,
+        trip_itinerary: itineraryData, trip_flightExtras: flightExtras, trip_hotelExtras: hotelExtras,
+        trip_carRentals: carRentals, trip_dayTours: dayTours, trip_otherBookings: otherBookings,
+        trip_todos: todos, trip_taxEnts: txEnts, trip_expenses: expenses
+      };
+      // 任何編輯視窗開著時先把更新排隊，關閉後再套用，避免蓋掉正在輸入的內容
+      const anyModalOpen = computed(() =>
+        showItineraryModal.value || showFlightModal.value || showHotelModal.value ||
+        car.showModal.value || tour.showModal.value || other.showModal.value ||
+        showTodoModal.value || showTxModal.value || showExpenseModal.value || showBannerModal.value);
+      const pendingKeys = new Set();
+
+      const applyRemoteKeys = (keys) => {
+        applyingRemote = true;
+        keys.forEach(k => { const r = syncRefs[k]; if (r) r.value = initData(k, r.value); });
+        if (currentTab.value !== 'settings') { // 正在設定頁輸入時不覆蓋輸入框
+          tripStartDateInput.value = tripStartDate.value;
+          tripDaysInput.value = tripDays.value;
+          twdToJpyInput.value = Number((1 / jpyRate.value).toFixed(3));
+        }
+        if (selectedDateIndex.value >= tripDays.value) selectedDateIndex.value = Math.max(0, tripDays.value - 1);
+        nextTick(() => nextTick(() => { applyingRemote = false; }));
+      };
+      const flushPending = () => {
+        if (anyModalOpen.value || !pendingKeys.size) return;
+        const keys = [...pendingKeys];
+        pendingKeys.clear();
+        applyRemoteKeys(keys);
+      };
+      watch(anyModalOpen, flushPending);
+      window.addEventListener('trip-sync-update', (e) => {
+        ((e.detail && e.detail.keys) || []).forEach(k => pendingKeys.add(k));
+        flushPending();
+      });
+      window.TRIP_LIVE = true; // 告訴 sync.js：畫面能自己更新，不要整頁重新整理
 
       return {
         currentTab, tabs, dateList, selectedDateIndex, categories, selectedCategory,
