@@ -916,7 +916,7 @@
           <div v-if="formItinerary.category === '航班'" class="space-y-3 p-3 bg-slate-50 border rounded-xl">
             <div>
               <label class="block font-bold text-slate-600 mb-1">航班編號 <span class="text-red-500">*</span></label>
-              <input v-model="formItinerary.flightNo" @input="formItinerary.flightNo = $event.target.value.toUpperCase()" type="text" autocapitalize="characters" autocomplete="off" placeholder="例如: BR116" class="w-full bg-white border p-2 rounded-lg outline-none uppercase">
+              <input v-model="formItinerary.flightNo" @input="formItinerary.flightNo = $event.target.value.toUpperCase()" type="text" autocapitalize="characters" autocomplete="off" placeholder="例如：BR116" class="w-full bg-white border p-2 rounded-lg outline-none uppercase">
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
@@ -1002,11 +1002,11 @@
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">飛行時間</label>
-              <input v-model="formItinerary.flightDuration" type="text" placeholder="例如: 3小時30分" class="w-full bg-white border p-2 rounded-lg outline-none">
+              <input v-model="formItinerary.flightDuration" type="text" placeholder="例如：3小時30分" class="w-full bg-white border p-2 rounded-lg outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">導航地點 (搜尋用)</label>
-              <input v-model="formItinerary.location" type="text" placeholder="例如: New Chitose Airport" class="w-full bg-white border p-2 rounded-lg outline-none">
+              <input v-model="formItinerary.location" type="text" placeholder="例如：New Chitose Airport" class="w-full bg-white border p-2 rounded-lg outline-none">
             </div>
           </div>
 
@@ -1076,7 +1076,7 @@
             </div>
             <div v-if="formItinerary.category === '景點'">
               <label class="block font-bold text-slate-600 mb-1">門票金額</label>
-              <input v-model="formItinerary.ticket" type="text" placeholder="例如: 大人 1000日圓" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <input v-model="formItinerary.ticket" type="text" placeholder="例如：大人 1000日圓" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
@@ -1127,11 +1127,11 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block font-bold text-slate-600 mb-1">託運行李 (kg)</label>
-              <input v-model="formFlightDoc.baggageChecked" type="text" placeholder="例如: 23" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <input v-model="formFlightDoc.baggageChecked" type="text" placeholder="例如：23" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">隨身行李 (kg)</label>
-              <input v-model="formFlightDoc.baggageCarryon" type="text" placeholder="例如: 7" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <input v-model="formFlightDoc.baggageCarryon" type="text" placeholder="例如：7" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
           </div>
           <div>
@@ -1145,7 +1145,7 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block font-bold text-slate-600 mb-1">金額</label>
-              <input v-model.number="formFlightDoc.price" type="number" placeholder="例如: 12000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <input v-model.number="formFlightDoc.price" type="number" placeholder="例如：12000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">幣別</label>
@@ -1191,7 +1191,7 @@
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">電話</label>
-            <input v-model="formHotelInfo.phone" type="text" placeholder="例如: +81 11-208-5555" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <input v-model="formHotelInfo.phone" type="text" placeholder="例如：+81 11-208-5555" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">地址</label>
@@ -1212,7 +1212,7 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block font-bold text-slate-600 mb-1">金額</label>
-              <input v-model.number="formHotelInfo.price" type="number" placeholder="例如: 15000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <input v-model.number="formHotelInfo.price" type="number" placeholder="例如：15000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">幣別</label>
@@ -1253,15 +1253,15 @@
         <div class="space-y-3 text-xs">
           <div>
             <label class="block font-bold text-slate-600 mb-1">名稱 <span class="text-red-500">*</span></label>
-            <input v-model="formDayTour.name" type="text" placeholder="例如: 富良野薰衣草一日遊" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <input v-model="formDayTour.name" type="text" placeholder="例如：富良野薰衣草一日遊" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
-            <input v-model="formDayTour.bookingNo" type="text" placeholder="例如: KKD-20260207-001" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <input v-model="formDayTour.bookingNo" type="text" placeholder="例如：KKD-20260207-001" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">集合/出發時間</label>
-            <input v-model="formDayTour.time" type="text" placeholder="例如: Day 2 08:30 於飯店大廳集合" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <input v-model="formDayTour.time" type="text" placeholder="例如：Day 2 08:30 於飯店大廳集合" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
@@ -1278,7 +1278,7 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block font-bold text-slate-600 mb-1">金額</label>
-              <input v-model.number="formDayTour.price" type="number" placeholder="例如: 3500" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <input v-model.number="formDayTour.price" type="number" placeholder="例如：3500" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">幣別</label>
@@ -1306,7 +1306,7 @@
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">備註</label>
-            <textarea v-model="formDayTour.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2" placeholder="例如: 需自備護照、含中文導覽"></textarea>
+            <textarea v-model="formDayTour.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2" placeholder="例如：需自備護照、含中文導覽"></textarea>
           </div>
         </div>
         <div class="flex gap-2 pt-2">
@@ -1326,15 +1326,15 @@
         <div class="space-y-3 text-xs">
           <div>
             <label class="block font-bold text-slate-600 mb-1">名稱 <span class="text-red-500">*</span></label>
-            <input v-model="formOtherBooking.name" type="text" placeholder="例如: 白色戀人公園門票 / 溫泉券" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <input v-model="formOtherBooking.name" type="text" placeholder="例如：白色戀人公園門票 / 溫泉券" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
-            <input v-model="formOtherBooking.bookingNo" type="text" placeholder="例如: TIX-20260207-001" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <input v-model="formOtherBooking.bookingNo" type="text" placeholder="例如：TIX-20260207-001" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">時間</label>
-            <input v-model="formOtherBooking.time" type="text" placeholder="例如: Day 3 全日有效" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <input v-model="formOtherBooking.time" type="text" placeholder="例如：Day 3 全日有效" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
@@ -1351,7 +1351,7 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block font-bold text-slate-600 mb-1">金額</label>
-              <input v-model.number="formOtherBooking.price" type="number" placeholder="例如: 1000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <input v-model.number="formOtherBooking.price" type="number" placeholder="例如：1000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">幣別</label>
@@ -1399,15 +1399,15 @@
         <div class="space-y-3 text-xs">
           <div>
             <label class="block font-bold text-slate-600 mb-1">租車公司/地點 <span class="text-red-500">*</span></label>
-            <input v-model="formCar.name" type="text" placeholder="例如: TOYOTA Rent a Car 新千歲機場店" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <input v-model="formCar.name" type="text" placeholder="例如：TOYOTA Rent a Car 新千歲機場店" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">預約號碼</label>
-            <input v-model="formCar.bookingNo" type="text" placeholder="例如: R-88902312" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <input v-model="formCar.bookingNo" type="text" placeholder="例如：R-88902312" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">取車時間</label>
-            <input v-model="formCar.pickupTime" type="text" placeholder="例如: Day 1 14:30" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <input v-model="formCar.pickupTime" type="text" placeholder="例如：Day 1 14:30" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">導航搜尋名稱</label>
@@ -1424,7 +1424,7 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block font-bold text-slate-600 mb-1">金額</label>
-              <input v-model.number="formCar.price" type="number" placeholder="例如: 8000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+              <input v-model.number="formCar.price" type="number" placeholder="例如：8000" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
               <label class="block font-bold text-slate-600 mb-1">幣別</label>
@@ -1452,7 +1452,7 @@
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">備註</label>
-            <textarea v-model="formCar.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2" placeholder="例如: 需年滿20歲、需國際駕照正本"></textarea>
+            <textarea v-model="formCar.note" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none" rows="2" placeholder="例如：需年滿20歲、需國際駕照正本"></textarea>
           </div>
         </div>
         <div class="flex gap-2 pt-2">
@@ -1472,7 +1472,7 @@
         <div class="space-y-3 text-xs">
           <div>
             <label class="block font-bold text-slate-600 mb-1">待辦事項 <span class="text-red-500">*</span></label>
-            <input v-model="formTodo.text" type="text" maxlength="60" placeholder="例如: 兌換日幣" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
+            <input v-model="formTodo.text" type="text" maxlength="60" placeholder="例如：兌換日幣" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">備註</label>
@@ -1601,7 +1601,7 @@
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">消費名稱 <span class="text-red-500">*</span></label>
-            <input v-model="formExpense.name" type="text" placeholder="例如: 湯咖哩" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
+            <input v-model="formExpense.name" type="text" placeholder="例如：湯咖哩" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">付款方式</label>
