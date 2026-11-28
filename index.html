@@ -924,7 +924,8 @@
                 <div class="relative">
                   <input
                     v-model="formItinerary.depAirport"
-                    @focus="openDepAirportDropdown"
+                    @focus="focusDepAirport($event)"
+                    @click="focusDepAirport($event)"
                     @input="openDepAirportDropdown"
                     @blur="closeDepAirportDropdown"
                     type="text"
@@ -954,7 +955,8 @@
                 <div class="relative">
                   <input
                     v-model="formItinerary.arrAirport"
-                    @focus="openArrAirportDropdown"
+                    @focus="focusArrAirport($event)"
+                    @click="focusArrAirport($event)"
                     @input="openArrAirportDropdown"
                     @blur="closeArrAirportDropdown"
                     type="text"
@@ -982,7 +984,7 @@
               <div>
                 <label class="block font-bold text-slate-600 mb-1">出發航廈</label>
                 <div class="relative">
-                  <input v-model="formItinerary.depTerminal" @focus="depTerminalOpen = true; moveCaretEnd($event)" @input="depTerminalOpen = true" @blur="closeDepTerminalDropdown" type="text" maxlength="20" autocomplete="off" placeholder="輸入或選擇航廈" class="w-full bg-white border p-2 pr-8 rounded-lg outline-none focus:border-ice-500">
+                  <input v-model="formItinerary.depTerminal" @focus="focusDepTerminal($event)" @click="focusDepTerminal($event)" @input="inputDepTerminal" @blur="closeDepTerminalDropdown" type="text" maxlength="20" autocomplete="off" placeholder="輸入或選擇航廈" class="w-full bg-white border p-2 pr-8 rounded-lg outline-none focus:border-ice-500">
                   <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                   <div v-if="depTerminalOpen && filteredDepTerminals.length" class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 py-1">
                     <button v-for="t in filteredDepTerminals" :key="t" type="button" @mousedown.prevent="selectDepTerminal(t)" class="w-full text-left px-3 py-2 text-sm hover:bg-ice-50 text-slate-700">{{ t }}</button>
@@ -992,7 +994,7 @@
               <div>
                 <label class="block font-bold text-slate-600 mb-1">抵達航廈</label>
                 <div class="relative">
-                  <input v-model="formItinerary.arrTerminal" @focus="arrTerminalOpen = true; moveCaretEnd($event)" @input="arrTerminalOpen = true" @blur="closeArrTerminalDropdown" type="text" maxlength="20" autocomplete="off" placeholder="輸入或選擇航廈" class="w-full bg-white border p-2 pr-8 rounded-lg outline-none focus:border-ice-500">
+                  <input v-model="formItinerary.arrTerminal" @focus="focusArrTerminal($event)" @click="focusArrTerminal($event)" @input="inputArrTerminal" @blur="closeArrTerminalDropdown" type="text" maxlength="20" autocomplete="off" placeholder="輸入或選擇航廈" class="w-full bg-white border p-2 pr-8 rounded-lg outline-none focus:border-ice-500">
                   <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                   <div v-if="arrTerminalOpen && filteredArrTerminals.length" class="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 py-1">
                     <button v-for="t in filteredArrTerminals" :key="t" type="button" @mousedown.prevent="selectArrTerminal(t)" class="w-full text-left px-3 py-2 text-sm hover:bg-ice-50 text-slate-700">{{ t }}</button>
@@ -2509,20 +2511,30 @@
       const depAirportOpen = ref(false);
       const arrAirportOpen = ref(false);
 
+      const depAirportShowAll = ref(false);
+      const arrAirportShowAll = ref(false);
+
       const filteredDepAirports = computed(() => {
+        if (depAirportShowAll.value) return airportOptions;
         const q = (formItinerary.value.depAirport || '').trim().toLowerCase();
         if (!q) return airportOptions;
         return airportOptions.filter(ap => ap.toLowerCase().includes(q));
       });
       const filteredArrAirports = computed(() => {
+        if (arrAirportShowAll.value) return airportOptions;
         const q = (formItinerary.value.arrAirport || '').trim().toLowerCase();
         if (!q) return airportOptions;
         return airportOptions.filter(ap => ap.toLowerCase().includes(q));
       });
 
-      const openDepAirportDropdown = () => { depAirportOpen.value = true; };
-      const openArrAirportDropdown = () => { arrAirportOpen.value = true; };
+      // 點進欄位：顯示全部 + 全選文字
+      const selectAllText = (e) => { const el = e.target; setTimeout(() => { try { el.select(); } catch (x) {} }, 0); };
+      const focusDepAirport = (e) => { depAirportShowAll.value = true; depAirportOpen.value = true; selectAllText(e); };
+      const focusArrAirport = (e) => { arrAirportShowAll.value = true; arrAirportOpen.value = true; selectAllText(e); };
 
+      // 開始打字：改成依關鍵字篩選
+      const openDepAirportDropdown = () => { depAirportShowAll.value = false; depAirportOpen.value = true; };
+      const openArrAirportDropdown = () => { arrAirportShowAll.value = false; arrAirportOpen.value = true; };
       const selectDepAirport = (ap) => { formItinerary.value.depAirport = ap; depAirportOpen.value = false; };
       const selectArrAirport = (ap) => { formItinerary.value.arrAirport = ap; arrAirportOpen.value = false; };
       const closeDepAirportDropdown = () => { setTimeout(() => { depAirportOpen.value = false; }, 150); };
@@ -2566,12 +2578,20 @@
       };
       const depTerminalOpen = ref(false);
       const arrTerminalOpen = ref(false);
-      const filterTerminals = (q) => {
+      const depTerminalShowAll = ref(false);
+      const arrTerminalShowAll = ref(false);
+      const filterTerminals = (q, showAll) => {
+        if (showAll) return terminalOptions.value;
         const text = (q || '').trim().toLowerCase();
         return terminalOptions.value.filter(t => !text || t.toLowerCase().includes(text));
       };
-      const filteredDepTerminals = computed(() => filterTerminals(formItinerary.value.depTerminal));
-      const filteredArrTerminals = computed(() => filterTerminals(formItinerary.value.arrTerminal));
+      const filteredDepTerminals = computed(() => filterTerminals(formItinerary.value.depTerminal, depTerminalShowAll.value));
+      const filteredArrTerminals = computed(() => filterTerminals(formItinerary.value.arrTerminal, arrTerminalShowAll.value));
+
+      const focusDepTerminal = (e) => { depTerminalShowAll.value = true; depTerminalOpen.value = true; selectAllText(e); };
+      const focusArrTerminal = (e) => { arrTerminalShowAll.value = true; arrTerminalOpen.value = true; selectAllText(e); };
+      const inputDepTerminal = () => { depTerminalShowAll.value = false; depTerminalOpen.value = true; };
+      const inputArrTerminal = () => { arrTerminalShowAll.value = false; arrTerminalOpen.value = true; };
       const selectDepTerminal = (t) => { formItinerary.value.depTerminal = t; depTerminalOpen.value = false; };
       const selectArrTerminal = (t) => { formItinerary.value.arrTerminal = t; arrTerminalOpen.value = false; };
       const closeDepTerminalDropdown = () => { setTimeout(() => { depTerminalOpen.value = false; formItinerary.value.depTerminal = (formItinerary.value.depTerminal || '').trim(); }, 150); };
@@ -3593,7 +3613,7 @@
         airportOptions, depAirportInputRef, arrAirportInputRef,
         depAirportOpen, arrAirportOpen,
         filteredDepAirports, filteredArrAirports,
-        openDepAirportDropdown, openArrAirportDropdown,
+        openDepAirportDropdown, openArrAirportDropdown,focusDepAirport, focusArrAirport, focusDepTerminal, focusArrTerminal, inputDepTerminal, inputArrTerminal,
         selectDepAirport, selectArrAirport, closeDepAirportDropdown, closeArrAirportDropdown,weeklyEditor, toggleEditorDay, applyEditor, setEditorClosed, loadDayToEditor,
         todos, todoFilter, todoFilters, filteredTodos, showTodoModal, isEditTodo, formTodo, openAddTodo, editTodo, saveTodo, deleteTodo,
         txView, txEnts, txForm, txDd, txMethods, txPlatforms, txPre, txDdList, txCloseDd, txPick,
