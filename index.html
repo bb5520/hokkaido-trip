@@ -896,7 +896,7 @@
           <!-- 名稱與分類 (通用) -->
           <div>
             <label class="block font-bold text-slate-600 mb-1">行程名稱 <span class="text-red-500">*</span></label>
-            <input v-if="formItinerary.category !== '航班'" v-model="formItinerary.name" type="text" placeholder="輸入名稱 (如: 長榮航空、小樽運河)" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
+            <input v-if="formItinerary.category !== '航班'" v-model="formItinerary.name" type="text" placeholder="輸入名稱 (例如：長榮航空、小樽運河)" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
             <select v-else v-model="formItinerary.name" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
               <option value="">未選擇</option>
               <option value="去程">去程</option>
