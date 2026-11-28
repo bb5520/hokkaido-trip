@@ -38,6 +38,9 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(items));return true}
 var tt=null,tto=0;
 function toast(m){if(tt)tt.remove();clearTimeout(tto);m=String(m);var t=h("div","fixed left-1/2 -translate-x-1/2 bottom-28 z-[95] bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-full max-w-[90vw] text-center",m);tt=t;document.body.appendChild(t);tto=setTimeout(function(){t.remove();if(tt===t)tt=null},1800+Math.min(2200,m.length*30))}
 function nurl(s){s=(s||"").trim();if(!s)return"";if(!/^https?:\/\//i.test(s))s="https://"+s;try{var u=new URL(s);return /^https?:$/.test(u.protocol)?u.href:""}catch(e){return""}}
+function cp(o){return JSON.parse(JSON.stringify(o))}
+function eq(a,b){return JSON.stringify(a)===JSON.stringify(b)}
+function idx(id){for(var i=0;i<items.length;i++)if(items[i].id===id)return i;return -1}
 function host(u){try{return new URL(u).hostname.replace(/^www\./,"")}catch(e){return u}}
 /* 圖片：存在與行程資料相同的 IndexedDB，並交給 sync.js 上傳雲端 */
 function odb(){return new Promise(function(r,j){var q=indexedDB.open(DB,1);q.onupgradeneeded=function(){q.result.createObjectStore(ST)};q.onsuccess=function(){r(q.result)};q.onerror=function(){j(q.error)}})}
@@ -158,10 +161,11 @@ function tile(label,icon,get,set,ui){
   blob(id).then(function(d){if(d&&get()===id)b.style.backgroundImage="url("+d+")"})}
  on(b,"click",function(){f.click()});on(x,"click",function(){set("");paint()});
  on(f,"change",function(){var file=f.files[0];f.value="";if(!file)return;ui.n++;ui.upd();shrink(file).then(store).then(function(id){set(id);paint()}).catch(function(){toast("無法讀取圖片")}).then(function(){ui.n--;ui.upd()})});
- w.appendChild(b);w.appendChild(x);w.appendChild(f);paint();return w}
+ w.appendChild(b);w.appendChild(x);w.appendChild(f);paint();w.paint=paint;return w}
 function openSheet(x,sub){
  ed=x||null;img=x?x.img||"":"";rcp=x?x.rcpt||"":"";
- var ov=h("div","fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"),bx=h("div","bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto"),hd=h("div","flex justify-between items-center border-b pb-2"),xb=h("button","text-slate-400"),body=h("div","space-y-3 text-xs");
+ var eid=x?x.id:null,wasEdit=!!x,gone=false,base=x?cp(x):null,rb=x?cp(x):null,
+ ov=h("div","fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"),bx=h("div","bg-white w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto"),hd=h("div","flex justify-between items-center border-b pb-2"),xb=h("button","text-slate-400"),body=h("div","space-y-3 text-xs");
  hd.appendChild(h("h3","font-bold text-slate-800",sub?"批次新增伴手禮（"+sub+"）":(ed?"編輯伴手禮":"新增伴手禮")));xb.appendChild(h("i","fa-solid fa-xmark text-lg"));hd.appendChild(xb);
  var fs=h("input",IC),fw=h("input",IC),fk=h("input",IC),fq=h("input",IC),fn=h("textarea",IC);
  fs.value=x?x.store:(grp==="store"?fg:"");fw.value=x?x.who:(grp==="who"?fg:"");fk.value=x?x.link:"";fq.value=x?x.qty:1;fn.value=x?x.note:"";
@@ -171,20 +175,53 @@ function openSheet(x,sub){
  var sp=h("div","text-[11px] text-ice-600 mt-1"),ui={n:0,upd:function(){sp.style.display=ui.n?"block":"none";sv.disabled=ui.n>0;sv.className="flex-1 font-bold py-2.5 rounded-xl "+(ui.n?"bg-slate-300 text-slate-500 cursor-not-allowed":"bg-ice-600 text-white");sv.textContent=ui.n?"讀取中...":lab}};
  sp.appendChild(h("i","fa-solid fa-spinner fa-spin mr-1"));sp.appendChild(document.createTextNode("檔案讀取中，請稍候..."));sp.style.display="none";
  var lab=ed?(queue.length?"儲存並下一張":"儲存"):"儲存",sv=h("button","flex-1 bg-ice-600 text-white font-bold py-2.5 rounded-xl",lab),ft=h("div","flex gap-2 pt-2");
-  body.appendChild(combo("店家",fs,"store"));
+ var ti=tile("上傳圖片","fa-image",function(){return img},function(v){img=v},ui),tr=tile("上傳收據","fa-receipt",function(){return rcp},function(v){rcp=v},ui);
+ body.appendChild(combo("店家",fs,"store"));
  var g2=h("div","grid grid-cols-2 gap-2");g2.appendChild(field("數量",fq));g2.appendChild(combo("誰要買",fw,"who"));body.appendChild(g2);
  body.appendChild(field("連結",fk));
- var g3=h("div","grid grid-cols-2 gap-2");g3.appendChild(field("圖片",tile("上傳圖片","fa-image",function(){return img},function(v){img=v},ui)));g3.appendChild(field("收據",tile("上傳收據","fa-receipt",function(){return rcp},function(v){rcp=v},ui)));body.appendChild(g3);body.appendChild(sp);
- 
+ var g3=h("div","grid grid-cols-2 gap-2");g3.appendChild(field("圖片",ti));g3.appendChild(field("收據",tr));body.appendChild(g3);body.appendChild(sp);
  body.appendChild(field("備註",fn));
- if(ed&&!sub){var del=h("button","flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl","刪除");on(del,"click",function(){ask("確定刪除這筆嗎？",function(){var i=items.indexOf(ed);if(i>-1)items.splice(i,1);save();ov.remove();draw();toast("已刪除")})});ft.appendChild(del)}
- on(xb,"click",function(){queue=[];ov.remove()});
+
+ /* ===== 即時合併：其他裝置修改時，把你沒動過的欄位換成最新值 ===== */
+ var LB={store:"店家",who:"誰要買",qty:"數量",link:"連結",img:"圖片",rcpt:"收據",note:"備註"},
+ FD={
+  store:{get:function(){return fs.value.trim()},set:function(v){fs.value=v||""}},
+  who:{get:function(){return fw.value.trim()},set:function(v){fw.value=v||""}},
+  qty:{get:qv,set:function(v){fq.value=v}},
+  link:{get:function(){return fk.value.trim()},set:function(v){fk.value=v||""}},
+  img:{get:function(){return img},set:function(v){img=v||"";ti.paint()}},
+  rcpt:{get:function(){return rcp},set:function(v){rcp=v||"";tr.paint()}},
+  note:{get:function(){return fn.value.trim()},set:function(v){fn.value=v||""}}
+ };
+ function onRemote(e){
+  if(!wasEdit||gone||!e.detail||e.detail.keys.indexOf(KEY)<0)return;
+  load();var i=idx(eid);
+  if(i<0){gone=true;toast("這筆伴手禮已被其他裝置刪除，儲存後會重新建立");return}
+  var rem=items[i],mg=[],cf=[];
+  Object.keys(FD).forEach(function(k){
+   var r=rem[k],b=base[k],c=FD[k].get();
+   if(eq(r,rb[k]))return;                       /* 其他裝置沒改這欄 */
+   if(eq(c,r)){base[k]=r;return}                /* 兩邊一樣 */
+   if(eq(c,b)){FD[k].set(r);base[k]=r;mg.push(LB[k])}  /* 你沒動過 → 換成最新 */
+   else cf.push(LB[k])});                       /* 兩邊都改 → 保留你的 */
+  rb=cp(rem);
+  var m=[];
+  if(mg.length)m.push("其他裝置剛修改了「"+mg.join("、")+"」，已自動同步");
+  if(cf.length)m.push("「"+cf.join("、")+"」與其他裝置的修改衝突，儲存後會以你的內容為準");
+  if(m.length)toast(m.join("｜"))}
+ window.addEventListener("trip-sync-update",onRemote);
+ function shut(){window.removeEventListener("trip-sync-update",onRemote);ov.remove()}
+
+ if(wasEdit&&!sub){var del=h("button","flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl","刪除");on(del,"click",function(){ask("確定刪除這筆嗎？",function(){load();var i=idx(eid);if(i>-1)items.splice(i,1);save();shut();draw();toast("已刪除")})});ft.appendChild(del)}
+ on(xb,"click",function(){queue=[];shut()});
  on(sv,"click",function(){
   var raw=fk.value.trim(),lk=nurl(raw);if(raw&&!lk){toast("連結格式不正確");return}
-  var d={store:fs.value.trim(),qty:qv(),who:fw.value.trim(),link:lk,img:img,rcpt:rcp,note:fn.value.trim()},old=ed?Object.assign({},ed):null,isNew=!ed;
-  if(ed)Object.assign(ed,d);else{d.id=Date.now();d.done=false;items.push(d)}
-  if(!save()){if(old)Object.assign(ed,old);else if(isNew)items.pop();return}
-  ov.remove();draw();if(queue.length)nextQ();else toast(isNew?"已新增":"已儲存")});
+  var d={store:fs.value.trim(),qty:qv(),who:fw.value.trim(),link:lk,img:img,rcpt:rcp,note:fn.value.trim()};
+  load();  /* 以最新資料為底，不會用過期的整份清單蓋掉別台的修改 */
+  var i=wasEdit?idx(eid):-1,cur=i>-1?items[i]:null,old=cur?Object.assign({},cur):null,isNew=!cur;
+  if(cur)Object.assign(cur,d);else{d.id=wasEdit?eid:Date.now();d.done=false;items.push(d)}
+  if(!save()){if(old)Object.assign(cur,old);else items.pop();return}
+  shut();draw();if(queue.length)nextQ();else toast(isNew&&!wasEdit?"已新增":"已儲存")});
  ft.appendChild(sv);bx.appendChild(hd);bx.appendChild(body);bx.appendChild(ft);ov.appendChild(bx);document.body.appendChild(ov)}
 function nextQ(){var x=queue.shift();if(x)openSheet(x,"批次上傳 第 "+(qtot-queue.length)+" / "+qtot+" 張")}
 function batch(files){var fs=files.slice(0,30),added=[],i=0;if(!fs.length)return;toast("處理 "+fs.length+" 張照片…");
