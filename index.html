@@ -314,7 +314,7 @@
           </div>
           <div class="space-y-3 text-xs">
             <div v-for="f in flightsInfo" :key="f.id" class="bg-slate-50 p-3 rounded-xl border border-slate-100 relative">
-              <div class="text-[10px] text-ice-600 font-bold mb-1">{{ dateList[f.dayIndex] ? dateList[f.dayIndex].date : '' }} (Day {{ f.dayIndex + 1 }})</div>
+              <div class="text-[10px] text-ice-600 font-bold mb-1">{{ dateList[f.dayIndex] ? dateList[f.dayIndex].date : '' }}（Day {{ f.dayIndex + 1 }}）</div>
               <div class="font-bold text-slate-700 mb-1 flex justify-between pr-8">
                 <span>{{ f.label }}</span>
                 <span class="text-ice-600">{{ f.duration }}</span>
@@ -356,7 +356,7 @@
             <div v-for="h in hotelsInfo" :key="h.id" class="border-b border-slate-100 pb-2 last:border-b-0 last:pb-0 relative">
               <div class="text-[10px] text-ice-600 font-bold mb-1">
                 {{ dateList[h.dayIndex] ? dateList[h.dayIndex].date : '' }}<span v-if="h.dayIndexEnd > h.dayIndex"> ~ {{ dateList[h.dayIndexEnd] ? dateList[h.dayIndexEnd].date : '' }}</span>
-                (Day {{ h.dayIndex + 1 }}<span v-if="h.dayIndexEnd > h.dayIndex"> ~ Day {{ h.dayIndexEnd + 1 }}</span>)
+                （Day {{ h.dayIndex + 1 }}<span v-if="h.dayIndexEnd > h.dayIndex"> ~ Day {{ h.dayIndexEnd + 1 }}</span>）
                 <span v-if="h.dayIndexEnd > h.dayIndex"> · {{ h.dayIndexEnd - h.dayIndex }}晚</span>
               </div>
               <div class="font-bold text-slate-800 text-sm pr-8">{{ h.name }}</div>
@@ -706,7 +706,7 @@
 
         <!-- 總花費統計卡片 (換算為日幣 JPY；含手動紀錄 + 資訊分頁自動帶入的金額；依「花費類別」篩選結果計算) -->
         <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-md">
-          <div class="text-xs text-slate-400">{{ selectedExpenseCategory === '全部' ? '總花費統計' : selectedExpenseCategory + ' 花費統計' }} (換算為日幣 JPY)</div>
+          <div class="text-xs text-slate-400">{{ selectedExpenseCategory === '全部' ? '總花費統計' : selectedExpenseCategory + ' 花費統計' }}（換算為日幣 JPY）</div>
           <div class="text-3xl font-bold mt-1 text-amber-300">¥ {{ totalExpensesJPY.toLocaleString() }}</div>
           <div class="text-xs text-slate-400 mt-1">約合 NT$ {{ Math.round(totalExpensesJPY * jpyRate).toLocaleString() }}</div>
         </div>
@@ -794,11 +794,11 @@
             <i class="fa-solid fa-money-bill-transfer text-ice-600"></i> 匯率手動調整
           </h2>
           <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-500 font-bold whitespace-nowrap">1 台幣 (TWD) =</span>
+            <span class="text-xs text-slate-500 font-bold whitespace-nowrap">1 台幣（TWD）=</span>
             <input v-model.number="twdToJpyInput" type="number" step="0.001" placeholder="4.65" class="flex-1 min-w-0 bg-slate-50 border p-2.5 rounded-xl outline-none text-sm font-bold">
-            <span class="text-xs text-slate-500 font-bold whitespace-nowrap">日圓 (JPY)</span>
+            <span class="text-xs text-slate-500 font-bold whitespace-nowrap">日圓（JPY）</span>
           </div>
-          <div class="text-[10px] text-slate-400 mt-2">目前使用匯率：1 TWD ≈ {{ (1 / jpyRate).toFixed(2) }} JPY (1 JPY ≈ {{ jpyRate.toFixed(3) }} TWD)</div>
+          <div class="text-[10px] text-slate-400 mt-2">目前使用匯率：1 TWD ≈ {{ (1 / jpyRate).toFixed(2) }} JPY（1 JPY ≈ {{ jpyRate.toFixed(3) }} TWD）</div>
           <button @click="saveJpyRate" class="w-full mt-3 bg-ice-600 text-white font-bold py-2.5 rounded-xl text-sm">
             更新匯率
           </button>
@@ -896,7 +896,7 @@
           <!-- 名稱與分類 (通用) -->
           <div>
             <label class="block font-bold text-slate-600 mb-1">行程名稱 <span class="text-red-500">*</span></label>
-            <input v-if="formItinerary.category !== '航班'" v-model="formItinerary.name" type="text" placeholder="輸入名稱 (如: 長榮航空、小樽運河)" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
+            <input v-if="formItinerary.category !== '航班'" v-model="formItinerary.name" type="text" placeholder="輸入名稱（如：長榮航空、小樽運河）" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none focus:border-ice-500">
             <select v-else v-model="formItinerary.name" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
               <option value="">未選擇</option>
               <option value="去程">去程</option>
@@ -928,7 +928,7 @@
                     @input="openDepAirportDropdown"
                     @blur="closeDepAirportDropdown"
                     type="text"
-                    placeholder="輸入關鍵字 (桃園 / TPE)"
+                    placeholder="輸入關鍵字（桃園 / TPE）"
                     class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500 text-slate-700">
                   <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                   <div v-if="depAirportOpen && filteredDepAirports.length"
@@ -958,7 +958,7 @@
                     @input="openArrAirportDropdown"
                     @blur="closeArrAirportDropdown"
                     type="text"
-                    placeholder="輸入關鍵字 (新千歲 / CTS)"
+                    placeholder="輸入關鍵字（新千歲 / CTS）"
                     class="w-full bg-slate-50 border p-2.5 pr-8 rounded-xl outline-none focus:border-ice-500 text-slate-700">
                   <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                   <div v-if="arrAirportOpen && filteredArrAirports.length"
@@ -1005,7 +1005,7 @@
               <input v-model="formItinerary.flightDuration" type="text" placeholder="例如：3小時30分" class="w-full bg-white border p-2 rounded-lg outline-none">
             </div>
             <div>
-              <label class="block font-bold text-slate-600 mb-1">導航地點 (搜尋用)</label>
+              <label class="block font-bold text-slate-600 mb-1">導航地點（搜尋用）</label>
               <input v-model="formItinerary.location" type="text" placeholder="例如：New Chitose Airport" class="w-full bg-white border p-2 rounded-lg outline-none">
             </div>
           </div>
@@ -1052,7 +1052,7 @@
                     <input v-model="weeklyEditor.close2" type="time" class="flex-1 min-w-0 bg-white border p-1.5 rounded-lg outline-none">
                     <button type="button" @click="weeklyEditor.split = false" class="flex-shrink-0 text-[11px] text-red-400 px-1">移除</button>
                   </div>
-                  <button v-else type="button" @click="weeklyEditor.split = true" class="text-[11px] font-bold text-ice-600 mt-1.5">＋ 加第二段 (午休後營業)</button>
+                  <button v-else type="button" @click="weeklyEditor.split = true" class="text-[11px] font-bold text-ice-600 mt-1.5">＋ 加第二段（午休後營業）</button>
                 </div>
 
                 <!-- ③ 套用 -->
@@ -1086,7 +1086,7 @@
 
           <!-- 行程照片 -->
           <div>
-            <label class="block font-bold text-slate-600 mb-1">照片上傳 (可多選，點擊縮圖可放大)</label>
+            <label class="block font-bold text-slate-600 mb-1">照片上傳（可多選，點擊縮圖可放大）</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formItinerary.images)" accept="image/*" class="w-full text-slate-500 text-xs mb-1.5">
             <div v-if="formItinerary.images && formItinerary.images.length" class="flex flex-wrap gap-2 mt-1">
               <div v-for="(photo, pi) in formItinerary.images" :key="photo.id" class="relative">
@@ -1126,11 +1126,11 @@
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">託運行李 (kg)</label>
+              <label class="block font-bold text-slate-600 mb-1">託運行李（kg）</label>
               <input v-model="formFlightDoc.baggageChecked" type="text" placeholder="例如：23" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
             <div>
-              <label class="block font-bold text-slate-600 mb-1">隨身行李 (kg)</label>
+              <label class="block font-bold text-slate-600 mb-1">隨身行李（kg）</label>
               <input v-model="formFlightDoc.baggageCarryon" type="text" placeholder="例如：7" class="w-full bg-slate-50 border p-2.5 rounded-xl outline-none">
             </div>
           </div>
@@ -1157,7 +1157,7 @@
           </div>
           <div v-if="formFlightDoc.price && formFlightDoc.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formFlightDoc.price * jpyRate).toLocaleString() }}</div>
           <div>
-            <label class="block font-bold text-slate-600 mb-1">相關文件 (機票/訂位截圖、PDF等，可多選)</label>
+            <label class="block font-bold text-slate-600 mb-1">相關文件（機票/訂位截圖、PDF等，可多選）</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formFlightDoc.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
             <div v-if="formFlightDoc.documents && formFlightDoc.documents.length" class="flex flex-wrap gap-2 mt-1">
               <div v-for="(doc, di) in formFlightDoc.documents" :key="doc.id" class="relative">
@@ -1224,7 +1224,7 @@
           </div>
           <div v-if="formHotelInfo.price && formHotelInfo.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formHotelInfo.price * jpyRate).toLocaleString() }}</div>
           <div>
-            <label class="block font-bold text-slate-600 mb-1">相關文件 (訂房確認單等，可多選)</label>
+            <label class="block font-bold text-slate-600 mb-1">相關文件（訂房確認單等，可多選）</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formHotelInfo.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
             <div v-if="formHotelInfo.documents && formHotelInfo.documents.length" class="flex flex-wrap gap-2 mt-1">
               <div v-for="(doc, di) in formHotelInfo.documents" :key="doc.id" class="relative">
@@ -1290,7 +1290,7 @@
           </div>
           <div v-if="formDayTour.price && formDayTour.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formDayTour.price * jpyRate).toLocaleString() }}</div>
           <div>
-            <label class="block font-bold text-slate-600 mb-1">相關文件 (預約確認單、票券等，可多選)</label>
+            <label class="block font-bold text-slate-600 mb-1">相關文件（預約確認單、票券等，可多選）</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formDayTour.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
             <div v-if="formDayTour.documents && formDayTour.documents.length" class="flex flex-wrap gap-2 mt-1">
               <div v-for="(doc, di) in formDayTour.documents" :key="doc.id" class="relative">
@@ -1363,7 +1363,7 @@
           </div>
           <div v-if="formOtherBooking.price && formOtherBooking.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formOtherBooking.price * jpyRate).toLocaleString() }}</div>
           <div>
-            <label class="block font-bold text-slate-600 mb-1">相關文件 (預約確認單、票券等，可多選)</label>
+            <label class="block font-bold text-slate-600 mb-1">相關文件（預約確認單、票券等，可多選）</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formOtherBooking.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
             <div v-if="formOtherBooking.documents && formOtherBooking.documents.length" class="flex flex-wrap gap-2 mt-1">
               <div v-for="(doc, di) in formOtherBooking.documents" :key="doc.id" class="relative">
@@ -1436,7 +1436,7 @@
           </div>
           <div v-if="formCar.price && formCar.currency === 'JPY'" class="text-[11px] text-ice-600 -mt-2">約合 NT$ {{ Math.round(formCar.price * jpyRate).toLocaleString() }}</div>
           <div>
-            <label class="block font-bold text-slate-600 mb-1">相關文件 (租車確認單等，可多選)</label>
+            <label class="block font-bold text-slate-600 mb-1">相關文件（租車確認單等，可多選）</label>
             <input type="file" multiple @change="e => handleDocUploadMulti(e, formCar.documents)" accept="image/*,application/pdf" class="w-full text-slate-500 text-xs mb-1.5">
             <div v-if="formCar.documents && formCar.documents.length" class="flex flex-wrap gap-2 mt-1">
               <div v-for="(doc, di) in formCar.documents" :key="doc.id" class="relative">
