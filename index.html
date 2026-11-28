@@ -2627,7 +2627,7 @@
           id: f.id, dayIndex: f.dayIndex, 
           label: f.name + (f.flightNo ? ` (${f.flightNo})` : ''), 
           duration: f.flightDuration || '未填寫飛行時間', 
-          route: `${f.depAirport || '出發地'}${f.depTerminal ? '（' + f.depTerminal + '）' : ''} ${f.depTime || '--:--'} ➔ ${f.arrAirport || '目的地'}${f.arrTerminal ? '（' + f.arrTerminal + '）' : ''} ${f.arrTime || '--:--'}`,
+          route: `${f.depAirport || '出發地'}${f.depTerminal ? '（' + f.depTerminal + '）' : ''} ${(f.depTime || '--:--').replace(':', '：')} ➔ ${f.arrAirport || '目的地'}${f.arrTerminal ? '（' + f.arrTerminal + '）' : ''} ${(f.arrTime || '--:--').replace(':', '：')}`,
           documents: extra.documents || [], 
           price: extra.price || null, 
           currency: extra.currency || 'JPY', 
