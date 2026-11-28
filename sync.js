@@ -9,8 +9,8 @@ function ls(k,v){rawSet.call(localStorage,k,JSON.stringify(v))}
 var dirty=lg("sync_dirty",{}),meta=lg("sync_meta",{}),bq=lg("sync_blobq",[]),authed=false,busy=false,again=false,pt=0,sb=null,mode="",readyRes;
 var ready=new Promise(function(r){readyRes=r});
 try{sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}})}catch(e){}
-Storage.prototype.setItem=function(k,v){var same=this===localStorage&&lraw(k)===String(v);rawSet.call(this,k,v);if(!same&&this===localStorage&&KEYS.indexOf(k)>=0){dirty[k]=1;ls("sync_dirty",dirty);sched()}};
-function sched(){clearTimeout(pt);pt=setTimeout(syncNow,800)}
+Storage.prototype.setItem=function(k,v){rawSet.call(this,k,v);if(this===localStorage&&KEYS.indexOf(k)>=0){dirty[k]=1;ls("sync_dirty",dirty);sched()}};
+function sched(){clearTimeout(pt);pt=setTimeout(syncNow,2000)}
 /* ---------- UI ---------- */
 function mk(t,s,x){var e=document.createElement(t);if(s)e.style.cssText=s;if(x!=null)e.textContent=x;return e}
 var IN="width:100%;height:46px;border:1px solid #e2e8f0;background:#f8fafc;color:#1e293b;border-radius:12px;padding:0 12px;font:inherit;font-size:16px;box-sizing:border-box",MB="border:0;background:none;padding:8px 14px;font-size:13px;text-align:left;color:#334155";
@@ -70,15 +70,13 @@ function pullChanges(){
   if(first&&hasL&&hasR)useLocal=!confirm("雲端已有資料，這支手機也有本機資料。\n\n按「確定」＝用雲端資料取代本機\n按「取消」＝以本機資料覆蓋雲端");
   KEYS.forEach(function(k){if(lraw(k)!=null&&(!rem[k]||(first&&useLocal)))dirty[k]=1});
   ls("sync_dirty",dirty);return pushDirty()}).then(remote).then(function(rem){
-    var need=KEYS.filter(function(k){return rem[k]&&!dirty[k]&&meta[k]!==rem[k]});
-  if(!need.length)return [];
-  var chg=[];
+  var need=KEYS.filter(function(k){return rem[k]&&!dirty[k]&&meta[k]!==rem[k]});
+  if(!need.length)return false;
   return sb.from("trip_kv").select("key,value,updated_at").in("key",need).then(function(v){
    if(v.error)throw v.error;
-   v.data.forEach(function(x){if(!dirty[x.key]){rawSet.call(localStorage,x.key,x.value);meta[x.key]=x.updated_at;chg.push(x.key)}});
-   ls("sync_meta",meta);return chg})})}
-function applyUpdate(keys){
- if(window.TRIP_LIVE){window.dispatchEvent(new CustomEvent("trip-sync-update",{detail:{keys:keys||[]}}));return}
+   v.data.forEach(function(x){if(!dirty[x.key]){rawSet.call(localStorage,x.key,x.value);meta[x.key]=x.updated_at}});
+   ls("sync_meta",meta);return true})})}
+function applyUpdate(){
  var last=+sessionStorage.getItem("sync_rl")||0;
  if(!document.querySelector(".fixed.inset-0")&&Date.now()-last>20000){sessionStorage.setItem("sync_rl",String(Date.now()));reloading=true;location.reload()}
  else setSt("有新資料，點此更新",true,true)}
@@ -87,10 +85,10 @@ function syncNow(){
  if(busy){again=true;return Promise.resolve()}
  busy=true;setSt("同步中…");
  return seed().then(pullChanges).then(function(ch){return flushBlobs().then(function(){return ch})}).then(function(ch){
-  var n=new Date();setSt("已同步 "+n.getHours()+":"+("0"+n.getMinutes()).slice(-2));if(ch&&ch.length)applyUpdate(ch)
+  var n=new Date();setSt("已同步 "+n.getHours()+":"+("0"+n.getMinutes()).slice(-2));if(ch)applyUpdate()
  }).catch(function(){setSt("離線或同步失敗，點此選單",true)}).then(function(){busy=false;if(again){again=false;sched()}})}
 /* ---------- 登入 / 登出 ---------- */
-function onAuthed(fresh){authed=true;chip.style.display="block";setSt("同步中…");readyRes();startRealtime();
+function onAuthed(fresh){authed=true;chip.style.display="block";setSt("同步中…");readyRes();
  if(fresh){lb.disabled=true;msg.style.color="#64748b";msg.textContent="同步資料中…"}else lockOff();
  syncNow().then(function(){if(fresh&&!reloading){lockOff();lb.disabled=false;msg.textContent="";msg.style.color="#dc2626"}})}
 function login(){lb.disabled=true;msg.textContent="";
@@ -101,7 +99,7 @@ function wipeLocal(){KEYS.concat(["sync_dirty","sync_meta","sync_blobq","sync_se
 function manual(){syncNow().then(function(){if(window.appToast)window.appToast(chip.textContent)})}
 function logout(){syncNow().then(function(){var n=Object.keys(dirty).length+bq.length;
  if(!confirm(n?"還有 "+n+" 項資料尚未同步到雲端，登出會遺失它們。確定要登出嗎？":"登出會清除這支手機上的本機資料（雲端資料不受影響）。確定嗎？"))return;
- rawSet.call(localStorage,"sync_out","1");stopRealtime();lockOn();mn.style.display="none";chip.style.display="none";em.value="";pw.value="";msg.textContent="";return sb.auth.signOut({scope:"local"}).catch(function(){}).then(wipeLocal)})}
+ rawSet.call(localStorage,"sync_out","1");lockOn();mn.style.display="none";chip.style.display="none";em.value="";pw.value="";msg.textContent="";return sb.auth.signOut({scope:"local"}).catch(function(){}).then(wipeLocal)})}
 chip.addEventListener("click",function(){if(mode==="reload"){location.reload();return}mn.style.display=mn.style.display==="flex"?"none":"flex"});
 b1.addEventListener("click",function(){mn.style.display="none";manual()});
 b2.addEventListener("click",function(){mn.style.display="none";logout()});
@@ -110,20 +108,11 @@ pw.addEventListener("keydown",function(e){if(e.key==="Enter")lb.click()});
 document.addEventListener("visibilitychange",function(){if(!document.hidden)syncNow()});
 document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-sync]");if(!t)return;var a=t.getAttribute("data-sync");if(a==="logout")logout();else if(a==="now")manual()});
 window.addEventListener("online",syncNow);
-var rt=null,rtTimer=0;
-function startRealtime(){
- if(!sb||rt)return;
- rt=sb.channel("trip_kv_live").on("postgres_changes",{event:"*",schema:"public",table:"trip_kv"},function(){
-  clearTimeout(rtTimer);rtTimer=setTimeout(syncNow,300);
- }).subscribe(function(st){if(st==="SUBSCRIBED")syncNow()});
-}
-function stopRealtime(){if(rt&&sb){try{sb.removeChannel(rt)}catch(e){}}rt=null}
-setInterval(function(){if(!document.hidden&&authed)syncNow()},60000);
 window.addEventListener("message",function(e){if(e.origin!==location.origin||!e.data||typeof e.data.souvFs!=="boolean")return;var f=document.querySelector('iframe[src="souvenir.html"]');if(!f)return;if(e.data.souvFs){if(f.dataset.o==null)f.dataset.o=f.style.cssText;f.style.cssText="position:fixed;inset:0;width:100%;height:100dvh;z-index:60;border:0;background:transparent"}else if(f.dataset.o!=null){f.style.cssText=f.dataset.o;delete f.dataset.o}});
 if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
 if(!sb){readyRes();chip.style.display="block";setSt("同步元件未載入，請重新整理",true)}else{
  if(outFlag){sb.auth.signOut({scope:"local"}).catch(function(){});readyRes();lockOn();return}
- sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_OUT"){authed=false;stopRealtime();chip.style.display="none";lockOn()}});
+ sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_OUT"){authed=false;chip.style.display="none";lockOn()}});
  sb.auth.getSession().then(function(r){if(r.data&&r.data.session)onAuthed();else{readyRes();lockOn()}}).catch(function(){readyRes()})}
 })();
 
