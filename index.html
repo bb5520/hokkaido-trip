@@ -2408,6 +2408,7 @@
       });
 
       const fmtT = (t) => (t ? t.replace(/^0/, '').replace(':', '：') : '--：--');
+      const showTime = (t) => (t ? t.replace(':', '：') : '--：--');
       const formatDayHours = (d) => {
         if (!d) return '未填寫';
         if (d.closed) return '公休';
