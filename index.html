@@ -618,11 +618,10 @@
         <template v-if="txView === 'calc'">
 
         <!-- 店家快速篩選 -->
-          <div v-if="txStoreNames.length > 1" class="flex gap-2 overflow-x-auto no-scrollbar py-1">
-            <button v-for="n in ['', ...txStoreNames]" :key="n" @click="txFilter = n"
-              :class="['flex-none px-3 py-1.5 rounded-xl text-xs font-medium', n === txFilter ? 'bg-ice-600 text-white font-bold shadow-sm' : 'bg-white text-slate-600 border border-slate-100 shadow-sm']">
-              {{ n || '全部' }}
-            </button>
+          <div v-if="txStoreNames.length > 1" class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input v-model="txFilter" type="text" placeholder="搜尋店家" class="w-full bg-white border border-slate-100 shadow-sm py-2 pl-8 pr-8 rounded-xl text-xs outline-none focus:border-ice-500">
+            <button v-if="txFilter" @click="txFilter = ''" aria-label="清除" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 p-1"><i class="fa-solid fa-xmark text-xs"></i></button>
           </div>
 
           <!-- 明細卡片 -->
@@ -3020,8 +3019,9 @@
       // 保留原本的位置編號 i，編輯和刪除才不會對錯筆
       const txShown = computed(() => {
         const all = txEnts.value.map((e, i) => ({ e, i }));
-        if (!txFilter.value || !txStoreNames.value.includes(txFilter.value)) return all;
-        return all.filter(r => (r.e.name || '').trim() === txFilter.value);
+        const q = (txFilter.value || '').trim().toLowerCase();
+        if (!q) return all;
+        return all.filter(r => (r.e.name || '').toLowerCase().includes(q));
       });
 
       const showTxModal = ref(false);
